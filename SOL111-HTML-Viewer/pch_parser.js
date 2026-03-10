@@ -171,9 +171,10 @@ const RE_SUBTITLE   = /^\$SUBTITLE\s*=\s*(.*)/i;
 const RE_LABEL      = /^\$LABEL\s*=\s*(.*)/i;
 const RE_SUBCASE    = /^\$SUBCASE\s+ID\s*=\s*(\d+)/i;
 
-// Explicit complex representation declaration (real MSC Nastran format)
+// Explicit representation declaration (real MSC Nastran format)
 const RE_REAL_IMAG  = /^\$REAL-IMAGINARY\s+OUTPUT/i;
 const RE_MAG_PHASE  = /^\$MAGNITUDE-PHASE\s+OUTPUT/i;
+const RE_REAL_ONLY  = /^\$REAL\s+OUTPUT/i;
 
 // Result type header — all families we handle
 const RE_RESULT     = /^\$(ACCELERATION|DISPLACEMENTS?|VELOCITY|SPCFORCES?|SPCF|MPCF|ELEMENT\s+FORCES?)/i;
@@ -544,13 +545,17 @@ function scanBlocks(text, runName) {
       continue;
     }
 
-    // --- Explicit complex representation ---
+    // --- Explicit representation ---
     if (RE_REAL_IMAG.test(line)) {
       if (curBlock) { curBlock.complexRep = "REAL_IMAG"; curBlock.rawLines.push(line); }
       continue;
     }
     if (RE_MAG_PHASE.test(line)) {
       if (curBlock) { curBlock.complexRep = "MAG_PHASE"; curBlock.rawLines.push(line); }
+      continue;
+    }
+    if (RE_REAL_ONLY.test(line)) {
+      if (curBlock) { curBlock.complexRep = "REAL_ONLY"; curBlock.rawLines.push(line); }
       continue;
     }
 
@@ -854,8 +859,9 @@ function extractGridVector(block, entityId, component) {
   const imArr    = [];
   const srcLines = [];
 
-  const lines   = block.rawLines;
-  const isSort2 = block.sort === "SORT2";
+  const lines      = block.rawLines;
+  const isSort2    = block.sort === "SORT2";
+  const isRealOnly = block.complexRep === "REAL_ONLY";
 
   if (isSort2) {
     // -----------------------------------------------------------------------
@@ -886,6 +892,12 @@ function extractGridVector(block, entityId, component) {
       const gr = classifyGridRow(line);
 
       if (gr && gr.type === "FORMAT_A") {
+        // Real-only blocks can end a record with just row1 (or row1+CONT1).
+        if (isRealOnly && (state === "GOT_ROW1" || state === "GOT_CONT1")) {
+          xArr.push(pendingX);
+          reArr.push(pendingA[compIdx]);
+          imArr.push(0);
+        }
         // Real MSC SORT2: x-value first
         pendingX    = gr.xValue;
         pendingA[0] = gr.vals[0] || 0;
@@ -899,6 +911,11 @@ function extractGridVector(block, entityId, component) {
       }
 
       if (gr && gr.type === "FORMAT_C" && gr.entityId === entityId) {
+        if (isRealOnly && (state === "GOT_ROW1" || state === "GOT_CONT1")) {
+          xArr.push(pendingX);
+          reArr.push(pendingA[compIdx]);
+          imArr.push(0);
+        }
         // Synthetic SORT2: entity ID + x in same row
         pendingX    = gr.xValue;
         pendingA[0] = gr.vals[0] || 0;
@@ -918,8 +935,15 @@ function extractGridVector(block, entityId, component) {
           pendingA[3] = vals[0] || 0;
           pendingA[4] = vals[1] || 0;
           pendingA[5] = vals[2] || 0;
-          state = "GOT_CONT1";
           srcLines.push(line);
+          if (isRealOnly) {
+            xArr.push(pendingX);
+            reArr.push(pendingA[compIdx]);
+            imArr.push(0);
+            state = "IDLE";
+          } else {
+            state = "GOT_CONT1";
+          }
         } else if (state === "GOT_CONT1") {
           // CONT 2: DOFs 1-3 of component B
           pendingB[0] = vals[0] || 0;
@@ -964,6 +988,12 @@ function extractGridVector(block, entityId, component) {
         state = "IDLE";
       }
     }
+    if (isRealOnly && (state === "GOT_ROW1" || state === "GOT_CONT1")) {
+      xArr.push(pendingX);
+      reArr.push(pendingA[compIdx]);
+      imArr.push(0);
+      state = "IDLE";
+    }
 
   } else {
     // -----------------------------------------------------------------------
@@ -987,6 +1017,11 @@ function extractGridVector(block, entityId, component) {
       const gr = classifyGridRow(line);
 
       if (gr && gr.type === "FORMAT_B" && gr.entityId === entityId) {
+        if (isRealOnly && (state === "GOT_ROW1" || state === "GOT_CONT1")) {
+          xArr.push(pendingX);
+          reArr.push(pendingA[compIdx]);
+          imArr.push(0);
+        }
         // Real MSC SORT1: entity ID first, x from $FREQUENCY
         pendingX    = lastFreq !== null ? lastFreq : 0;
         pendingA[0] = gr.vals[0] || 0;
@@ -1000,6 +1035,11 @@ function extractGridVector(block, entityId, component) {
       }
 
       if (gr && gr.type === "FORMAT_C" && gr.entityId === entityId) {
+        if (isRealOnly && (state === "GOT_ROW1" || state === "GOT_CONT1")) {
+          xArr.push(pendingX);
+          reArr.push(pendingA[compIdx]);
+          imArr.push(0);
+        }
         // Synthetic SORT1: entity ID + x in same row
         pendingX    = gr.xValue;
         pendingA[0] = gr.vals[0] || 0;
@@ -1018,8 +1058,15 @@ function extractGridVector(block, entityId, component) {
           pendingA[3] = vals[0] || 0;
           pendingA[4] = vals[1] || 0;
           pendingA[5] = vals[2] || 0;
-          state = "GOT_CONT1";
           srcLines.push(line);
+          if (isRealOnly) {
+            xArr.push(pendingX);
+            reArr.push(pendingA[compIdx]);
+            imArr.push(0);
+            state = "IDLE";
+          } else {
+            state = "GOT_CONT1";
+          }
         } else if (state === "GOT_CONT1") {
           pendingB[0] = vals[0] || 0;
           pendingB[1] = vals[1] || 0;
@@ -1059,8 +1106,19 @@ function extractGridVector(block, entityId, component) {
       // Different entity row resets state
       if (gr && (gr.type === "FORMAT_B" || gr.type === "FORMAT_C") &&
           gr.entityId !== null && gr.entityId !== entityId) {
+        if (isRealOnly && (state === "GOT_ROW1" || state === "GOT_CONT1")) {
+          xArr.push(pendingX);
+          reArr.push(pendingA[compIdx]);
+          imArr.push(0);
+        }
         state = "IDLE";
       }
+    }
+    if (isRealOnly && (state === "GOT_ROW1" || state === "GOT_CONT1")) {
+      xArr.push(pendingX);
+      reArr.push(pendingA[compIdx]);
+      imArr.push(0);
+      state = "IDLE";
     }
   }
 
