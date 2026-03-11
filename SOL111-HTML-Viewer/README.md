@@ -29,7 +29,7 @@ A single-file, self-contained HTML tool for interactively plotting Nastran `.pch
 | Transient (time history) results | ✓ |
 | Acceleration (ACCELERATION) | ✓ |
 | SPC Forces (SPCFORCES) | ✓ |
-| CBUSH / CELAS element forces | ✓ (Tier 1) |
+| CBUSH / CELAS1/2/3/4 element forces | ✓ |
 | Multiple files / runs overlaid | ✓ |
 
 ---
@@ -131,6 +131,7 @@ const { x, y } = PCHParser.computeRepresentation(td, 'MAGNITUDE');
 | `parsePCH` | `(text: string, name: string) → RunData` | Parse a full PCH file into blocks |
 | `extractTraceData` | `(block: BlockMeta, entityId: number, component: string) → TraceData\|null` | Extract x/re/im arrays for one entity+component |
 | `computeRepresentation` | `(td: TraceData, repr: string) → {x, y}` | Compute the requested representation |
+| `componentLabelsForBlock` | `(block: BlockMeta) → string[]` | Return the component list for a parsed block, including element-type-aware labels |
 
 ---
 
@@ -143,21 +144,22 @@ cd /path/to/pch_plotter
 node test_parser.js
 ```
 
-Expected output: **78 passed, 0 failed**.
+Expected output: all parser tests pass with zero failures.
 
-The tests cover all six synthetic fixtures:
+The tests cover the synthetic fixtures:
 - Fixture A: SORT2, Real/Imaginary (ACCELERATION + SPCFORCES)
 - Fixture B: SORT1, Real/Imaginary
 - Fixture C: SORT2, Magnitude/Phase
 - Fixture D: XYPUNCH curves
 - Fixture E: CBUSH element forces with CONT lines
 - Fixture F: Transient (time history)
+- Fixture G: mixed CBUSH + CELAS element forces
 
 ---
 
 ## Known Limitations and Future Work
 
-- **Tier 2 element types** (CBAR, CBEAM, CROD, shells, solids) are not yet supported. The parser will ignore blocks with unrecognised result families.
+- **Deferred element types** (CBAR, CBEAM, CROD, shells, solids) are not yet supported. Unsupported `$ELEMENT FORCES` blocks are left unexposed in the trace tree.
 - **Multiple subcases in a single block** are not yet supported; each subcase must be a separate block.
 - **SORT1 with mixed entities per frequency step** is supported but the entity ID list is built from data rows, which may be slower for very large files.
 - **GB-scale transient files**: the parser reads the entire file into memory as a string. For multi-GB files, consider splitting into subcases before loading.

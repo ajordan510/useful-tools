@@ -22,7 +22,7 @@
  *   • VELOCITY       – grid vector, 6 DOFs
  *   • SPCF / SPCFORCES – SPC force/moment vector, 6 DOFs
  *   • MPCF           – MPC force/moment vector, 6 DOFs
- *   • ELEMENT FORCES (CBUSH / CELAS) – with CONT line handling
+ *   • ELEMENT FORCES (CBUSH, CELAS1/2/3/4) – element-type-aware parsing
  *   • XYPUNCH curves – ACCE and FORCE, RM/IP component conventions
  *
  * DOF labelling
@@ -33,8 +33,9 @@
  * For force/reaction results (SPCF, MPCF):
  *   Components are labelled Fx, Fy, Fz, Mx, My, Mz
  *
- * For element force results (CBUSH, CELAS):
- *   Components are labelled F1, F2, F3, M1, M2, M3
+ * For element force results:
+ *   CBUSH components are labelled F1, F2, F3, M1, M2, M3
+ *   CELAS1/2/3/4 components are labelled F
  *
  * ============================================================================
  * Row format variants handled
@@ -73,6 +74,7 @@
  * extractTraceData(block, entityId, component)  → TraceData|null
  * computeRepresentation(td, repr)  → { x: number[], y: number[] }
  * componentLabels(resultFamily)  → string[]
+ * componentLabelsForBlock(block) → string[]
  *
  * ============================================================================
  * Typedefs
@@ -149,6 +151,15 @@ const FAMILY_COMPONENTS = {
   "XYPUNCH":        ["RM", "IP"],
 };
 
+const ELEMENT_FORCE_DESCRIPTORS = {
+  CBUSH:  { components: ["F1", "F2", "F3", "M1", "M2", "M3"], kind: "VECTOR6" },
+  CELAS:  { components: ["F"], kind: "SCALAR" },
+  CELAS1: { components: ["F"], kind: "SCALAR" },
+  CELAS2: { components: ["F"], kind: "SCALAR" },
+  CELAS3: { components: ["F"], kind: "SCALAR" },
+  CELAS4: { components: ["F"], kind: "SCALAR" },
+};
+
 /**
  * Unified component-to-DOF-index map.
  * All naming conventions map to indices 0-5.
@@ -158,7 +169,17 @@ const COMPONENT_INDEX = {
   Fx: 0, Fy: 1, Fz: 2, Mx: 3, My: 4, Mz: 5,
   fx: 0, fy: 1, fz: 2, mx: 3, my: 4, mz: 5,
   FX: 0, FY: 1, FZ: 2, MX: 3, MY: 4, MZ: 5,
+  F: 0, f: 0,
   F1: 0, F2: 1, F3: 2, M1: 3, M2: 4, M3: 5,
+};
+
+const REPR_LABEL_TO_KEY = {
+  "MAGNITUDE": "MAGNITUDE",
+  "MAGNITUDE (DB)": "DB",
+  "REAL": "REAL",
+  "IMAGINARY": "IMAG",
+  "PHASE (DEG)": "PHASE",
+  "PHASE UNWRAPPED (DEG)": "PHASE_UNWRAPPED",
 };
 
 // ---------------------------------------------------------------------------
@@ -396,6 +417,582 @@ function componentLabels(resultFamily) {
   return FAMILY_COMPONENTS[resultFamily] || ["T1", "T2", "T3", "R1", "R2", "R3"];
 }
 
+function normalizeElementType(elementType) {
+  const normalized = String(elementType || "").trim().toUpperCase();
+  return normalized || null;
+}
+
+function getElementForceDescriptor(elementType) {
+  const normalized = normalizeElementType(elementType);
+  return normalized ? (ELEMENT_FORCE_DESCRIPTORS[normalized] || null) : null;
+}
+
+function parseElementForceRow(line) {
+  const trimmed = String(line || "").trim();
+  if (!trimmed || trimmed.startsWith("$") || /^-?CONT[-\s]/i.test(trimmed)) return null;
+
+  const tokens = trimmed.split(/\s+/);
+  if (tokens.length < 2 || tokens[1] === "G") return null;
+
+  const t0 = tokens[0];
+  const t0IsPlainInt = /^\d+$/.test(t0);
+  const t1IsType = /^[A-Za-z]/.test(tokens[1] || "") && isNaN(Number(tokens[1]));
+  const entityId = t0IsPlainInt ? parseInt(t0, 10) : null;
+  const elementType = t1IsType ? normalizeElementType(tokens[1]) : null;
+
+  if (t0IsPlainInt && t1IsType && tokens.length >= 4) {
+    const xValue = Number(tokens[2]);
+    if (isNaN(xValue)) return null;
+    const values = tokens.slice(3).map(Number).filter(v => !isNaN(v));
+    return { format: "SORTX_TYPED", entityId, elementType, xValue, values };
+  }
+
+  if (t0IsPlainInt && !t1IsType) {
+    const values = tokens.slice(1).map(Number).filter(v => !isNaN(v));
+    return { format: "SORT1", entityId, elementType: null, xValue: null, values };
+  }
+
+  const xValue = Number(t0);
+  if (isNaN(xValue)) return null;
+  const valueStart = t1IsType ? 2 : 1;
+  const values = tokens.slice(valueStart).map(Number).filter(v => !isNaN(v));
+  return { format: t1IsType ? "SORT2_TYPED" : "SORT2", entityId: null, elementType, xValue, values };
+}
+
+function normalizeElementContValues(values, expectedCount) {
+  if (!Array.isArray(values)) return [];
+  if (values.length === expectedCount + 1 && Math.abs(values[0]) < 1e-12) {
+    return values.slice(1);
+  }
+  return values;
+}
+
+function resolveElementForceType(block) {
+  if (!block || block.resultFamily !== "ELEMENT_FORCES") return normalizeElementType(block && block.elementType);
+
+  let normalized = normalizeElementType(block.elementType);
+  if (normalized) return normalized;
+
+  for (const line of block.rawLines || []) {
+    const m = RE_ELEMTYPE.exec(line);
+    if (m) {
+      normalized = normalizeElementType(m[1]);
+      break;
+    }
+    const row = parseElementForceRow(line);
+    if (row && row.elementType) {
+      normalized = row.elementType;
+      break;
+    }
+  }
+
+  if (!normalized) normalized = inferElementForceTypeFromTraceStore(block);
+
+  if (normalized) block.elementType = normalized;
+  return normalized;
+}
+
+function componentLabelsForBlock(block) {
+  if (!block) return [];
+  if (block.resultFamily !== "ELEMENT_FORCES") {
+    return componentLabels(block.resultFamily);
+  }
+  const descriptor = getElementForceDescriptor(resolveElementForceType(block));
+  if (descriptor) return descriptor.components.slice();
+
+  const traceComps = Array.from(new Set(Object.keys(block.traceStore || {}).map(key => {
+    const parts = String(key).split("::");
+    return normalizeComponentLabel(parts[parts.length - 1]);
+  }).filter(Boolean).map(comp => comp.toUpperCase())));
+  if (traceComps.length === 0) return [];
+  return traceComps.sort((a, b) => {
+    const ai = COMPONENT_INDEX[a];
+    const bi = COMPONENT_INDEX[b];
+    if (ai !== undefined && bi !== undefined && ai !== bi) return ai - bi;
+    if (ai !== undefined) return -1;
+    if (bi !== undefined) return 1;
+    return a.localeCompare(b);
+  });
+}
+
+function normalizeComponentLabel(component) {
+  return String(component || "").trim();
+}
+
+function normalizeTraceComponentKey(component) {
+  return normalizeComponentLabel(component).toUpperCase();
+}
+
+function makeTraceStoreKey(entityId, component) {
+  return `${entityId}::${normalizeTraceComponentKey(component)}`;
+}
+
+function inferElementForceTypeFromComponent(component) {
+  const key = normalizeTraceComponentKey(component);
+  if (!key) return null;
+  if (key === "F") return "CELAS";
+  return ELEMENT_FORCE_DESCRIPTORS.CBUSH.components.includes(key) ? "CBUSH" : null;
+}
+
+function inferElementForceTypeFromTraceStore(block) {
+  const keys = Object.keys((block && block.traceStore) || {});
+  for (const key of keys) {
+    const parts = String(key).split("::");
+    const inferred = inferElementForceTypeFromComponent(parts[parts.length - 1]);
+    if (inferred) return inferred;
+  }
+  return null;
+}
+
+function parseCsvRows(text) {
+  const rows = [];
+  let row = [];
+  let cell = "";
+  let i = 0;
+  let inQuotes = false;
+  const src = String(text || "").replace(/^\uFEFF/, "");
+
+  while (i < src.length) {
+    const ch = src[i];
+    if (inQuotes) {
+      if (ch === "\"") {
+        if (src[i + 1] === "\"") {
+          cell += "\"";
+          i += 2;
+          continue;
+        }
+        inQuotes = false;
+      } else {
+        cell += ch;
+      }
+      i++;
+      continue;
+    }
+    if (ch === "\"") {
+      inQuotes = true;
+      i++;
+      continue;
+    }
+    if (ch === ",") {
+      row.push(cell);
+      cell = "";
+      i++;
+      continue;
+    }
+    if (ch === "\r") {
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = "";
+      if (src[i + 1] === "\n") i++;
+      i++;
+      continue;
+    }
+    if (ch === "\n") {
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = "";
+      i++;
+      continue;
+    }
+    cell += ch;
+    i++;
+  }
+
+  if (cell.length > 0 || row.length > 0) {
+    row.push(cell);
+    rows.push(row);
+  }
+  return rows;
+}
+
+function csvCell(rows, rowIdx, colIdx) {
+  return (rows[rowIdx] && rows[rowIdx][colIdx] !== undefined) ? rows[rowIdx][colIdx] : "";
+}
+
+function normalizeSpreadsheetFamily(value) {
+  const raw = String(value || "").trim().replace(/\s+/g, " ").toUpperCase();
+  return RESULT_FAMILIES[raw] || raw;
+}
+
+function parseSpreadsheetSubcase(value) {
+  const m = String(value || "").trim().match(/^SC\s*(\d+)$/i);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+function parseSpreadsheetEntity(value) {
+  const m = String(value || "").trim().match(/^ID\s*(\d+)$/i);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+function parseRepresentationLabel(value) {
+  const key = String(value || "").trim().toUpperCase();
+  return REPR_LABEL_TO_KEY[key] || null;
+}
+
+function parseSpreadsheetNumber(value) {
+  const trimmed = String(value === undefined || value === null ? "" : value).trim();
+  if (!trimmed) return NaN;
+  const num = Number(trimmed);
+  return isNaN(num) ? NaN : num;
+}
+
+function makeSpreadsheetDisplayName(fileName, sheetName, runIndex, runCount) {
+  const sheetSuffix = sheetName ? ` [${sheetName}]` : "";
+  if (runCount > 1) return `${fileName}${sheetSuffix} [Spreadsheet ${runIndex + 1}/${runCount}]`;
+  return `${fileName}${sheetSuffix} [Spreadsheet]`;
+}
+
+function createSpreadsheetBlock(blockIndex, runName, subcaseId, family, xypunchMeta, elementType) {
+  const title = runName.replace(/\.[^.]+$/i, "");
+  const subtitle = "Spreadsheet Import";
+  const normalizedElementType = family === "ELEMENT_FORCES"
+    ? (normalizeElementType(elementType) || null)
+    : null;
+  return {
+    blockIndex,
+    resultFamily: family,
+    resultType: family,
+    domain: "FREQUENCY_RESPONSE",
+    sort: "SPREADSHEET",
+    complexRep: "UNKNOWN",
+    subcaseId,
+    title,
+    subtitle,
+    label: "",
+    entityIds: [],
+    elementType: normalizedElementType,
+    xypunchComp: xypunchMeta ? xypunchMeta.comp : null,
+    xypunchKind: xypunchMeta ? xypunchMeta.kind : null,
+    xypunchEntity: xypunchMeta ? xypunchMeta.entityId : null,
+    sourceKind: "SPREADSHEET",
+    traceStore: {},
+    rawLines: [
+      "$SPREADSHEET IMPORT",
+      `$SOURCE FILE = ${runName}`,
+      `$SUBCASE ID = ${subcaseId}`,
+      `$RESULT FAMILY = ${family}`,
+    ],
+    dataLines: [],
+  };
+}
+
+function addSpreadsheetTrace(block, traceData, meta) {
+  const key = makeTraceStoreKey(meta.entityId, meta.component);
+  block.traceStore[key] = traceData;
+  if (!block.entityIds.includes(meta.entityId)) block.entityIds.push(meta.entityId);
+  if (block.resultFamily === "ELEMENT_FORCES" && meta.elementType) {
+    block.elementType = normalizeElementType(meta.elementType);
+  }
+  if (block.resultFamily === "XYPUNCH") {
+    block.xypunchEntity = meta.entityId;
+    block.xypunchComp = meta.component;
+  }
+  if (block.resultFamily === "ELEMENT_FORCES" && block.elementType) {
+    const marker = `$ELEMENT TYPE = ${block.elementType}`;
+    if (!block.rawLines.includes(marker)) block.rawLines.push(marker);
+  }
+  block.rawLines.push(
+    `$TRACE ID = ${meta.entityId} ${meta.component} (${meta.storageKind === "DERIVED" ? meta.lockedRepr : "RAW"})`
+  );
+}
+
+function finalizeSpreadsheetRun(run) {
+  run.blocks.forEach((block, idx) => {
+    block.blockIndex = idx;
+    if (block.entityIds.length > 1) block.entityIds.sort((a, b) => a - b);
+    if (run.displayName) block.title = run.displayName;
+    block.subtitle = run.importSheetName ? `Spreadsheet Import (${run.importSheetName})` : "Spreadsheet Import";
+  });
+  return run;
+}
+
+function parseSpreadsheetCsv(fileName, text, sheetName) {
+  const prefix = sheetName ? `${fileName} [${sheetName}]` : fileName;
+  const rows = parseCsvRows(text);
+  const warnings = [];
+  if (rows.length < 7) {
+    return { runs: [], warnings: [`${prefix}: not enough rows for exported spreadsheet format.`] };
+  }
+
+  const baseLabels = ["Source File", "Subcase", "Result Family", "Entity ID", "Direction"];
+  for (let i = 0; i < baseLabels.length; i++) {
+    if (String(csvCell(rows, i, 0)).trim() !== baseLabels[i]) {
+      return { runs: [], warnings: [`${prefix}: missing required metadata row "${baseLabels[i]}".`] };
+    }
+  }
+  let elementTypeRowIdx = null;
+  let representationRowIdx = 5;
+  if (String(csvCell(rows, 5, 0)).trim() === "Element Type") {
+    elementTypeRowIdx = 5;
+    representationRowIdx = 6;
+  }
+  if (String(csvCell(rows, representationRowIdx, 0)).trim() !== "Representation") {
+    return { runs: [], warnings: [`${prefix}: missing required metadata row "Representation".`] };
+  }
+
+  let headerRowIdx = representationRowIdx + 1;
+  while (headerRowIdx < rows.length && rows[headerRowIdx].every(cell => String(cell || "").trim() === "")) {
+    headerRowIdx++;
+  }
+  if (headerRowIdx >= rows.length) {
+    return { runs: [], warnings: [`${prefix}: missing column header row.`] };
+  }
+  if (String(csvCell(rows, headerRowIdx, 0)).trim() !== "Frequency_Hz") {
+    return { runs: [], warnings: [`${prefix}: expected first data header cell to be "Frequency_Hz".`] };
+  }
+
+  const xValues = [];
+  const metadataRowCount = Math.max(representationRowIdx + 1, elementTypeRowIdx === null ? 0 : elementTypeRowIdx + 1);
+  const columnCount = Math.max(
+    rows[headerRowIdx].length,
+    ...Array.from({ length: metadataRowCount }, (_, idx) => (rows[idx] ? rows[idx].length : 0))
+  );
+  const dataColumns = [];
+  for (let col = 1; col < columnCount; col++) {
+    const sourceFile = String(csvCell(rows, 0, col)).trim();
+    const subcaseId = parseSpreadsheetSubcase(csvCell(rows, 1, col));
+    const family = normalizeSpreadsheetFamily(csvCell(rows, 2, col));
+    const entityId = parseSpreadsheetEntity(csvCell(rows, 3, col));
+    const component = normalizeComponentLabel(csvCell(rows, 4, col));
+    const elementType = family === "ELEMENT_FORCES"
+      ? (normalizeElementType(elementTypeRowIdx === null ? "" : csvCell(rows, elementTypeRowIdx, col))
+        || inferElementForceTypeFromComponent(component))
+      : null;
+    const reprLabel = String(csvCell(rows, representationRowIdx, col)).trim();
+    const header = String(csvCell(rows, headerRowIdx, col)).trim();
+    if (!sourceFile && !subcaseId && !family && !entityId && !component && !reprLabel && !header && !elementType) continue;
+    if (!sourceFile || subcaseId === null || !family || entityId === null || !component || !reprLabel) {
+      warnings.push(`${prefix}: skipping column ${col + 1} due to incomplete metadata.`);
+      continue;
+    }
+    dataColumns.push({
+      col,
+      sourceFile,
+      subcaseId,
+      family,
+      entityId,
+      component,
+      elementType,
+      reprLabel,
+      reprKey: parseRepresentationLabel(reprLabel),
+      header,
+      values: [],
+    });
+  }
+
+  if (dataColumns.length === 0) {
+    return { runs: [], warnings: [`${prefix}: no importable data columns found.`] };
+  }
+
+  for (let rowIdx = headerRowIdx + 1; rowIdx < rows.length; rowIdx++) {
+    const rawX = String(csvCell(rows, rowIdx, 0)).trim();
+    if (!rawX) continue;
+    const x = parseSpreadsheetNumber(rawX);
+    if (isNaN(x)) {
+      warnings.push(`${prefix}: skipping row ${rowIdx + 1} with non-numeric Frequency_Hz value "${rawX}".`);
+      continue;
+    }
+    xValues.push(x);
+    dataColumns.forEach(col => {
+      const rawCell = String(csvCell(rows, rowIdx, col.col)).trim();
+      const value = parseSpreadsheetNumber(rawCell);
+      if (rawCell && isNaN(value)) {
+        warnings.push(`${prefix}: non-numeric value "${rawCell}" in row ${rowIdx + 1}, column ${col.col + 1}; importing as NaN.`);
+      }
+      col.values.push(value);
+    });
+  }
+
+  if (xValues.length === 0) {
+    return { runs: [], warnings: [`${prefix}: no numeric data rows found.`] };
+  }
+
+  const runMap = {};
+
+  function getRun(runName) {
+    if (!runMap[runName]) {
+      runMap[runName] = { runName, title: runName.replace(/\.[^.]+$/i, ""), blocks: [], warnings: [] };
+    }
+    return runMap[runName];
+  }
+
+  function getBlock(run, meta) {
+    const isXypunch = meta.family === "XYPUNCH";
+    let block = run.blocks.find(b => {
+      if (b.resultFamily !== meta.family || b.subcaseId !== meta.subcaseId) return false;
+      if (meta.family === "ELEMENT_FORCES" && normalizeElementType(b.elementType) !== normalizeElementType(meta.elementType)) {
+        return false;
+      }
+      if (!isXypunch) return true;
+      return b.xypunchEntity === meta.entityId && normalizeTraceComponentKey(b.xypunchComp) === normalizeTraceComponentKey(meta.component);
+    });
+    if (!block) {
+      block = createSpreadsheetBlock(
+        run.blocks.length,
+        run.runName,
+        meta.subcaseId,
+        meta.family,
+        isXypunch ? { entityId: meta.entityId, comp: meta.component, kind: "XYPUNCH" } : null,
+        meta.elementType
+      );
+      run.blocks.push(block);
+    }
+    return block;
+  }
+
+  for (let i = 0; i < dataColumns.length; i++) {
+    const col = dataColumns[i];
+    if (col.reprKey === "REAL") {
+      const next = dataColumns[i + 1];
+      if (!next || next.reprKey !== "IMAG" ||
+          next.sourceFile !== col.sourceFile ||
+          next.subcaseId !== col.subcaseId ||
+          next.family !== col.family ||
+          next.entityId !== col.entityId ||
+          normalizeElementType(next.elementType) !== normalizeElementType(col.elementType) ||
+          normalizeTraceComponentKey(next.component) !== normalizeTraceComponentKey(col.component)) {
+        warnings.push(`${prefix}: skipping column ${col.col + 1} because the matching Imaginary column is missing or mismatched.`);
+        continue;
+      }
+
+      const traceData = {
+        x: new Float64Array(xValues),
+        re: new Float64Array(col.values),
+        im: new Float64Array(next.values),
+        isComplex: true,
+        complexRep: "REAL_IMAG",
+        component: col.component,
+        entityId: col.entityId,
+        domain: "FREQUENCY_RESPONSE",
+        storageKind: "COMPLEX",
+        lockedRepr: null,
+        sourceLines: [
+          `$SOURCE FILE = ${col.sourceFile}`,
+          `$SUBCASE ID = ${col.subcaseId}`,
+          `$RESULT FAMILY = ${col.family}`,
+          ...(col.elementType ? [`$ELEMENT TYPE = ${col.elementType}`] : []),
+          `$ENTITY ID = ${col.entityId}`,
+          `$DIRECTION = ${col.component}`,
+          `$REPRESENTATION = RAW`,
+        ],
+      };
+      const run = getRun(col.sourceFile);
+      const block = getBlock(run, col);
+      addSpreadsheetTrace(block, traceData, {
+        entityId: col.entityId,
+        component: col.component,
+        elementType: col.elementType,
+        storageKind: "COMPLEX",
+        lockedRepr: null,
+      });
+      i++;
+      continue;
+    }
+
+    if (col.reprKey === "IMAG") {
+      warnings.push(`${prefix}: skipping column ${col.col + 1} because it is an unpaired Imaginary column.`);
+      continue;
+    }
+
+    if (!col.reprKey) {
+      warnings.push(`${prefix}: skipping column ${col.col + 1} with unsupported representation "${col.reprLabel}".`);
+      continue;
+    }
+
+    const traceData = {
+      x: new Float64Array(xValues),
+      re: new Float64Array(col.values),
+      im: new Float64Array(col.values.length),
+      isComplex: false,
+      complexRep: "UNKNOWN",
+      component: col.component,
+      entityId: col.entityId,
+      domain: "FREQUENCY_RESPONSE",
+      storageKind: "DERIVED",
+      lockedRepr: col.reprKey,
+        sourceLines: [
+          `$SOURCE FILE = ${col.sourceFile}`,
+          `$SUBCASE ID = ${col.subcaseId}`,
+          `$RESULT FAMILY = ${col.family}`,
+          ...(col.elementType ? [`$ELEMENT TYPE = ${col.elementType}`] : []),
+          `$ENTITY ID = ${col.entityId}`,
+          `$DIRECTION = ${col.component}`,
+          `$REPRESENTATION = ${col.reprKey}`,
+      ],
+    };
+    const run = getRun(col.sourceFile);
+    const block = getBlock(run, col);
+      addSpreadsheetTrace(block, traceData, {
+        entityId: col.entityId,
+        component: col.component,
+        elementType: col.elementType,
+        storageKind: "DERIVED",
+        lockedRepr: col.reprKey,
+      });
+  }
+
+  const runs = Object.values(runMap).map(run => {
+    run.sourceKind = "SPREADSHEET";
+    run.importFileName = fileName;
+    run.importSheetName = sheetName || null;
+    run.sourceRunName = run.runName;
+    run.warnings.push(...warnings);
+    return finalizeSpreadsheetRun(run);
+  });
+  runs.forEach((run, idx) => {
+    run.displayName = makeSpreadsheetDisplayName(fileName, sheetName, idx, runs.length);
+    run.title = run.displayName;
+    run.blocks.forEach(block => {
+      block.title = run.displayName;
+      block.subtitle = sheetName ? `Spreadsheet Import (${sheetName})` : "Spreadsheet Import";
+    });
+  });
+  return { runs, warnings };
+}
+
+function parseSpreadsheetText(fileName, text) {
+  const result = parseSpreadsheetCsv(fileName, text, null);
+  if (result.runs.length === 0) {
+    throw new Error(result.warnings[0] || `${fileName}: no importable spreadsheet data found.`);
+  }
+  return result.runs;
+}
+
+function parseWorkbook(fileName, workbook, xlsxApi) {
+  const api = xlsxApi || (typeof XLSX !== "undefined" ? XLSX : (typeof globalThis !== "undefined" ? globalThis.XLSX : null));
+  if (!api || !api.utils || typeof api.utils.sheet_to_csv !== "function") {
+    throw new Error("XLSX reader is unavailable.");
+  }
+  if (!workbook || !Array.isArray(workbook.SheetNames) || !workbook.Sheets) {
+    throw new Error(`${fileName}: invalid workbook data.`);
+  }
+
+  const runs = [];
+  const workbookWarnings = [];
+  workbook.SheetNames.forEach(sheetName => {
+    const sheet = workbook.Sheets[sheetName];
+    if (!sheet) {
+      workbookWarnings.push(`${fileName} [${sheetName}]: worksheet is missing.`);
+      return;
+    }
+    const csv = api.utils.sheet_to_csv(sheet, { blankrows: true });
+    const parsed = parseSpreadsheetCsv(fileName, csv, sheetName);
+    if (parsed.runs.length === 0) {
+      workbookWarnings.push(...parsed.warnings);
+      return;
+    }
+    runs.push(...parsed.runs);
+  });
+
+  if (runs.length === 0) {
+    throw new Error(workbookWarnings[0] || `${fileName}: no importable worksheets found.`);
+  }
+  if (workbookWarnings.length) runs[0].warnings.push(...workbookWarnings);
+  return runs;
+}
+
 // ---------------------------------------------------------------------------
 // Pass 1: Block scanner
 // ---------------------------------------------------------------------------
@@ -425,10 +1022,16 @@ function scanBlocks(text, runName) {
 
   function finaliseBlock() {
     if (!curBlock) return;
+    if (curBlock.resultFamily === "ELEMENT_FORCES") {
+      curBlock.elementType = resolveElementForceType(curBlock);
+      if (curBlock.elementType && !getElementForceDescriptor(curBlock.elementType)) {
+        warnings.push(`${runName}: unsupported element force type ${curBlock.elementType} in subcase ${curBlock.subcaseId}.`);
+      }
+    }
     if (curBlock.sort === "UNKNOWN" && curBlock.entityIds.length > 0) {
       curBlock.sort = "SORT2";
     }
-    if (curBlock.complexRep === "UNKNOWN" && curBlock.dataLines.length > 2) {
+    if (curBlock.complexRep === "UNKNOWN" && curBlock.dataLines.length > 0) {
       curBlock.complexRep = inferComplexRep(curBlock);
     }
     if (curBlock.dataLines.length > 0 || curBlock.resultFamily === "XYPUNCH") {
@@ -452,17 +1055,26 @@ function scanBlocks(text, runName) {
     // is called.  We use a lookahead into rawLines[] to find the upcoming
     // $SUBCASE ID value so we can use it as the merge key.
     let lookaheadSubcase = curSubcase;
+    let lookaheadElemType = family === "ELEMENT_FORCES" ? normalizeElementType(curElemType) : null;
     if (family !== "XYPUNCH") {
       for (let j = curLineIdx + 1; j < Math.min(curLineIdx + 10, rawLines.length); j++) {
         const ahead = stripLineNumber(rawLines[j]);
         const sm = RE_SUBCASE.exec(ahead);
-        if (sm) { lookaheadSubcase = parseInt(sm[1], 10); break; }
+        if (sm) {
+          lookaheadSubcase = parseInt(sm[1], 10);
+          continue;
+        }
+        if (family === "ELEMENT_FORCES") {
+          const em = RE_ELEMTYPE.exec(ahead);
+          if (em) lookaheadElemType = normalizeElementType(em[1]);
+        }
         // Stop looking if we hit another result-type header or data
         if (RE_RESULT.exec(ahead) || RE_FREQ.exec(ahead)) break;
       }
     }
 
     if (curBlock && curBlock.resultFamily === family && curBlock.subcaseId === lookaheadSubcase
+        && (family !== "ELEMENT_FORCES" || normalizeElementType(curBlock.elementType) === lookaheadElemType)
         && family !== "XYPUNCH") {
       // Same block still open — just continue accumulating into it.
       return;
@@ -474,7 +1086,8 @@ function scanBlocks(text, runName) {
     // Check if the last finalised block matches (SORT1 merge).
     if (family !== "XYPUNCH" && blocks.length > 0) {
       const last = blocks[blocks.length - 1];
-      if (last.resultFamily === family && last.subcaseId === lookaheadSubcase) {
+      if (last.resultFamily === family && last.subcaseId === lookaheadSubcase
+          && (family !== "ELEMENT_FORCES" || normalizeElementType(last.elementType) === lookaheadElemType)) {
         // Reopen the last block — remove it from the finalised list and make
         // it the current block again so we can keep appending to it.
         blocks.pop();
@@ -483,7 +1096,7 @@ function scanBlocks(text, runName) {
         curBlock.title    = curTitle    || curBlock.title;
         curBlock.subtitle = curSubtitle || curBlock.subtitle;
         curBlock.label    = curLabel    || curBlock.label;
-        if (curElemType) curBlock.elementType = curElemType;
+        if (lookaheadElemType) curBlock.elementType = lookaheadElemType;
         return;
       }
     }
@@ -503,10 +1116,12 @@ function scanBlocks(text, runName) {
       subtitle:      curSubtitle,
       label:         curLabel,
       entityIds:     [],
-      elementType:   curElemType,
+      elementType:   lookaheadElemType,
       xypunchComp:   null,
       xypunchKind:   null,
       xypunchEntity: null,
+      sourceKind:    "PCH",
+      traceStore:    null,
       rawLines:      [],
       dataLines:     [],
     };
@@ -561,7 +1176,7 @@ function scanBlocks(text, runName) {
 
     // --- Element type ---
     if ((m = RE_ELEMTYPE.exec(line))) {
-      curElemType = m[1].toUpperCase();
+      curElemType = normalizeElementType(m[1]);
       if (curBlock) { curBlock.elementType = curElemType; curBlock.rawLines.push(line); }
       continue;
     }
@@ -648,17 +1263,13 @@ function scanBlocks(text, runName) {
         const trimmed = line.trim();
         if (trimmed && !trimmed.startsWith("$") && /^[\d.Ee+\-]/.test(trimmed)) {
           curBlock.dataLines.push(lineIdx);
-          // Collect entity IDs from SORT1 element force rows:
-          // Format: "  <entityId>  v1  v2  v3" (integer first, no G flag, no x-value)
-          // Distinguish from real-MSC SORT2 rows ("  <x_float>  v1  v2  v3") by checking
-          // whether the first token is a plain integer (no decimal point or exponent)
-          const tokens = trimmed.split(/\s+/);
-          if (tokens.length >= 2) {
-            const t0 = tokens[0];
-            const isPlainInt = /^\d+$/.test(t0);
-            if (isPlainInt) {
-              const eid = parseInt(t0, 10);
-              if (!curBlock.entityIds.includes(eid)) curBlock.entityIds.push(eid);
+          const row = parseElementForceRow(line);
+          if (row) {
+            if (row.entityId !== null && !curBlock.entityIds.includes(row.entityId)) {
+              curBlock.entityIds.push(row.entityId);
+            }
+            if (row.elementType && !curBlock.elementType) {
+              curBlock.elementType = row.elementType;
             }
           }
           continue;
@@ -694,7 +1305,7 @@ function scanBlocks(text, runName) {
     if (blk.domain === "UNKNOWN" && blk.dataLines.length > 0) {
       blk.domain = inferDomain(blk);
     }
-    if (blk.complexRep === "UNKNOWN" && blk.dataLines.length > 2) {
+    if (blk.complexRep === "UNKNOWN" && blk.dataLines.length > 0) {
       blk.complexRep = inferComplexRep(blk);
     }
   }
@@ -729,17 +1340,9 @@ function inferDomain(blk) {
     const xym = RE_XY_ROW.exec(line);
     if (xym) return parseFloat(xym[1]) > 0.5 ? "FREQUENCY_RESPONSE" : "TRANSIENT";
 
-    // Element force SORT2 rows: first token is float (frequency)
-    const trimmed = line.trim();
-    if (trimmed && !trimmed.startsWith("$") && !RE_CONT.test(line)) {
-      const tokens = trimmed.split(/\s+/);
-      if (tokens.length >= 2 && tokens[1] !== "G") {
-        const t0 = Number(tokens[0]);
-        if (!isNaN(t0) && !/^\d+$/.test(tokens[0])) {
-          // Float first token = SORT2 element force row with x-value
-          return t0 > 0.5 ? "FREQUENCY_RESPONSE" : "TRANSIENT";
-        }
-      }
+    const elemRow = parseElementForceRow(line);
+    if (elemRow && elemRow.xValue !== null) {
+      return elemRow.xValue > 0.5 ? "FREQUENCY_RESPONSE" : "TRANSIENT";
     }
   }
   return "UNKNOWN";
@@ -760,6 +1363,50 @@ function inferDomain(blk) {
  * @returns {string}
  */
 function inferComplexRep(blk) {
+  if (blk.resultFamily === "ELEMENT_FORCES") {
+    const descriptor = getElementForceDescriptor(resolveElementForceType(blk));
+    if (!descriptor) return "UNKNOWN";
+
+    let foundAnyPair = false;
+    let allFirstNonNeg = true;
+    let allSecondInRange = true;
+
+    for (let i = 0; i < blk.dataLines.length; i++) {
+      const line = blk.rawLines[blk.dataLines[i]];
+      const row = parseElementForceRow(line);
+      if (!row || row.values.length === 0) continue;
+
+      if (row.values.some(v => v < 0)) return "REAL_IMAG";
+      if (row.values.some(v => v < 0)) allFirstNonNeg = false;
+
+      if (descriptor.kind === "SCALAR") {
+        if (row.values.length >= 2) {
+          foundAnyPair = true;
+          if (Math.abs(row.values[1]) > 360) allSecondInRange = false;
+        }
+        continue;
+      }
+
+      const cont1Idx = i + 1 < blk.dataLines.length ? blk.dataLines[i + 1] : null;
+      const cont2Idx = i + 2 < blk.dataLines.length ? blk.dataLines[i + 2] : null;
+      if (cont1Idx === null || cont2Idx === null) continue;
+
+      const cont1Match = RE_CONT.exec(blk.rawLines[cont1Idx]);
+      const cont2Match = RE_CONT.exec(blk.rawLines[cont2Idx]);
+      if (!cont1Match || !cont2Match) continue;
+
+      const firstContVals = normalizeElementContValues(parseFloats(cont1Match[1]), 3);
+      const secondContVals = normalizeElementContValues(parseFloats(cont2Match[1]), 3);
+      if (firstContVals.some(v => v < 0)) return "REAL_IMAG";
+      foundAnyPair = true;
+      if (secondContVals.some(v => Math.abs(v) > 360)) allSecondInRange = false;
+    }
+
+    if (!foundAnyPair) return "UNKNOWN";
+    if (allFirstNonNeg && allSecondInRange) return "MAG_PHASE";
+    return "REAL_IMAG";
+  }
+
   let foundAnyPair   = false;
   let allFirstNonNeg = true;
   let allSecondInRange = true;
@@ -823,6 +1470,9 @@ function inferComplexRep(blk) {
  * @returns {TraceData|null}
  */
 function extractTraceData(block, entityId, component) {
+  if (block && block.traceStore) {
+    return block.traceStore[makeTraceStoreKey(entityId, component)] || null;
+  }
   if (block.resultFamily === "XYPUNCH") {
     return extractXYPunch(block, entityId, component);
   }
@@ -1155,6 +1805,8 @@ function extractGridVector(block, entityId, component) {
     component,
     entityId,
     domain:     block.domain,
+    storageKind: "COMPLEX",
+    lockedRepr: null,
     sourceLines: srcLines,
   };
 }
@@ -1200,12 +1852,14 @@ function extractXYPunch(block, entityId, component) {
     component:  blkComp,
     entityId,
     domain:     "FREQUENCY_RESPONSE",
+    storageKind: "COMPLEX",
+    lockedRepr: null,
     sourceLines: srcLines,
   };
 }
 
 // ---------------------------------------------------------------------------
-// Element force extraction (CBUSH / CELAS)
+// Element force extraction (CBUSH / CELAS1-4)
 // ---------------------------------------------------------------------------
 
 /**
@@ -1228,7 +1882,13 @@ function extractXYPunch(block, entityId, component) {
  * @returns {TraceData|null}
  */
 function extractElementForces(block, entityId, component) {
+  const elementType = resolveElementForceType(block);
+  const descriptor = getElementForceDescriptor(elementType);
+  if (!descriptor) return null;
+
   const compKey = component.toUpperCase();
+  if (!descriptor.components.includes(compKey)) return null;
+
   const compIdx = COMPONENT_INDEX[compKey];
   if (compIdx === undefined) return null;
 
@@ -1266,7 +1926,7 @@ function extractElementForces(block, entityId, component) {
     // CONT line
     const cm = RE_CONT.exec(line);
     if (cm && state !== "IDLE") {
-      const vals = cm[1].trim().split(/\s+/).map(Number).filter(v => !isNaN(v));
+      const vals = normalizeElementContValues(parseFloats(cm[1]), 3);
       if (state === "GOT_ROW1") {
         pendingRe[3] = vals[0] || 0;
         pendingRe[4] = vals[1] || 0;
@@ -1312,43 +1972,18 @@ function extractElementForces(block, entityId, component) {
     //   Format 1 (Synthetic):  "<entityId>  <TYPE>  <freq>  v1  v2  v3"  (entity ID + type keyword + freq)
     //   Format 2 (Real SORT2): "<freq>  v1  v2  v3"                       (float frequency first)
     //   Format 3 (Real SORT1): "<entityId>  v1  v2  v3"                   (plain integer entity ID first, x from $FREQUENCY)
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("$")) continue;
-    // Skip CONT lines (already handled above)
-    if (/^-?CONT[-\s]/i.test(trimmed)) continue;
+    const row = parseElementForceRow(line);
+    if (!row || !row.values || row.values.length < 1) continue;
+    if (row.elementType && row.elementType !== elementType) { state = "IDLE"; continue; }
+    if (row.entityId !== null && row.entityId !== entityId) { state = "IDLE"; continue; }
 
-    const tokens = trimmed.split(/\s+/);
-    if (tokens.length < 2) continue;
-    // Skip grid rows (have G flag)
-    if (tokens[1] === "G") continue;
-
-    let freq = null;
-    let dataVals = null;
-
-    const t0 = tokens[0];
-    const t0Int = parseInt(t0, 10);
-    const t0IsPlainInt = /^\d+$/.test(t0);  // no decimal point or exponent
-    const t1IsType = tokens[1] && /^[A-Za-z]/.test(tokens[1]) && isNaN(Number(tokens[1]));
-
-    if (t0IsPlainInt && t1IsType && tokens.length >= 4) {
-      // Format 1 (Synthetic): entity ID + type keyword + freq + vals
-      if (t0Int !== entityId) { state = "IDLE"; continue; }
-      freq = Number(tokens[2]);
-      if (isNaN(freq)) continue;
-      dataVals = tokens.slice(3).map(Number).filter(v => !isNaN(v));
-    } else if (t0IsPlainInt && !t1IsType) {
-      // Format 3 (Real SORT1): entity ID first, x from $FREQUENCY
-      if (t0Int !== entityId) { state = "IDLE"; continue; }
+    let freq = row.xValue;
+    if (row.entityId !== null && row.xValue === null) {
       freq = lastFreq !== null ? lastFreq : 0;
-      dataVals = tokens.slice(1).map(Number).filter(v => !isNaN(v));
-    } else {
-      // Format 2 (Real SORT2): float frequency first
-      freq = Number(t0);
-      if (isNaN(freq)) continue;
-      dataVals = tokens.slice(1).map(Number).filter(v => !isNaN(v));
     }
+    if (freq === null || isNaN(freq)) continue;
 
-    if (!dataVals || dataVals.length < 1) continue;
+    const dataVals = row.values;
 
     pendingX      = freq;
     pendingRe[0]  = dataVals[0] || 0;
@@ -1358,16 +1993,18 @@ function extractElementForces(block, entityId, component) {
     pendingIm     = [0, 0, 0, 0, 0, 0];
 
     // CELAS: only 2 data values (re, im) — emit immediately
-    if (dataVals.length === 2) {
+    if (descriptor.kind === "SCALAR") {
+      if (dataVals.length < 2) continue;
       xArr.push(freq);
       reArr.push(dataVals[0]);
       imArr.push(dataVals[1]);
       srcLines.push(line);
       state = "IDLE";
-    } else {
-      state = "GOT_ROW1";
-      srcLines.push(line);
+      continue;
     }
+
+    state = "GOT_ROW1";
+    srcLines.push(line);
   }
 
   if (xArr.length === 0) return null;
@@ -1381,6 +2018,8 @@ function extractElementForces(block, entityId, component) {
     component,
     entityId,
     domain:     block.domain,
+    storageKind: "COMPLEX",
+    lockedRepr: null,
     sourceLines: srcLines,
   };
 }
@@ -1402,6 +2041,18 @@ function computeRepresentation(td, repr) {
   const n   = td.x.length;
   const x   = Array.from(td.x);
   const y   = new Array(n);
+
+  if (td.storageKind === "DERIVED") {
+    for (let i = 0; i < n; i++) y[i] = td.re[i];
+    return {
+      x,
+      y,
+      effectiveRepr: td.lockedRepr || repr,
+      requestedRepr: repr,
+      isLocked: !!td.lockedRepr && td.lockedRepr !== repr,
+    };
+  }
+
   const isMAP = td.complexRep === "MAG_PHASE";
 
   function getRe(i)  { return isMAP ? td.re[i] * Math.cos(td.im[i] * Math.PI / 180) : td.re[i]; }
@@ -1450,7 +2101,7 @@ function computeRepresentation(td, repr) {
       for (let i = 0; i < n; i++) y[i] = getMag(i);
   }
 
-  return { x, y };
+  return { x, y, effectiveRepr: repr, requestedRepr: repr, isLocked: false };
 }
 
 // ---------------------------------------------------------------------------
@@ -1473,7 +2124,15 @@ function parsePCH(text, runName) {
 // Module export
 // ---------------------------------------------------------------------------
 
-const PCHParser = { parsePCH, extractTraceData, computeRepresentation, componentLabels };
+const PCHParser = {
+  parsePCH,
+  parseSpreadsheetText,
+  parseWorkbook,
+  extractTraceData,
+  computeRepresentation,
+  componentLabels,
+  componentLabelsForBlock,
+};
 
 if (typeof module !== "undefined" && module.exports) {
   module.exports = PCHParser;
