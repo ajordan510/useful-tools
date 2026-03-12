@@ -969,7 +969,7 @@ function parseWorkbook(fileName, workbook, xlsxApi) {
     throw new Error(`${fileName}: invalid workbook data.`);
   }
 
-  const runs = [];
+  const allRuns = [];
   const workbookWarnings = [];
   workbook.SheetNames.forEach(sheetName => {
     const sheet = workbook.Sheets[sheetName];
@@ -977,20 +977,37 @@ function parseWorkbook(fileName, workbook, xlsxApi) {
       workbookWarnings.push(`${fileName} [${sheetName}]: worksheet is missing.`);
       return;
     }
-    const csv = api.utils.sheet_to_csv(sheet, { blankrows: true });
+    let csv = api.utils.sheet_to_csv(sheet, { blankrows: true });
+    // Strip BOM if present
+    if (csv.length > 0 && csv.charCodeAt(0) === 0xFEFF) csv = csv.slice(1);
     const parsed = parseSpreadsheetCsv(fileName, csv, sheetName);
     if (parsed.runs.length === 0) {
       workbookWarnings.push(...parsed.warnings);
       return;
     }
-    runs.push(...parsed.runs);
+    // Each sheet becomes its own run, labeled "[sheetName] fileName"
+    parsed.runs.forEach((run, idx) => {
+      const label = parsed.runs.length > 1
+        ? `[${sheetName}] ${fileName} (${idx + 1})`
+        : `[${sheetName}] ${fileName}`;
+      run.runName = label;
+      run.displayName = label;
+      run.title = label;
+      run.importFileName = fileName;
+      run.importSheetName = sheetName;
+      run.blocks.forEach(block => {
+        block.title = label;
+        block.subtitle = sheetName;
+      });
+    });
+    allRuns.push(...parsed.runs);
   });
 
-  if (runs.length === 0) {
+  if (allRuns.length === 0) {
     throw new Error(workbookWarnings[0] || `${fileName}: no importable worksheets found.`);
   }
-  if (workbookWarnings.length) runs[0].warnings.push(...workbookWarnings);
-  return runs;
+  if (workbookWarnings.length) allRuns[0].warnings.push(...workbookWarnings);
+  return allRuns;
 }
 
 // ---------------------------------------------------------------------------
