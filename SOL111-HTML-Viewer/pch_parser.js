@@ -712,50 +712,62 @@ function parseSpreadsheetCsv(fileName, textOrRows, sheetName) {
   const prefix = sheetName ? `${fileName} [${sheetName}]` : fileName;
   const rows = Array.isArray(textOrRows) ? textOrRows : parseCsvRows(textOrRows);
   const warnings = [];
-  if (rows.length < 7) {
+  if (rows.length < 3) {
     return { runs: [], warnings: [`${prefix}: not enough rows for exported spreadsheet format.`] };
   }
 
-  const baseLabels = ["Source File", "Subcase", "Result Family", "Entity ID", "Direction"];
-  for (let i = 0; i < baseLabels.length; i++) {
-    if (String(csvCell(rows, i, 0)).trim() !== baseLabels[i]) {
-      return { runs: [], warnings: [`${prefix}: missing required metadata row "${baseLabels[i]}".`] };
+  // Scan for metadata rows by label, skipping blank rows.
+  // This handles both compact CSVs (no blank rows) and spaced CSVs
+  // (blank/comma-only rows between metadata rows).
+  const metaLabels = {
+    "Source File": null, "Subcase": null, "Result Family": null,
+    "Entity ID": null, "Direction": null,
+    "Element Type": null, "Representation": null,
+  };
+  let headerRowIdx = -1;
+  for (let r = 0; r < rows.length; r++) {
+    const label = String(csvCell(rows, r, 0)).trim();
+    if (!label) continue; // skip blank rows
+    if (label in metaLabels) {
+      metaLabels[label] = r;
+    } else if (label === "Frequency_Hz") {
+      headerRowIdx = r;
+      break;
     }
   }
-  let elementTypeRowIdx = null;
-  let representationRowIdx = 5;
-  if (String(csvCell(rows, 5, 0)).trim() === "Element Type") {
-    elementTypeRowIdx = 5;
-    representationRowIdx = 6;
+
+  const requiredLabels = ["Source File", "Subcase", "Result Family", "Entity ID", "Direction", "Representation"];
+  for (const req of requiredLabels) {
+    if (metaLabels[req] === null) {
+      return { runs: [], warnings: [`${prefix}: missing required metadata row "${req}".`] };
+    }
   }
-  if (String(csvCell(rows, representationRowIdx, 0)).trim() !== "Representation") {
-    return { runs: [], warnings: [`${prefix}: missing required metadata row "Representation".`] };
+  const sourceFileRowIdx = metaLabels["Source File"];
+  const subcaseRowIdx = metaLabels["Subcase"];
+  const familyRowIdx = metaLabels["Result Family"];
+  const entityIdRowIdx = metaLabels["Entity ID"];
+  const directionRowIdx = metaLabels["Direction"];
+  const elementTypeRowIdx = metaLabels["Element Type"];
+  const representationRowIdx = metaLabels["Representation"];
+
+  if (headerRowIdx < 0) {
+    return { runs: [], warnings: [`${prefix}: missing "Frequency_Hz" header row.`] };
   }
 
-  let headerRowIdx = representationRowIdx + 1;
-  while (headerRowIdx < rows.length && rows[headerRowIdx].every(cell => String(cell || "").trim() === "")) {
-    headerRowIdx++;
-  }
-  if (headerRowIdx >= rows.length) {
-    return { runs: [], warnings: [`${prefix}: missing column header row.`] };
-  }
-  if (String(csvCell(rows, headerRowIdx, 0)).trim() !== "Frequency_Hz") {
-    return { runs: [], warnings: [`${prefix}: expected first data header cell to be "Frequency_Hz".`] };
-  }
-
-  const xValues = [];
-  const metadataRowCount = Math.max(representationRowIdx + 1, elementTypeRowIdx === null ? 0 : elementTypeRowIdx + 1);
+  // Collect all metadata row indices for column count calculation
+  const metaRowIndices = Object.values(metaLabels).filter(v => v !== null);
   const columnCount = Math.max(
     rows[headerRowIdx].length,
-    ...Array.from({ length: metadataRowCount }, (_, idx) => (rows[idx] ? rows[idx].length : 0))
+    ...metaRowIndices.map(idx => (rows[idx] ? rows[idx].length : 0))
   );
+  const xValues = [];
   const dataColumns = [];
   for (let col = 1; col < columnCount; col++) {
-    const sourceFile = String(csvCell(rows, 0, col)).trim();
-    const subcaseId = parseSpreadsheetSubcase(csvCell(rows, 1, col));
-    const family = normalizeSpreadsheetFamily(csvCell(rows, 2, col));
-    const entityId = parseSpreadsheetEntity(csvCell(rows, 3, col));
-    const component = normalizeComponentLabel(csvCell(rows, 4, col));
+    const sourceFile = String(csvCell(rows, sourceFileRowIdx, col)).trim();
+    const subcaseId = parseSpreadsheetSubcase(csvCell(rows, subcaseRowIdx, col));
+    const family = normalizeSpreadsheetFamily(csvCell(rows, familyRowIdx, col));
+    const entityId = parseSpreadsheetEntity(csvCell(rows, entityIdRowIdx, col));
+    const component = normalizeComponentLabel(csvCell(rows, directionRowIdx, col));
     const elementType = family === "ELEMENT_FORCES"
       ? (normalizeElementType(elementTypeRowIdx === null ? "" : csvCell(rows, elementTypeRowIdx, col))
         || inferElementForceTypeFromComponent(component))
