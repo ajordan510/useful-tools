@@ -28,6 +28,8 @@ const FIXTURES = path.join(__dirname, "test_fixtures");
 let passed = 0;
 let failed = 0;
 
+(async function main() {
+
 function assert(cond, msg) {
   if (cond) {
     console.log(`  ✓  ${msg}`);
@@ -69,6 +71,10 @@ function loadSpreadsheet(filename) {
   return fs.readFileSync(path.join(FIXTURES, filename), "utf8");
 }
 
+function loadSpreadsheetBuffer(filename) {
+  return fs.readFileSync(path.join(FIXTURES, filename));
+}
+
 // ---------------------------------------------------------------------------
 // Test helpers
 // ---------------------------------------------------------------------------
@@ -100,24 +106,38 @@ function csvRow(cells) {
   return cells.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",");
 }
 
-function buildSpreadsheetCsv(columns, dataRows) {
+function buildSpreadsheetCsv(columns, dataRows, options) {
+  const opts = options || {};
+  const delimiter = opts.delimiter || ",";
+  const leadingCols = opts.leadingCols || 0;
+  const blankRowsBetweenMeta = opts.blankRowsBetweenMeta || 0;
+  const blankRowsBeforeHeader = opts.blankRowsBeforeHeader || 0;
   const includeElementType = columns.some(c => Object.prototype.hasOwnProperty.call(c, "elementType"));
+  const pad = cells => new Array(leadingCols).fill("").concat(cells);
+  const joinRow = cells => cells.map(v => `"${String(v).replace(/"/g, '""')}"`).join(delimiter);
   const metaRows = [
-    ["Source File", ...columns.map(c => c.sourceFile)],
-    ["Subcase", ...columns.map(c => `SC ${c.subcaseId}`)],
-    ["Result Family", ...columns.map(c => c.family)],
-    ["Entity ID", ...columns.map(c => `ID ${c.entityId}`)],
-    ["Direction", ...columns.map(c => c.component)],
+    [opts.sourceFileLabel || "Source File", ...columns.map(c => c.sourceFile === undefined ? "" : c.sourceFile)],
+    [opts.subcaseLabel || "Subcase", ...columns.map(c => c.subcaseRaw !== undefined ? c.subcaseRaw : `SC ${c.subcaseId}`)],
+    [opts.familyLabel || "Result Family", ...columns.map(c => c.family)],
+    [opts.entityLabel || "Entity ID", ...columns.map(c => c.entityRaw !== undefined ? c.entityRaw : `ID ${c.entityId}`)],
+    [opts.directionLabel || "Direction", ...columns.map(c => c.component)],
   ];
   if (includeElementType) {
-    metaRows.push(["Element Type", ...columns.map(c => c.elementType || "")]);
+    metaRows.push([opts.elementTypeLabel || "Element Type", ...columns.map(c => c.elementType || "")]);
   }
-  metaRows.push(["Representation", ...columns.map(c => c.reprLabel)]);
-  const header = ["Frequency_Hz", ...columns.map(c => c.header)];
-  const lines = metaRows.map(csvRow);
-  lines.push("");
-  lines.push(csvRow(header));
-  dataRows.forEach(row => lines.push(row.join(",")));
+  metaRows.push([opts.representationLabel || "Representation", ...columns.map(c => c.reprLabel)]);
+  const header = [opts.axisLabel || "Frequency_Hz", ...columns.map(c => c.header)];
+  const lines = [];
+  const blankLine = new Array(leadingCols + header.length).fill("").map(v => `"${v}"`).join(delimiter);
+  metaRows.forEach((row, idx) => {
+    lines.push(joinRow(pad(row)));
+    if (idx < metaRows.length - 1) {
+      for (let i = 0; i < blankRowsBetweenMeta; i++) lines.push(blankLine);
+    }
+  });
+  for (let i = 0; i < blankRowsBeforeHeader; i++) lines.push(blankLine);
+  lines.push(joinRow(pad(header)));
+  dataRows.forEach(row => lines.push(joinRow(pad(row))));
   return lines.join("\n");
 }
 
@@ -542,36 +562,118 @@ console.log("\n=== Spreadsheet: display representation lock ===");
 }
 
 // ---------------------------------------------------------------------------
+// Spreadsheet import: Excel-authored CSV variants
+// ---------------------------------------------------------------------------
+console.log("\n=== Spreadsheet: Excel-authored CSV variants ===");
+{
+  const variantColumns = [
+    { sourceFile: "", subcaseId: 7, subcaseRaw: "7", family: "Acceleration", entityId: 2001, entityRaw: "2001", component: "T1", reprLabel: " real ", header: "excel|re" },
+    { sourceFile: "", subcaseId: 7, subcaseRaw: "7", family: "Acceleration", entityId: 2001, entityRaw: "2001", component: "T1", reprLabel: "Imaginary", header: "excel|im" },
+  ];
+  const semicolonCsv = buildSpreadsheetCsv(
+    variantColumns,
+    [["1,5", "10,25", "0,5"], ["2,5", "20,5", "1,5"]],
+    {
+      delimiter: ";",
+      leadingCols: 1,
+      blankRowsBetweenMeta: 1,
+      blankRowsBeforeHeader: 1,
+      sourceFileLabel: " source file : ",
+      subcaseLabel: " SUBCASE ",
+      familyLabel: " result family ",
+      entityLabel: " Entity ID ",
+      directionLabel: " direction ",
+      representationLabel: " representation ",
+      axisLabel: " frequency hz ",
+    }
+  );
+  const variantRuns = PCHParser.parseSpreadsheetText("excel_semicolon.csv", semicolonCsv);
+  assertEqual(variantRuns.length, 1, "Semicolon-delimited CSV imports");
+  assert(variantRuns[0].warnings.some(w => w.includes("Source File metadata")), "Blank Source File falls back to spreadsheet file name");
+  const variantTd = PCHParser.extractTraceData(variantRuns[0].blocks[0], 2001, "T1");
+  assert(variantTd !== null, "Semicolon-delimited CSV trace extracts");
+  if (variantTd) {
+    assertEqual(variantTd.x[0], 1.5, "Decimal-comma frequency is parsed");
+    assertEqual(variantTd.re[0], 10.25, "Decimal-comma data is parsed");
+    assertEqual(variantTd.im[1], 1.5, "Imaginary decimal-comma data is parsed");
+  }
+
+  const tabCsv = buildSpreadsheetCsv(
+    [
+      { sourceFile: "", subcaseId: 8, subcaseRaw: 8, family: "SPCF", entityId: 44, entityRaw: 44, component: "Fz", reprLabel: "Magnitude", header: "tab|mag" },
+    ],
+    [["5", "100"], ["10", "200"]],
+    {
+      delimiter: "\t",
+      leadingCols: 2,
+      blankRowsBeforeHeader: 1,
+    }
+  );
+  const tabRuns = PCHParser.parseSpreadsheetText("excel_tab.csv", tabCsv);
+  const tabTd = PCHParser.extractTraceData(tabRuns[0].blocks[0], 44, "Fz");
+  assert(tabTd !== null, "Tab-delimited CSV trace extracts");
+  if (tabTd) {
+    assertEqual(tabTd.storageKind, "DERIVED", "Tab-delimited derived import preserves storage kind");
+    assertEqual(tabTd.lockedRepr, "MAGNITUDE", "Tab-delimited derived import preserves representation lock");
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Spreadsheet import: workbook multi-sheet
 // ---------------------------------------------------------------------------
 console.log("\n=== Spreadsheet: workbook import ===");
 {
-  const validA = buildSpreadsheetCsv(
-    [
-      { sourceFile: "wb_a.pch", subcaseId: 1, family: "ACCELERATION", entityId: 11, component: "T1", reprLabel: "Real", header: "wb_a.pch|SC1|ID11|T1|Re" },
-      { sourceFile: "wb_a.pch", subcaseId: 1, family: "ACCELERATION", entityId: 11, component: "T1", reprLabel: "Imaginary", header: "wb_a.pch|SC1|ID11|T1|Im" },
-    ],
-    [["1", "1", "0"], ["2", "2", "0"]]
-  );
-  const validB = buildSpreadsheetCsv(
-    [
-      { sourceFile: "wb_b.pch", subcaseId: 2, family: "SPCF", entityId: 22, component: "Fz", reprLabel: "Real", header: "wb_b.pch|SC2|ID22|Fz|Re" },
-      { sourceFile: "wb_b.pch", subcaseId: 2, family: "SPCF", entityId: 22, component: "Fz", reprLabel: "Imaginary", header: "wb_b.pch|SC2|ID22|Fz|Im" },
-    ],
-    [["3", "3", "0"], ["4", "4", "0"]]
-  );
+  const validA = [
+    ["", "Source File", "wb_a.pch", "wb_a.pch"],
+    ["", "Subcase", "SC 1", "SC 1"],
+    ["", "Result Family", "ACCELERATION", "ACCELERATION"],
+    ["", "Entity ID", "ID 11", "ID 11"],
+    ["", "Direction", "T1", "T1"],
+    ["", "Representation", "Real", "Imaginary"],
+    ["", "", "", ""],
+    ["", "Frequency_Hz", "wb_a.pch|SC1|ID11|T1|Re", "wb_a.pch|SC1|ID11|T1|Im"],
+    ["", 1, 1, 0],
+    ["", 2, 2, 0],
+  ];
+  const validB = [
+    ["", "Source File", "", ""],
+    ["", "Subcase", 2, 2],
+    ["", "Result Family", "SPCF", "SPCF"],
+    ["", "Entity ID", 22, 22],
+    ["", "Direction", "Fz", "Fz"],
+    ["", "Representation", "Real", "Imaginary"],
+    ["", "Frequency_Hz", "wb_b.pch|SC2|ID22|Fz|Re", "wb_b.pch|SC2|ID22|Fz|Im"],
+    ["", 3, 3, 0],
+    ["", 4, 4, 0],
+  ];
   const workbook = {
     SheetNames: ["ValidA", "Invalid", "ValidB"],
     Sheets: {
-      ValidA: { csv: validA },
-      Invalid: { csv: "not,a,valid,export" },
-      ValidB: { csv: validB },
+      ValidA: validA,
+      Invalid: [["not", "a", "valid", "export"]],
+      ValidB: validB,
     },
   };
-  const fakeXlsx = { utils: { sheet_to_csv: sheet => sheet.csv } };
-  const runs = PCHParser.parseWorkbook("workbook.xlsx", workbook, fakeXlsx);
+  const runs = PCHParser.parseWorkbook("workbook.xlsx", workbook);
   assertEqual(runs.length, 2, "Workbook import returns valid sheets only");
   assert(runs[0].warnings.some(w => w.includes("Invalid")), "Workbook import records invalid sheet warning");
+  assert(runs[1].warnings.some(w => w.includes("Source File metadata")), "Workbook import records Source File fallback warning");
+  assertIncludes(runs[0].displayName, "Spreadsheet", "Workbook import display name identifies spreadsheet origin");
+}
+
+// ---------------------------------------------------------------------------
+// Spreadsheet import: real XLSX fixture
+// ---------------------------------------------------------------------------
+console.log("\n=== Spreadsheet: XLSX fixture import ===");
+{
+  const runs = await PCHParser.parseWorkbookBuffer("pch_export_example.xlsx", loadSpreadsheetBuffer("pch_export_example.xlsx"));
+  assertGt(runs.length, 0, "Real XLSX fixture imports through standalone parser");
+  const run = runs.find(r => (r.displayName || "").includes("pch_export_example.xlsx"));
+  assert(run !== undefined, "Real XLSX fixture keeps spreadsheet display naming");
+  if (run) {
+    const block = run.blocks.find(b => b.resultFamily === "DISPLACEMENT");
+    assert(block !== undefined, "Real XLSX fixture contains displacement data");
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -590,7 +692,7 @@ console.log("\n=== Spreadsheet: validation failures ===");
   ].join("\n");
   assertThrows(
     () => PCHParser.parseSpreadsheetText("missing_meta.csv", missingMeta),
-    "missing required metadata row",
+    "no recognized metadata/header block found",
     "Missing metadata rows are rejected"
   );
 
@@ -636,3 +738,7 @@ if (failed > 0) {
 } else {
   console.log("ALL TESTS PASSED");
 }
+})().catch(err => {
+  console.error(err && err.stack ? err.stack : err);
+  process.exit(1);
+});

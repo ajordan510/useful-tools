@@ -182,6 +182,37 @@ const REPR_LABEL_TO_KEY = {
   "PHASE UNWRAPPED (DEG)": "PHASE_UNWRAPPED",
 };
 
+const SPREADSHEET_LABEL_ALIASES = {
+  "SOURCE FILE": "SOURCE FILE",
+  "SOURCEFILE": "SOURCE FILE",
+  "SUBCASE": "SUBCASE",
+  "SUBCASE ID": "SUBCASE",
+  "SUBCASEID": "SUBCASE",
+  "RESULT FAMILY": "RESULT FAMILY",
+  "RESULTFAMILY": "RESULT FAMILY",
+  "ENTITY ID": "ENTITY ID",
+  "ENTITYID": "ENTITY ID",
+  "DIRECTION": "DIRECTION",
+  "COMPONENT": "DIRECTION",
+  "ELEMENT TYPE": "ELEMENT TYPE",
+  "ELEMENTTYPE": "ELEMENT TYPE",
+  "REPRESENTATION": "REPRESENTATION",
+  "FREQUENCY HZ": "FREQUENCY_HZ",
+  "FREQUENCY_HZ": "FREQUENCY_HZ",
+  "FREQUENCY": "FREQUENCY_HZ",
+  "TIME": "TIME",
+  "TIME SEC": "TIME_SEC",
+  "TIME_SEC": "TIME_SEC",
+};
+
+const SPREADSHEET_REQUIRED_LABELS = [
+  "SUBCASE",
+  "RESULT FAMILY",
+  "ENTITY ID",
+  "DIRECTION",
+  "REPRESENTATION",
+];
+
 // ---------------------------------------------------------------------------
 // Regex patterns
 // ---------------------------------------------------------------------------
@@ -544,13 +575,71 @@ function inferElementForceTypeFromTraceStore(block) {
   return null;
 }
 
-function parseCsvRows(text) {
+function normalizeSpreadsheetWhitespace(value) {
+  return String(value === undefined || value === null ? "" : value)
+    .replace(/^\uFEFF/, "")
+    .replace(/\u00A0/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeSpreadsheetLabel(value) {
+  return normalizeSpreadsheetWhitespace(value)
+    .replace(/\s*:\s*$/, "")
+    .toUpperCase();
+}
+
+function canonicalSpreadsheetLabel(value) {
+  return SPREADSHEET_LABEL_ALIASES[normalizeSpreadsheetLabel(value)] || null;
+}
+
+function detectCsvDelimiter(text) {
+  const src = String(text || "").replace(/^\uFEFF/, "");
+  const candidates = [",", ";", "\t"];
+  const scores = {};
+  candidates.forEach(delim => { scores[delim] = 0; });
+  let inQuotes = false;
+  let lineCount = 0;
+
+  for (let i = 0; i < src.length && lineCount < 25; i++) {
+    const ch = src[i];
+    if (ch === "\"") {
+      if (inQuotes && src[i + 1] === "\"") {
+        i++;
+        continue;
+      }
+      inQuotes = !inQuotes;
+      continue;
+    }
+    if (!inQuotes && scores[ch] !== undefined) {
+      scores[ch]++;
+      continue;
+    }
+    if (!inQuotes && (ch === "\n" || ch === "\r")) {
+      lineCount++;
+      if (ch === "\r" && src[i + 1] === "\n") i++;
+    }
+  }
+
+  let best = ",";
+  let bestScore = -1;
+  candidates.forEach(delim => {
+    if (scores[delim] > bestScore) {
+      best = delim;
+      bestScore = scores[delim];
+    }
+  });
+  return best;
+}
+
+function parseCsvRows(text, delimiter) {
   const rows = [];
   let row = [];
   let cell = "";
   let i = 0;
   let inQuotes = false;
   const src = String(text || "").replace(/^\uFEFF/, "");
+  const delim = delimiter || detectCsvDelimiter(src);
 
   while (i < src.length) {
     const ch = src[i];
@@ -573,7 +662,7 @@ function parseCsvRows(text) {
       i++;
       continue;
     }
-    if (ch === ",") {
+    if (ch === delim) {
       row.push(cell);
       cell = "";
       i++;
@@ -604,7 +693,14 @@ function parseCsvRows(text) {
     row.push(cell);
     rows.push(row);
   }
+  rows.csvDelimiter = delim;
   return rows;
+}
+
+function normalizeSpreadsheetRows(rows) {
+  return (Array.isArray(rows) ? rows : []).map(row => (
+    Array.isArray(row) ? row.map(cell => cell === undefined || cell === null ? "" : cell) : [row]
+  ));
 }
 
 function csvCell(rows, rowIdx, colIdx) {
@@ -612,29 +708,80 @@ function csvCell(rows, rowIdx, colIdx) {
 }
 
 function normalizeSpreadsheetFamily(value) {
-  const raw = String(value || "").trim().replace(/\s+/g, " ").toUpperCase();
+  const raw = normalizeSpreadsheetLabel(value).replace(/[-\s]+/g, "_");
   return RESULT_FAMILIES[raw] || raw;
 }
 
+function parseSpreadsheetInteger(value, prefixRegex) {
+  if (typeof value === "number" && isFinite(value)) return Math.trunc(value);
+  const raw = normalizeSpreadsheetWhitespace(value);
+  if (!raw) return null;
+  const prefixed = prefixRegex ? raw.match(prefixRegex) : null;
+  if (prefixed) return parseInt(prefixed[1], 10);
+  const num = parseSpreadsheetNumber(raw);
+  if (isFinite(num)) return Math.trunc(num);
+  const generic = raw.match(/-?\d+/);
+  return generic ? parseInt(generic[0], 10) : null;
+}
+
 function parseSpreadsheetSubcase(value) {
-  const m = String(value || "").trim().match(/^SC\s*(\d+)$/i);
-  return m ? parseInt(m[1], 10) : null;
+  return parseSpreadsheetInteger(value, /^(?:SC|SUBCASE)\s*[:=]?\s*(-?\d+)$/i);
 }
 
 function parseSpreadsheetEntity(value) {
-  const m = String(value || "").trim().match(/^ID\s*(\d+)$/i);
-  return m ? parseInt(m[1], 10) : null;
+  return parseSpreadsheetInteger(value, /^(?:ID|ENTITY(?:\s+ID)?)\s*[:=]?\s*(-?\d+)$/i);
 }
 
 function parseRepresentationLabel(value) {
-  const key = String(value || "").trim().toUpperCase();
-  return REPR_LABEL_TO_KEY[key] || null;
+  const key = normalizeSpreadsheetLabel(value).replace(/[-\s]+/g, "_");
+  if (!key) return null;
+  if (REPR_LABEL_TO_KEY[key]) return REPR_LABEL_TO_KEY[key];
+  if (key === "IMAGINARY") return "IMAG";
+  if (key === "REAL_PART") return "REAL";
+  if (key === "IMAG_PART" || key === "IMAGINARY_PART") return "IMAG";
+  if (key === "MAG" || key === "ABS") return "MAGNITUDE";
+  if (key === "PHASE_DEG" || key === "PHASE_DEGREES") return "PHASE";
+  if (key === "DB20" || key === "DECIBELS") return "DB";
+  return null;
+}
+
+function normalizeSpreadsheetNumericString(value) {
+  let raw = normalizeSpreadsheetWhitespace(value)
+    .replace(/[−–—]/g, "-")
+    .replace(/\s+/g, "");
+  if (!raw) return "";
+  if (/[.,]/.test(raw)) {
+    const lastComma = raw.lastIndexOf(",");
+    const lastDot = raw.lastIndexOf(".");
+    if (lastComma >= 0 && lastDot >= 0) {
+      if (lastComma > lastDot) {
+        raw = raw.replace(/\./g, "").replace(",", ".");
+      } else {
+        raw = raw.replace(/,/g, "");
+      }
+    } else if (lastComma >= 0) {
+      const commaCount = (raw.match(/,/g) || []).length;
+      if (commaCount === 1) {
+        const fractional = raw.length - lastComma - 1;
+        raw = fractional === 3 && /^\d{1,3}(,\d{3})+$/.test(raw)
+          ? raw.replace(/,/g, "")
+          : raw.replace(",", ".");
+      } else {
+        raw = raw.replace(/\./g, "").replace(/,/g, "");
+      }
+    } else {
+      const dotCount = (raw.match(/\./g) || []).length;
+      if (dotCount > 1) raw = raw.replace(/\./g, "");
+    }
+  }
+  return raw;
 }
 
 function parseSpreadsheetNumber(value) {
-  const trimmed = String(value === undefined || value === null ? "" : value).trim();
-  if (!trimmed) return NaN;
-  const num = Number(trimmed);
+  if (typeof value === "number") return isFinite(value) ? value : NaN;
+  const normalized = normalizeSpreadsheetNumericString(value);
+  if (!normalized) return NaN;
+  const num = Number(normalized);
   return isNaN(num) ? NaN : num;
 }
 
@@ -708,77 +855,109 @@ function finalizeSpreadsheetRun(run) {
   return run;
 }
 
-function parseSpreadsheetCsv(fileName, textOrRows, sheetName) {
+function isSpreadsheetAxisHeader(value) {
+  const label = normalizeSpreadsheetLabel(value).replace(/[-\s]+/g, "_");
+  return label === "FREQUENCY_HZ" || label === "FREQUENCY" || label === "TIME" || label === "TIME_SEC";
+}
+
+function scanSpreadsheetRegions(rows) {
+  const candidates = [];
+  for (let rowIdx = 0; rowIdx < rows.length; rowIdx++) {
+    const row = rows[rowIdx] || [];
+    for (let colIdx = 0; colIdx < row.length; colIdx++) {
+      if (!isSpreadsheetAxisHeader(row[colIdx])) continue;
+      const labelRows = {};
+      for (let scan = rowIdx - 1; scan >= 0 && rowIdx - scan <= 32; scan--) {
+        const label = canonicalSpreadsheetLabel(csvCell(rows, scan, colIdx));
+        if (!label || labelRows[label] !== undefined) continue;
+        labelRows[label] = scan;
+      }
+      const hasRequired = SPREADSHEET_REQUIRED_LABELS.every(label => labelRows[label] !== undefined);
+      if (!hasRequired) continue;
+      const startRow = Math.min(rowIdx, ...Object.values(labelRows));
+      candidates.push({
+        anchorCol: colIdx,
+        headerRowIdx: rowIdx,
+        startRow,
+        labelRows,
+      });
+    }
+  }
+  candidates.sort((a, b) => {
+    if (a.startRow !== b.startRow) return a.startRow - b.startRow;
+    if (a.anchorCol !== b.anchorCol) return a.anchorCol - b.anchorCol;
+    return a.headerRowIdx - b.headerRowIdx;
+  });
+  return candidates.filter((candidate, idx) => {
+    if (idx === 0) return true;
+    const prev = candidates[idx - 1];
+    return candidate.startRow !== prev.startRow ||
+      candidate.anchorCol !== prev.anchorCol ||
+      candidate.headerRowIdx !== prev.headerRowIdx;
+  });
+}
+
+function parseSpreadsheetRows(fileName, rows, sheetName, options) {
   const prefix = sheetName ? `${fileName} [${sheetName}]` : fileName;
-  const rows = Array.isArray(textOrRows) ? textOrRows : parseCsvRows(textOrRows);
+  const normalizedRows = normalizeSpreadsheetRows(rows);
   const warnings = [];
-  if (rows.length < 3) {
-    return { runs: [], warnings: [`${prefix}: not enough rows for exported spreadsheet format.`] };
+
+  if (normalizedRows.length < 3) {
+    return { runs: [], warnings: [`${prefix}: not enough rows for spreadsheet import.`] };
   }
 
-  // Scan for metadata rows by label, skipping blank rows.
-  // This handles both compact CSVs (no blank rows) and spaced CSVs
-  // (blank/comma-only rows between metadata rows).
-  const metaLabels = {
-    "Source File": null, "Subcase": null, "Result Family": null,
-    "Entity ID": null, "Direction": null,
-    "Element Type": null, "Representation": null,
-  };
-  let headerRowIdx = -1;
-  for (let r = 0; r < rows.length; r++) {
-    const label = String(csvCell(rows, r, 0)).trim();
-    if (!label) continue; // skip blank rows
-    if (label in metaLabels) {
-      metaLabels[label] = r;
-    } else if (label === "Frequency_Hz") {
-      headerRowIdx = r;
-      break;
-    }
+  const candidates = scanSpreadsheetRegions(normalizedRows);
+  if (candidates.length === 0) {
+    return { runs: [], warnings: [`${prefix}: no recognized metadata/header block found.`] };
+  }
+  if (candidates.length > 1) {
+    warnings.push(`${prefix}: found ${candidates.length} spreadsheet regions; importing the first and ignoring the rest.`);
   }
 
-  const requiredLabels = ["Source File", "Subcase", "Result Family", "Entity ID", "Direction", "Representation"];
-  for (const req of requiredLabels) {
-    if (metaLabels[req] === null) {
-      return { runs: [], warnings: [`${prefix}: missing required metadata row "${req}".`] };
-    }
-  }
-  const sourceFileRowIdx = metaLabels["Source File"];
-  const subcaseRowIdx = metaLabels["Subcase"];
-  const familyRowIdx = metaLabels["Result Family"];
-  const entityIdRowIdx = metaLabels["Entity ID"];
-  const directionRowIdx = metaLabels["Direction"];
-  const elementTypeRowIdx = metaLabels["Element Type"];
-  const representationRowIdx = metaLabels["Representation"];
+  const candidate = candidates[0];
+  const nextCandidate = candidates[1] || null;
+  const headerRowIdx = candidate.headerRowIdx;
+  const anchorCol = candidate.anchorCol;
+  const sourceFileRowIdx = candidate.labelRows["SOURCE FILE"];
+  const subcaseRowIdx = candidate.labelRows["SUBCASE"];
+  const familyRowIdx = candidate.labelRows["RESULT FAMILY"];
+  const entityIdRowIdx = candidate.labelRows["ENTITY ID"];
+  const directionRowIdx = candidate.labelRows["DIRECTION"];
+  const representationRowIdx = candidate.labelRows["REPRESENTATION"];
+  const elementTypeRowIdx = candidate.labelRows["ELEMENT TYPE"];
+  const sheetFallbackName = sheetName ? `${fileName} [${sheetName}]` : fileName;
+  const sourceFileFallbackUsed = new Set();
 
-  if (headerRowIdx < 0) {
-    return { runs: [], warnings: [`${prefix}: missing "Frequency_Hz" header row.`] };
+  const rowLimit = nextCandidate ? nextCandidate.startRow : normalizedRows.length;
+  let columnCount = 0;
+  for (let rowIdx = candidate.startRow; rowIdx < rowLimit; rowIdx++) {
+    columnCount = Math.max(columnCount, (normalizedRows[rowIdx] || []).length);
   }
 
-  // Collect all metadata row indices for column count calculation
-  const metaRowIndices = Object.values(metaLabels).filter(v => v !== null);
-  const columnCount = Math.max(
-    rows[headerRowIdx].length,
-    ...metaRowIndices.map(idx => (rows[idx] ? rows[idx].length : 0))
-  );
   const xValues = [];
   const dataColumns = [];
-  for (let col = 1; col < columnCount; col++) {
-    const sourceFile = String(csvCell(rows, sourceFileRowIdx, col)).trim();
-    const subcaseId = parseSpreadsheetSubcase(csvCell(rows, subcaseRowIdx, col));
-    const family = normalizeSpreadsheetFamily(csvCell(rows, familyRowIdx, col));
-    const entityId = parseSpreadsheetEntity(csvCell(rows, entityIdRowIdx, col));
-    const component = normalizeComponentLabel(csvCell(rows, directionRowIdx, col));
+
+  for (let col = anchorCol + 1; col < columnCount; col++) {
+    const rawSourceFile = normalizeSpreadsheetWhitespace(csvCell(normalizedRows, sourceFileRowIdx, col));
+    const sourceFile = rawSourceFile || sheetFallbackName;
+    const subcaseId = parseSpreadsheetSubcase(csvCell(normalizedRows, subcaseRowIdx, col));
+    const family = normalizeSpreadsheetFamily(csvCell(normalizedRows, familyRowIdx, col));
+    const entityId = parseSpreadsheetEntity(csvCell(normalizedRows, entityIdRowIdx, col));
+    const component = normalizeComponentLabel(csvCell(normalizedRows, directionRowIdx, col));
     const elementType = family === "ELEMENT_FORCES"
-      ? (normalizeElementType(elementTypeRowIdx === null ? "" : csvCell(rows, elementTypeRowIdx, col))
+      ? (normalizeElementType(elementTypeRowIdx === undefined ? "" : csvCell(normalizedRows, elementTypeRowIdx, col))
         || inferElementForceTypeFromComponent(component))
       : null;
-    const reprLabel = String(csvCell(rows, representationRowIdx, col)).trim();
-    const header = String(csvCell(rows, headerRowIdx, col)).trim();
-    if (!sourceFile && !subcaseId && !family && !entityId && !component && !reprLabel && !header && !elementType) continue;
-    if (!sourceFile || subcaseId === null || !family || entityId === null || !component || !reprLabel) {
+    const reprLabel = normalizeSpreadsheetWhitespace(csvCell(normalizedRows, representationRowIdx, col));
+    const reprKey = parseRepresentationLabel(reprLabel);
+    const header = normalizeSpreadsheetWhitespace(csvCell(normalizedRows, headerRowIdx, col));
+
+    if (!rawSourceFile && !subcaseId && !family && !entityId && !component && !reprLabel && !header && !elementType) continue;
+    if (subcaseId === null || !family || entityId === null || !component || !reprLabel) {
       warnings.push(`${prefix}: skipping column ${col + 1} due to incomplete metadata.`);
       continue;
     }
+    if (!rawSourceFile) sourceFileFallbackUsed.add(sourceFile);
     dataColumns.push({
       col,
       sourceFile,
@@ -788,27 +967,33 @@ function parseSpreadsheetCsv(fileName, textOrRows, sheetName) {
       component,
       elementType,
       reprLabel,
-      reprKey: parseRepresentationLabel(reprLabel),
+      reprKey,
       header,
       values: [],
     });
   }
 
   if (dataColumns.length === 0) {
-    return { runs: [], warnings: [`${prefix}: no importable data columns found.`] };
+    const delimiterHint = options && options.delimiter ? ` Parsed delimiter "${options.delimiter}".` : "";
+    return { runs: [], warnings: [`${prefix}: no importable data columns found.${delimiterHint}`] };
   }
 
-  for (let rowIdx = headerRowIdx + 1; rowIdx < rows.length; rowIdx++) {
-    const rawX = String(csvCell(rows, rowIdx, 0)).trim();
+  if (sourceFileFallbackUsed.size > 0) {
+    warnings.push(`${prefix}: blank Source File metadata encountered; using spreadsheet file name fallback.`);
+  }
+
+  for (let rowIdx = headerRowIdx + 1; rowIdx < rowLimit; rowIdx++) {
+    const rawX = normalizeSpreadsheetWhitespace(csvCell(normalizedRows, rowIdx, anchorCol));
     if (!rawX) continue;
+    if (canonicalSpreadsheetLabel(rawX)) break;
     const x = parseSpreadsheetNumber(rawX);
     if (isNaN(x)) {
-      warnings.push(`${prefix}: skipping row ${rowIdx + 1} with non-numeric Frequency_Hz value "${rawX}".`);
+      warnings.push(`${prefix}: skipping row ${rowIdx + 1} with non-numeric axis value "${rawX}".`);
       continue;
     }
     xValues.push(x);
     dataColumns.forEach(col => {
-      const rawCell = String(csvCell(rows, rowIdx, col.col)).trim();
+      const rawCell = normalizeSpreadsheetWhitespace(csvCell(normalizedRows, rowIdx, col.col));
       const value = parseSpreadsheetNumber(rawCell);
       if (rawCell && isNaN(value)) {
         warnings.push(`${prefix}: non-numeric value "${rawCell}" in row ${rowIdx + 1}, column ${col.col + 1}; importing as NaN.`);
@@ -818,7 +1003,7 @@ function parseSpreadsheetCsv(fileName, textOrRows, sheetName) {
   }
 
   if (xValues.length === 0) {
-    return { runs: [], warnings: [`${prefix}: no numeric data rows found.`] };
+    return { runs: [], warnings: [`${prefix}: no numeric frequency/time rows found.`] };
   }
 
   const runMap = {};
@@ -856,6 +1041,10 @@ function parseSpreadsheetCsv(fileName, textOrRows, sheetName) {
 
   for (let i = 0; i < dataColumns.length; i++) {
     const col = dataColumns[i];
+    if (!col.reprKey) {
+      warnings.push(`${prefix}: skipping column ${col.col + 1} with unsupported representation "${col.reprLabel}".`);
+      continue;
+    }
     if (col.reprKey === "REAL") {
       const next = dataColumns[i + 1];
       if (!next || next.reprKey !== "IMAG" ||
@@ -887,7 +1076,7 @@ function parseSpreadsheetCsv(fileName, textOrRows, sheetName) {
           ...(col.elementType ? [`$ELEMENT TYPE = ${col.elementType}`] : []),
           `$ENTITY ID = ${col.entityId}`,
           `$DIRECTION = ${col.component}`,
-          `$REPRESENTATION = RAW`,
+          "$REPRESENTATION = RAW",
         ],
       };
       const run = getRun(col.sourceFile);
@@ -902,14 +1091,8 @@ function parseSpreadsheetCsv(fileName, textOrRows, sheetName) {
       i++;
       continue;
     }
-
     if (col.reprKey === "IMAG") {
       warnings.push(`${prefix}: skipping column ${col.col + 1} because it is an unpaired Imaginary column.`);
-      continue;
-    }
-
-    if (!col.reprKey) {
-      warnings.push(`${prefix}: skipping column ${col.col + 1} with unsupported representation "${col.reprLabel}".`);
       continue;
     }
 
@@ -924,25 +1107,25 @@ function parseSpreadsheetCsv(fileName, textOrRows, sheetName) {
       domain: "FREQUENCY_RESPONSE",
       storageKind: "DERIVED",
       lockedRepr: col.reprKey,
-        sourceLines: [
-          `$SOURCE FILE = ${col.sourceFile}`,
-          `$SUBCASE ID = ${col.subcaseId}`,
-          `$RESULT FAMILY = ${col.family}`,
-          ...(col.elementType ? [`$ELEMENT TYPE = ${col.elementType}`] : []),
-          `$ENTITY ID = ${col.entityId}`,
-          `$DIRECTION = ${col.component}`,
-          `$REPRESENTATION = ${col.reprKey}`,
+      sourceLines: [
+        `$SOURCE FILE = ${col.sourceFile}`,
+        `$SUBCASE ID = ${col.subcaseId}`,
+        `$RESULT FAMILY = ${col.family}`,
+        ...(col.elementType ? [`$ELEMENT TYPE = ${col.elementType}`] : []),
+        `$ENTITY ID = ${col.entityId}`,
+        `$DIRECTION = ${col.component}`,
+        `$REPRESENTATION = ${col.reprKey}`,
       ],
     };
     const run = getRun(col.sourceFile);
     const block = getBlock(run, col);
-      addSpreadsheetTrace(block, traceData, {
-        entityId: col.entityId,
-        component: col.component,
-        elementType: col.elementType,
-        storageKind: "DERIVED",
-        lockedRepr: col.reprKey,
-      });
+    addSpreadsheetTrace(block, traceData, {
+      entityId: col.entityId,
+      component: col.component,
+      elementType: col.elementType,
+      storageKind: "DERIVED",
+      lockedRepr: col.reprKey,
+    });
   }
 
   const runs = Object.values(runMap).map(run => {
@@ -953,6 +1136,7 @@ function parseSpreadsheetCsv(fileName, textOrRows, sheetName) {
     run.warnings.push(...warnings);
     return finalizeSpreadsheetRun(run);
   });
+
   runs.forEach((run, idx) => {
     run.displayName = makeSpreadsheetDisplayName(fileName, sheetName, idx, runs.length);
     run.title = run.displayName;
@@ -961,7 +1145,16 @@ function parseSpreadsheetCsv(fileName, textOrRows, sheetName) {
       block.subtitle = sheetName ? `Spreadsheet Import (${sheetName})` : "Spreadsheet Import";
     });
   });
+
   return { runs, warnings };
+}
+
+function parseSpreadsheetCsv(fileName, textOrRows, sheetName) {
+  const isRowMatrix = Array.isArray(textOrRows);
+  const rows = isRowMatrix ? normalizeSpreadsheetRows(textOrRows) : parseCsvRows(textOrRows);
+  return parseSpreadsheetRows(fileName, rows, sheetName, {
+    delimiter: isRowMatrix ? null : rows.csvDelimiter,
+  });
 }
 
 function parseSpreadsheetText(fileName, text) {
@@ -972,11 +1165,260 @@ function parseSpreadsheetText(fileName, text) {
   return result.runs;
 }
 
-function parseWorkbook(fileName, workbook, xlsxApi) {
-  const api = xlsxApi || (typeof XLSX !== "undefined" ? XLSX : (typeof globalThis !== "undefined" ? globalThis.XLSX : null));
-  if (!api || !api.utils) {
-    throw new Error("XLSX reader is unavailable.");
+function readUint16LE(bytes, offset) {
+  return bytes[offset] | (bytes[offset + 1] << 8);
+}
+
+function readUint32LE(bytes, offset) {
+  return ((bytes[offset]) |
+    (bytes[offset + 1] << 8) |
+    (bytes[offset + 2] << 16) |
+    (bytes[offset + 3] << 24)) >>> 0;
+}
+
+function decodeUtf8(bytes) {
+  if (typeof TextDecoder !== "undefined") {
+    return new TextDecoder("utf-8").decode(bytes);
   }
+  if (typeof Buffer !== "undefined") {
+    return Buffer.from(bytes).toString("utf8");
+  }
+  let text = "";
+  for (let i = 0; i < bytes.length; i++) text += String.fromCharCode(bytes[i]);
+  return decodeURIComponent(escape(text));
+}
+
+async function inflateRawBytes(bytes) {
+  if (typeof module !== "undefined" && module.exports) {
+    const zlib = require("zlib");
+    const inflated = zlib.inflateRawSync(Buffer.from(bytes));
+    return new Uint8Array(inflated.buffer, inflated.byteOffset, inflated.byteLength);
+  }
+  if (typeof DecompressionStream !== "undefined") {
+    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+    const response = new Response(stream);
+    return new Uint8Array(await response.arrayBuffer());
+  }
+  throw new Error("Deflate decompression is unavailable in this environment.");
+}
+
+function normalizeZipPath(path) {
+  return String(path || "")
+    .replace(/\\/g, "/")
+    .replace(/^\.\//, "")
+    .replace(/\/+/g, "/");
+}
+
+function resolveZipPath(basePath, target) {
+  if (!target) return "";
+  const normalizedTarget = normalizeZipPath(target);
+  if (/^[A-Za-z]+:/.test(normalizedTarget)) return normalizedTarget;
+  const baseParts = normalizeZipPath(basePath).split("/");
+  baseParts.pop();
+  normalizedTarget.split("/").forEach(part => {
+    if (!part || part === ".") return;
+    if (part === "..") baseParts.pop();
+    else baseParts.push(part);
+  });
+  return baseParts.join("/");
+}
+
+async function unzipEntries(arrayBuffer) {
+  const bytes = arrayBuffer instanceof Uint8Array
+    ? arrayBuffer
+    : new Uint8Array(arrayBuffer);
+  let eocdOffset = -1;
+  for (let offset = bytes.length - 22; offset >= Math.max(0, bytes.length - 65557); offset--) {
+    if (readUint32LE(bytes, offset) === 0x06054b50) {
+      eocdOffset = offset;
+      break;
+    }
+  }
+  if (eocdOffset < 0) throw new Error("Invalid XLSX archive: missing central directory.");
+
+  const totalEntries = readUint16LE(bytes, eocdOffset + 10);
+  const centralDirOffset = readUint32LE(bytes, eocdOffset + 16);
+  const entries = new Map();
+  let cursor = centralDirOffset;
+
+  for (let i = 0; i < totalEntries; i++) {
+    if (readUint32LE(bytes, cursor) !== 0x02014b50) {
+      throw new Error("Invalid XLSX archive: malformed central directory.");
+    }
+    const compressionMethod = readUint16LE(bytes, cursor + 10);
+    const compressedSize = readUint32LE(bytes, cursor + 20);
+    const fileNameLength = readUint16LE(bytes, cursor + 28);
+    const extraLength = readUint16LE(bytes, cursor + 30);
+    const commentLength = readUint16LE(bytes, cursor + 32);
+    const localHeaderOffset = readUint32LE(bytes, cursor + 42);
+    const fileName = decodeUtf8(bytes.slice(cursor + 46, cursor + 46 + fileNameLength));
+
+    if (readUint32LE(bytes, localHeaderOffset) !== 0x04034b50) {
+      throw new Error(`Invalid XLSX archive: malformed local header for ${fileName}.`);
+    }
+    const localNameLength = readUint16LE(bytes, localHeaderOffset + 26);
+    const localExtraLength = readUint16LE(bytes, localHeaderOffset + 28);
+    const dataStart = localHeaderOffset + 30 + localNameLength + localExtraLength;
+    const rawData = bytes.slice(dataStart, dataStart + compressedSize);
+    entries.set(normalizeZipPath(fileName), { compressionMethod, rawData });
+
+    cursor += 46 + fileNameLength + extraLength + commentLength;
+  }
+
+  const extracted = new Map();
+  for (const [name, entry] of entries.entries()) {
+    if (name.endsWith("/")) continue;
+    if (entry.compressionMethod === 0) {
+      extracted.set(name, entry.rawData);
+      continue;
+    }
+    if (entry.compressionMethod === 8) {
+      extracted.set(name, await inflateRawBytes(entry.rawData));
+      continue;
+    }
+    throw new Error(`Unsupported XLSX compression method ${entry.compressionMethod} for ${name}.`);
+  }
+  return extracted;
+}
+
+function decodeXmlEntities(text) {
+  return String(text || "")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, "\"")
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, "&");
+}
+
+function parseXmlAttributes(fragment) {
+  const attrs = {};
+  const re = /([A-Za-z_][\w:.-]*)\s*=\s*"([^"]*)"/g;
+  let match;
+  while ((match = re.exec(fragment)) !== null) {
+    attrs[match[1]] = decodeXmlEntities(match[2]);
+  }
+  return attrs;
+}
+
+function collectXmlMatches(xml, tagName) {
+  const matches = [];
+  const re = new RegExp(`<(?:\\w+:)?${tagName}\\b([^>]*?)(?:>([\\s\\S]*?)<\\/(?:\\w+:)?${tagName}>|\\s*\\/>)`, "g");
+  let match;
+  while ((match = re.exec(xml)) !== null) {
+    matches.push({ attrs: parseXmlAttributes(match[1] || ""), inner: match[2] || "" });
+  }
+  return matches;
+}
+
+function extractXmlText(fragment) {
+  const parts = [];
+  const re = /<(?:\w+:)?t\b[^>]*>([\s\S]*?)<\/(?:\w+:)?t>/g;
+  let match;
+  while ((match = re.exec(fragment)) !== null) {
+    parts.push(decodeXmlEntities(match[1]));
+  }
+  return parts.join("");
+}
+
+function parseSharedStringsXml(xml) {
+  return collectXmlMatches(xml, "si").map(match => extractXmlText(match.inner));
+}
+
+function columnLettersToIndex(ref) {
+  const letters = String(ref || "").match(/[A-Z]+/i);
+  if (!letters) return -1;
+  let idx = 0;
+  const upper = letters[0].toUpperCase();
+  for (let i = 0; i < upper.length; i++) idx = idx * 26 + (upper.charCodeAt(i) - 64);
+  return idx - 1;
+}
+
+function parseWorksheetRows(xml, sharedStrings) {
+  const rows = [];
+  collectXmlMatches(xml, "row").forEach((rowMatch, rowIdx) => {
+    const row = [];
+    let fallbackCol = 0;
+    const cellRe = /<(?:\w+:)?c\b([^>]*?)(?:>([\s\S]*?)<\/(?:\w+:)?c>|\s*\/>)/g;
+    let cellMatch;
+    while ((cellMatch = cellRe.exec(rowMatch.inner)) !== null) {
+      const attrs = parseXmlAttributes(cellMatch[1] || "");
+      const colIdx = attrs.r ? columnLettersToIndex(attrs.r) : fallbackCol++;
+      const inner = cellMatch[2] || "";
+      let value = "";
+      if (attrs.t === "s") {
+        const sharedIdxMatch = inner.match(/<(?:\w+:)?v\b[^>]*>([\s\S]*?)<\/(?:\w+:)?v>/);
+        const sharedIdx = sharedIdxMatch ? parseInt(sharedIdxMatch[1], 10) : NaN;
+        value = isNaN(sharedIdx) ? "" : (sharedStrings[sharedIdx] || "");
+      } else if (attrs.t === "inlineStr") {
+        value = extractXmlText(inner);
+      } else if (attrs.t === "b") {
+        const boolMatch = inner.match(/<(?:\w+:)?v\b[^>]*>([\s\S]*?)<\/(?:\w+:)?v>/);
+        value = boolMatch && boolMatch[1] === "1" ? "TRUE" : "FALSE";
+      } else {
+        const vMatch = inner.match(/<(?:\w+:)?v\b[^>]*>([\s\S]*?)<\/(?:\w+:)?v>/);
+        value = vMatch ? decodeXmlEntities(vMatch[1]) : extractXmlText(inner);
+        const numeric = parseSpreadsheetNumber(value);
+        if (!isNaN(numeric) && normalizeSpreadsheetWhitespace(value) !== "") value = numeric;
+      }
+      while (row.length <= colIdx) row.push("");
+      row[colIdx] = value;
+      fallbackCol = colIdx + 1;
+    }
+    rows[rowIdx] = row;
+  });
+  return rows;
+}
+
+function buildWorkbookFromXlsxEntries(entries) {
+  const workbookPath = ["xl/workbook.xml", "workbook.xml"].find(name => entries.has(name));
+  if (!workbookPath) throw new Error("Workbook XML is missing.");
+
+  const workbookXml = decodeUtf8(entries.get(workbookPath));
+  const relsPath = resolveZipPath(workbookPath, "_rels/workbook.xml.rels");
+  const relsXml = entries.has(relsPath) ? decodeUtf8(entries.get(relsPath)) : "";
+  const relationshipMap = {};
+  collectXmlMatches(relsXml, "Relationship").forEach(rel => {
+    if (rel.attrs.Id && rel.attrs.Target) relationshipMap[rel.attrs.Id] = resolveZipPath(relsPath, rel.attrs.Target);
+  });
+
+  const sharedStringsPath = ["xl/sharedStrings.xml", "sharedStrings.xml"].find(name => entries.has(name));
+  const sharedStrings = sharedStringsPath ? parseSharedStringsXml(decodeUtf8(entries.get(sharedStringsPath))) : [];
+  const workbook = { SheetNames: [], Sheets: {} };
+
+  collectXmlMatches(workbookXml, "sheet").forEach((sheet, idx) => {
+    const relId = sheet.attrs["r:id"] || sheet.attrs.id || "";
+    const target = relationshipMap[relId] || resolveZipPath(workbookPath, `worksheets/sheet${idx + 1}.xml`);
+    if (!entries.has(target)) return;
+    workbook.SheetNames.push(sheet.attrs.name || `Sheet${idx + 1}`);
+    workbook.Sheets[workbook.SheetNames[workbook.SheetNames.length - 1]] = parseWorksheetRows(
+      decodeUtf8(entries.get(target)),
+      sharedStrings
+    );
+  });
+
+  if (workbook.SheetNames.length === 0) throw new Error("No worksheets found in workbook.");
+  return workbook;
+}
+
+async function parseWorkbookBuffer(fileName, arrayBuffer) {
+  const lower = String(fileName || "").toLowerCase();
+  if (lower.endsWith(".xls") && !lower.endsWith(".xlsx")) {
+    throw new Error(`${fileName}: legacy .xls files are not supported by the standalone importer. Save as .xlsx or .csv.`);
+  }
+  const entries = await unzipEntries(arrayBuffer);
+  return parseWorkbook(fileName, buildWorkbookFromXlsxEntries(entries));
+}
+
+function workbookSheetRows(sheet, xlsxApi) {
+  if (Array.isArray(sheet)) return normalizeSpreadsheetRows(sheet);
+  const api = xlsxApi || (typeof XLSX !== "undefined" ? XLSX : (typeof globalThis !== "undefined" ? globalThis.XLSX : null));
+  if (api && api.utils && typeof api.utils.sheet_to_json === "function") {
+    return normalizeSpreadsheetRows(api.utils.sheet_to_json(sheet, { header: 1, defval: "", blankrows: true }));
+  }
+  throw new Error("Workbook sheet rows are unavailable.");
+}
+
+function parseWorkbook(fileName, workbook, xlsxApi) {
   if (!workbook || !Array.isArray(workbook.SheetNames) || !workbook.Sheets) {
     throw new Error(`${fileName}: invalid workbook data.`);
   }
@@ -989,19 +1431,14 @@ function parseWorkbook(fileName, workbook, xlsxApi) {
       workbookWarnings.push(`${fileName} [${sheetName}]: worksheet is missing.`);
       return;
     }
-    // Use sheet_to_json with header:1 to get a 2D array of native values,
-    // bypassing sheet_to_csv which can produce formatting/locale issues.
-    const rows = api.utils.sheet_to_json(sheet, { header: 1, defval: "", blankrows: true });
+    const rows = workbookSheetRows(sheet, xlsxApi);
     const parsed = parseSpreadsheetCsv(fileName, rows, sheetName);
     if (parsed.runs.length === 0) {
       workbookWarnings.push(...parsed.warnings);
       return;
     }
-    // Each sheet becomes its own run, labeled "[sheetName] fileName"
     parsed.runs.forEach((run, idx) => {
-      const label = parsed.runs.length > 1
-        ? `[${sheetName}] ${fileName} (${idx + 1})`
-        : `[${sheetName}] ${fileName}`;
+      const label = makeSpreadsheetDisplayName(fileName, sheetName, idx, parsed.runs.length);
       run.runName = label;
       run.displayName = label;
       run.title = label;
@@ -1009,7 +1446,7 @@ function parseWorkbook(fileName, workbook, xlsxApi) {
       run.importSheetName = sheetName;
       run.blocks.forEach(block => {
         block.title = label;
-        block.subtitle = sheetName;
+        block.subtitle = `Spreadsheet Import (${sheetName})`;
       });
     });
     allRuns.push(...parsed.runs);
@@ -2157,6 +2594,7 @@ const PCHParser = {
   parsePCH,
   parseSpreadsheetText,
   parseWorkbook,
+  parseWorkbookBuffer,
   extractTraceData,
   computeRepresentation,
   componentLabels,
