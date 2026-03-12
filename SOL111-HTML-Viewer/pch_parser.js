@@ -708,9 +708,9 @@ function finalizeSpreadsheetRun(run) {
   return run;
 }
 
-function parseSpreadsheetCsv(fileName, text, sheetName) {
+function parseSpreadsheetCsv(fileName, textOrRows, sheetName) {
   const prefix = sheetName ? `${fileName} [${sheetName}]` : fileName;
-  const rows = parseCsvRows(text);
+  const rows = Array.isArray(textOrRows) ? textOrRows : parseCsvRows(textOrRows);
   const warnings = [];
   if (rows.length < 7) {
     return { runs: [], warnings: [`${prefix}: not enough rows for exported spreadsheet format.`] };
@@ -962,7 +962,7 @@ function parseSpreadsheetText(fileName, text) {
 
 function parseWorkbook(fileName, workbook, xlsxApi) {
   const api = xlsxApi || (typeof XLSX !== "undefined" ? XLSX : (typeof globalThis !== "undefined" ? globalThis.XLSX : null));
-  if (!api || !api.utils || typeof api.utils.sheet_to_csv !== "function") {
+  if (!api || !api.utils) {
     throw new Error("XLSX reader is unavailable.");
   }
   if (!workbook || !Array.isArray(workbook.SheetNames) || !workbook.Sheets) {
@@ -977,10 +977,10 @@ function parseWorkbook(fileName, workbook, xlsxApi) {
       workbookWarnings.push(`${fileName} [${sheetName}]: worksheet is missing.`);
       return;
     }
-    let csv = api.utils.sheet_to_csv(sheet, { blankrows: true });
-    // Strip BOM if present
-    if (csv.length > 0 && csv.charCodeAt(0) === 0xFEFF) csv = csv.slice(1);
-    const parsed = parseSpreadsheetCsv(fileName, csv, sheetName);
+    // Use sheet_to_json with header:1 to get a 2D array of native values,
+    // bypassing sheet_to_csv which can produce formatting/locale issues.
+    const rows = api.utils.sheet_to_json(sheet, { header: 1, defval: "", blankrows: true });
+    const parsed = parseSpreadsheetCsv(fileName, rows, sheetName);
     if (parsed.runs.length === 0) {
       workbookWarnings.push(...parsed.warnings);
       return;
