@@ -113,6 +113,8 @@ function buildSpreadsheetCsv(columns, dataRows, options) {
   const blankRowsBetweenMeta = opts.blankRowsBetweenMeta || 0;
   const blankRowsBeforeHeader = opts.blankRowsBeforeHeader || 0;
   const includeElementType = columns.some(c => Object.prototype.hasOwnProperty.call(c, "elementType"));
+  const includeSubcaseLabel = opts.includeSubcaseLabel || columns.some(c => Object.prototype.hasOwnProperty.call(c, "subcaseLabelValue"));
+  const includeEntityLabel = opts.includeEntityLabel || columns.some(c => Object.prototype.hasOwnProperty.call(c, "entityLabelValue"));
   const pad = cells => new Array(leadingCols).fill("").concat(cells);
   const joinRow = cells => cells.map(v => `"${String(v).replace(/"/g, '""')}"`).join(delimiter);
   const metaRows = [
@@ -122,6 +124,12 @@ function buildSpreadsheetCsv(columns, dataRows, options) {
     [opts.entityLabel || "Entity ID", ...columns.map(c => c.entityRaw !== undefined ? c.entityRaw : `ID ${c.entityId}`)],
     [opts.directionLabel || "Direction", ...columns.map(c => c.component)],
   ];
+  if (includeSubcaseLabel) {
+    metaRows.push([opts.subcaseLabelRow || "Subcase Label", ...columns.map(c => c.subcaseLabelValue || "")]);
+  }
+  if (includeEntityLabel) {
+    metaRows.push([opts.entityLabelRow || "Entity Label", ...columns.map(c => c.entityLabelValue || "")]);
+  }
   if (includeElementType) {
     metaRows.push([opts.elementTypeLabel || "Element Type", ...columns.map(c => c.elementType || "")]);
   }
@@ -566,6 +574,26 @@ console.log("\n=== Spreadsheet: display representation lock ===");
 // ---------------------------------------------------------------------------
 console.log("\n=== Spreadsheet: Excel-authored CSV variants ===");
 {
+  const unquotedSemicolonCsv = [
+    ["Source File", "excel_locale.pch", "excel_locale.pch"],
+    ["Subcase", "SC 7", "SC 7"],
+    ["Result Family", "Acceleration", "Acceleration"],
+    ["Entity ID", "ID 2001", "ID 2001"],
+    ["Direction", "T1", "T1"],
+    ["Representation", "Real", "Imaginary"],
+    ["Frequency_Hz", "excel_locale.pch|SC7|ID2001|T1|Real", "excel_locale.pch|SC7|ID2001|T1|Imaginary"],
+    ["1,5", "10,25", "0,5"],
+    ["2,5", "20,5", "1,5"],
+  ].map(row => row.join(";")).join("\n");
+  const unquotedSemicolonRuns = PCHParser.parseSpreadsheetText("excel_semicolon_unquoted.csv", unquotedSemicolonCsv);
+  const unquotedTd = PCHParser.extractTraceData(unquotedSemicolonRuns[0].blocks[0], 2001, "T1");
+  assert(unquotedTd !== null, "Unquoted semicolon CSV with decimal commas imports");
+  if (unquotedTd) {
+    assertEqual(unquotedTd.x[0], 1.5, "Unquoted semicolon CSV keeps decimal-comma axis values");
+    assertEqual(unquotedTd.re[1], 20.5, "Unquoted semicolon CSV keeps decimal-comma real values");
+    assertEqual(unquotedTd.im[0], 0.5, "Unquoted semicolon CSV keeps decimal-comma imaginary values");
+  }
+
   const variantColumns = [
     { sourceFile: "", subcaseId: 7, subcaseRaw: "7", family: "Acceleration", entityId: 2001, entityRaw: "2001", component: "T1", reprLabel: " real ", header: "excel|re" },
     { sourceFile: "", subcaseId: 7, subcaseRaw: "7", family: "Acceleration", entityId: 2001, entityRaw: "2001", component: "T1", reprLabel: "Imaginary", header: "excel|im" },
@@ -616,6 +644,95 @@ console.log("\n=== Spreadsheet: Excel-authored CSV variants ===");
     assertEqual(tabTd.storageKind, "DERIVED", "Tab-delimited derived import preserves storage kind");
     assertEqual(tabTd.lockedRepr, "MAGNITUDE", "Tab-delimited derived import preserves representation lock");
   }
+
+  const pipeCsv = buildSpreadsheetCsv(
+    [
+      {
+        sourceFile: "labels_only.xlsx",
+        subcaseRaw: "Takeoff Lateral",
+        subcaseLabelValue: "Takeoff Lateral",
+        family: "Displacement",
+        entityRaw: "Wing Tip Sensor",
+        entityLabelValue: "Wing Tip Sensor",
+        component: "T2",
+        reprLabel: "Magnitude",
+        header: "labels_only.xlsx|Takeoff Lateral|Wing Tip Sensor|T2|Magnitude",
+      },
+    ],
+    [["5", "12.5"], ["10", "15.25"]],
+    {
+      delimiter: "|",
+      includeSubcaseLabel: true,
+      includeEntityLabel: true,
+    }
+  );
+  const pipeRuns = PCHParser.parseSpreadsheetText("labels_pipe.csv", pipeCsv);
+  assertEqual(pipeRuns.length, 1, "Pipe-delimited CSV imports");
+  const pipeBlock = pipeRuns[0].blocks[0];
+  assertEqual(pipeBlock.subcaseId, null, "Text-only subcase imports without a numeric subcase ID");
+  assertEqual(pipeBlock.subcaseLabel, "Takeoff Lateral", "Text-only subcase label is preserved");
+  assertEqual(pipeBlock.entityIds[0], "ENTITY:WING_TIP_SENSOR", "Text-only entity gets a stable string key");
+  assertEqual(pipeBlock.entityLabels["ENTITY:WING_TIP_SENSOR"], "Wing Tip Sensor", "Text-only entity label is preserved");
+  const pipeTd = PCHParser.extractTraceData(pipeBlock, "ENTITY:WING_TIP_SENSOR", "T2");
+  assert(pipeTd !== null, "Pipe-delimited text-label trace extracts");
+  if (pipeTd) {
+    assertEqual(pipeTd.re[1], 15.25, "Pipe-delimited text-label data is parsed");
+  }
+
+  const headerFallbackCsv = buildSpreadsheetCsv(
+    [
+      { sourceFile: "", subcaseId: 12, family: "Velocity", entityId: 991, component: "T3", reprLabel: "Real", header: "fallback_run.pch|SC12|ID991|T3|Real" },
+      { sourceFile: "", subcaseId: 12, family: "Velocity", entityId: 991, component: "T3", reprLabel: "Imaginary", header: "fallback_run.pch|SC12|ID991|T3|Imaginary" },
+    ],
+    [["1", "2", "0.1"], ["2", "3", "0.2"]],
+    {
+      sourceFileLabel: "Source File",
+      subcaseLabel: "Subcase",
+      entityLabel: "Entity ID",
+      directionLabel: "Direction",
+      representationLabel: "Representation",
+    }
+  )
+    .replace(/"SC 12"/g, "\"\"")
+    .replace(/"ID 991"/g, "\"\"")
+    .replace(/"T3"/g, "\"\"")
+    .replace(/"Real"/, "\"\"")
+    .replace(/"Imaginary"/, "\"\"");
+  const headerFallbackRuns = PCHParser.parseSpreadsheetText("header_fallback.csv", headerFallbackCsv);
+  const headerFallbackTd = PCHParser.extractTraceData(headerFallbackRuns[0].blocks[0], 991, "T3");
+  assert(headerFallbackTd !== null, "Header fallback restores missing metadata from exported-style headers");
+  if (headerFallbackTd) {
+    assertEqual(headerFallbackTd.re[0], 2, "Header fallback real data is preserved");
+    assertEqual(headerFallbackTd.im[1], 0.2, "Header fallback imaginary data is preserved");
+  }
+
+  const sparseMetaCsv = buildSpreadsheetCsv(
+    [
+      { sourceFile: "sparse_meta.pch", subcaseId: 12, subcaseRaw: "SC 12", family: "Velocity", entityId: 991, component: "T3", reprLabel: "Real", header: "sparse_meta.pch|SC12|ID991|T3|Real" },
+      { sourceFile: "sparse_meta.pch", subcaseId: 12, subcaseRaw: "SC 12", family: "Velocity", entityId: 991, component: "T3", reprLabel: "Imaginary", header: "sparse_meta.pch|SC12|ID991|T3|Imaginary" },
+    ],
+    [["1", "2", "0.1"], ["2", "3", "0.2"]]
+  )
+    .replace(/^"Subcase"/m, "\"\"")
+    .replace(/^"Entity ID"/m, "\"\"")
+    .replace(/^"Direction"/m, "\"\"")
+    .replace(/^"Representation"/m, "\"\"");
+  const sparseMetaRuns = PCHParser.parseSpreadsheetText("sparse_meta.csv", sparseMetaCsv);
+  const sparseMetaTd = PCHParser.extractTraceData(sparseMetaRuns[0].blocks[0], 991, "T3");
+  assert(sparseMetaTd !== null, "Sparse metadata rows still import when exported headers are present");
+  if (sparseMetaTd) {
+    assertEqual(sparseMetaTd.re[0], 2, "Sparse metadata fallback preserves real data");
+    assertEqual(sparseMetaTd.im[1], 0.2, "Sparse metadata fallback preserves imaginary data");
+  }
+
+  const scLabelCsv = buildSpreadsheetCsv(
+    [
+      { sourceFile: "sc_label.pch", subcaseId: 4, subcaseRaw: "SC 4", family: "Displacement", entityId: 77, component: "T1", reprLabel: "Magnitude", header: "sc_label.pch|SC4|ID77|T1|Magnitude" },
+    ],
+    [["5", "9.25"], ["10", "10.5"]]
+  );
+  const scLabelRuns = PCHParser.parseSpreadsheetText("sc_label.csv", scLabelCsv);
+  assertEqual(scLabelRuns[0].blocks[0].subcaseLabel, "SC 4", "Simple SC-style subcase label is preserved for spreadsheet tree display");
 }
 
 // ---------------------------------------------------------------------------

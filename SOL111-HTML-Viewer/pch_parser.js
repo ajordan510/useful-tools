@@ -128,17 +128,19 @@
 // ---------------------------------------------------------------------------
 
 const RESULT_FAMILIES = {
-  "ACCELERATION":    "ACCELERATION",
-  "DISPLACEMENTS":   "DISPLACEMENT",
-  "DISPLACEMENT":    "DISPLACEMENT",
-  "VELOCITY":        "VELOCITY",
-  "SPCFORCES":       "SPCF",
-  "SPCFORCE":        "SPCF",
-  "SPCF":            "SPCF",
-  "MPCF":            "MPCF",
-  "ELEMENT FORCES":  "ELEMENT_FORCES",
-  "ELEMENT_FORCES":  "ELEMENT_FORCES",
-  "XYPUNCH":         "XYPUNCH",
+  "ACCELERATION":   "ACCELERATION",
+  "DISPLACEMENTS":  "DISPLACEMENT",
+  "DISPLACEMENT":   "DISPLACEMENT",
+  "VELOCITY":       "VELOCITY",
+  "SPCFORCES":      "SPCF",
+  "SPCFORCE":       "SPCF",
+  "SPCF":           "SPCF",
+  "MPCFORCES":      "MPCF",
+  "MPCFORCE":       "MPCF",
+  "MPCF":           "MPCF",
+  "ELEMENTFORCES":  "ELEMENT_FORCES",
+  "ELEMENTFORCE":   "ELEMENT_FORCES",
+  "XYPUNCH":        "XYPUNCH",
 };
 
 const FAMILY_COMPONENTS = {
@@ -183,26 +185,32 @@ const REPR_LABEL_TO_KEY = {
 };
 
 const SPREADSHEET_LABEL_ALIASES = {
-  "SOURCE FILE": "SOURCE FILE",
   "SOURCEFILE": "SOURCE FILE",
   "SUBCASE": "SUBCASE",
-  "SUBCASE ID": "SUBCASE",
   "SUBCASEID": "SUBCASE",
-  "RESULT FAMILY": "RESULT FAMILY",
+  "CASE": "SUBCASE",
+  "LOADCASE": "SUBCASE",
+  "SUBCASELABEL": "SUBCASE LABEL",
+  "SUBCASENAME": "SUBCASE LABEL",
   "RESULTFAMILY": "RESULT FAMILY",
-  "ENTITY ID": "ENTITY ID",
+  "QUANTITY": "RESULT FAMILY",
+  "RESULTTYPE": "RESULT FAMILY",
   "ENTITYID": "ENTITY ID",
+  "ID": "ENTITY ID",
+  "GRIDID": "ENTITY ID",
+  "POINTID": "ENTITY ID",
+  "ELEMENTID": "ENTITY ID",
+  "ENTITYLABEL": "ENTITY LABEL",
   "DIRECTION": "DIRECTION",
   "COMPONENT": "DIRECTION",
-  "ELEMENT TYPE": "ELEMENT TYPE",
+  "DOF": "DIRECTION",
   "ELEMENTTYPE": "ELEMENT TYPE",
   "REPRESENTATION": "REPRESENTATION",
-  "FREQUENCY HZ": "FREQUENCY_HZ",
-  "FREQUENCY_HZ": "FREQUENCY_HZ",
+  "FORMAT": "REPRESENTATION",
+  "FREQUENCYHZ": "FREQUENCY_HZ",
   "FREQUENCY": "FREQUENCY_HZ",
   "TIME": "TIME",
-  "TIME SEC": "TIME_SEC",
-  "TIME_SEC": "TIME_SEC",
+  "TIMESEC": "TIME_SEC",
 };
 
 const SPREADSHEET_REQUIRED_LABELS = [
@@ -212,6 +220,8 @@ const SPREADSHEET_REQUIRED_LABELS = [
   "DIRECTION",
   "REPRESENTATION",
 ];
+
+const CSV_DELIMITER_CANDIDATES = [",", ";", "\t", "|"];
 
 // ---------------------------------------------------------------------------
 // Regex patterns
@@ -589,13 +599,17 @@ function normalizeSpreadsheetLabel(value) {
     .toUpperCase();
 }
 
+function compactSpreadsheetLabel(value) {
+  return normalizeSpreadsheetLabel(value).replace(/[^A-Z0-9]+/g, "");
+}
+
 function canonicalSpreadsheetLabel(value) {
-  return SPREADSHEET_LABEL_ALIASES[normalizeSpreadsheetLabel(value)] || null;
+  return SPREADSHEET_LABEL_ALIASES[compactSpreadsheetLabel(value)] || null;
 }
 
 function detectCsvDelimiter(text) {
   const src = String(text || "").replace(/^\uFEFF/, "");
-  const candidates = [",", ";", "\t"];
+  const candidates = CSV_DELIMITER_CANDIDATES;
   const scores = {};
   candidates.forEach(delim => { scores[delim] = 0; });
   let inQuotes = false;
@@ -708,8 +722,8 @@ function csvCell(rows, rowIdx, colIdx) {
 }
 
 function normalizeSpreadsheetFamily(value) {
-  const raw = normalizeSpreadsheetLabel(value).replace(/[-\s]+/g, "_");
-  return RESULT_FAMILIES[raw] || raw;
+  const compact = compactSpreadsheetLabel(value);
+  return RESULT_FAMILIES[compact] || compact;
 }
 
 function parseSpreadsheetInteger(value, prefixRegex) {
@@ -732,8 +746,99 @@ function parseSpreadsheetEntity(value) {
   return parseSpreadsheetInteger(value, /^(?:ID|ENTITY(?:\s+ID)?)\s*[:=]?\s*(-?\d+)$/i);
 }
 
+function normalizeSpreadsheetIdentityKey(value) {
+  return normalizeSpreadsheetWhitespace(value)
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function makeSpreadsheetTextKey(prefix, value) {
+  const token = normalizeSpreadsheetIdentityKey(value);
+  return token ? `${prefix}:${token}` : null;
+}
+
+function isSimpleSpreadsheetSubcaseLabel(value) {
+  const token = compactSpreadsheetLabel(value);
+  return !token || /^-?\d+$/.test(token) || /^SC-?\d+$/.test(token) || /^SUBCASE-?\d+$/.test(token);
+}
+
+function isSimpleSpreadsheetEntityLabel(value) {
+  const token = compactSpreadsheetLabel(value);
+  return !token ||
+    /^-?\d+$/.test(token) ||
+    /^(?:ID|ENTITYID|GRIDID|POINTID|ELEMENTID)-?\d+$/.test(token);
+}
+
+function parseSpreadsheetSubcaseInfo(value, labelValue) {
+  const raw = normalizeSpreadsheetWhitespace(value);
+  const labelRaw = normalizeSpreadsheetWhitespace(labelValue);
+  const id = parseSpreadsheetInteger(raw, /^(?:SC|SUBCASE|CASE|LOAD\s*CASE)\s*[:=]?\s*(-?\d+)/i);
+  const shouldPreserveRawLabel = !labelRaw && /^(?:SC|SUBCASE|CASE|LOAD\s*CASE)/i.test(raw);
+  const derivedLabel = labelRaw || (!isSimpleSpreadsheetSubcaseLabel(raw) || shouldPreserveRawLabel ? raw : "");
+  return {
+    id,
+    key: id !== null ? String(id) : makeSpreadsheetTextKey("SUBCASE", derivedLabel || raw),
+    label: derivedLabel || null,
+    raw,
+  };
+}
+
+function parseSpreadsheetEntityInfo(value, labelValue) {
+  const raw = normalizeSpreadsheetWhitespace(value);
+  const labelRaw = normalizeSpreadsheetWhitespace(labelValue);
+  const id = parseSpreadsheetInteger(raw, /^(?:ID|ENTITY(?:\s+ID)?|GRID(?:\s+ID)?|POINT(?:\s+ID)?|ELEMENT(?:\s+ID)?)\s*[:=]?\s*(-?\d+)/i);
+  const derivedLabel = labelRaw || (!isSimpleSpreadsheetEntityLabel(raw) ? raw : "");
+  return {
+    id,
+    key: id !== null ? String(id) : makeSpreadsheetTextKey("ENTITY", derivedLabel || raw),
+    label: derivedLabel || null,
+    raw,
+  };
+}
+
+function mergeSpreadsheetIdentity(primary, fallback) {
+  return {
+    id: primary && primary.id !== null ? primary.id : (fallback ? fallback.id : null),
+    key: (primary && primary.key) || (fallback && fallback.key) || null,
+    label: (primary && primary.label) || (fallback && fallback.label) || null,
+    raw: (primary && primary.raw) || (fallback && fallback.raw) || "",
+  };
+}
+
+function parseSpreadsheetHeaderHint(value) {
+  const raw = normalizeSpreadsheetWhitespace(value);
+  if (!raw || raw.indexOf("|") < 0) return null;
+  const parts = raw.split("|").map(part => normalizeSpreadsheetWhitespace(part));
+  if (parts.length < 5) return null;
+  const reprLabel = parts.pop();
+  const component = parts.pop();
+  const entityRaw = parts.pop();
+  const subcaseRaw = parts.pop();
+  const sourceFile = parts.join("|");
+  return {
+    sourceFile,
+    subcase: parseSpreadsheetSubcaseInfo(subcaseRaw, ""),
+    entity: parseSpreadsheetEntityInfo(entityRaw, ""),
+    component,
+    reprLabel,
+  };
+}
+
+function compareSpreadsheetIdentityKeys(a, b) {
+  const aText = String(a === undefined || a === null ? "" : a);
+  const bText = String(b === undefined || b === null ? "" : b);
+  const aNum = /^-?\d+$/.test(aText) ? parseInt(aText, 10) : NaN;
+  const bNum = /^-?\d+$/.test(bText) ? parseInt(bText, 10) : NaN;
+  const aIsNum = !isNaN(aNum);
+  const bIsNum = !isNaN(bNum);
+  if (aIsNum && bIsNum && aNum !== bNum) return aNum - bNum;
+  if (aIsNum !== bIsNum) return aIsNum ? -1 : 1;
+  return aText.localeCompare(bText);
+}
+
 function parseRepresentationLabel(value) {
-  const key = normalizeSpreadsheetLabel(value).replace(/[-\s]+/g, "_");
+  const key = normalizeSpreadsheetLabel(value).replace(/[-_\s]+/g, "_");
   if (!key) return null;
   if (REPR_LABEL_TO_KEY[key]) return REPR_LABEL_TO_KEY[key];
   if (key === "IMAGINARY") return "IMAG";
@@ -791,12 +896,15 @@ function makeSpreadsheetDisplayName(fileName, sheetName, runIndex, runCount) {
   return `${fileName}${sheetSuffix} [Spreadsheet]`;
 }
 
-function createSpreadsheetBlock(blockIndex, runName, subcaseId, family, xypunchMeta, elementType) {
+function createSpreadsheetBlock(blockIndex, runName, subcaseInfo, family, xypunchMeta, elementType, sheetName) {
   const title = runName.replace(/\.[^.]+$/i, "");
   const subtitle = "Spreadsheet Import";
   const normalizedElementType = family === "ELEMENT_FORCES"
     ? (normalizeElementType(elementType) || null)
     : null;
+  const subcaseId = subcaseInfo && subcaseInfo.id !== null ? subcaseInfo.id : null;
+  const subcaseKey = subcaseInfo && subcaseInfo.key ? subcaseInfo.key : (subcaseId !== null ? String(subcaseId) : "0");
+  const subcaseLabel = subcaseInfo && subcaseInfo.label ? subcaseInfo.label : null;
   return {
     blockIndex,
     resultFamily: family,
@@ -805,20 +913,26 @@ function createSpreadsheetBlock(blockIndex, runName, subcaseId, family, xypunchM
     sort: "SPREADSHEET",
     complexRep: "UNKNOWN",
     subcaseId,
+    subcaseKey,
+    subcaseLabel,
     title,
     subtitle,
     label: "",
     entityIds: [],
+    entityLabels: {},
     elementType: normalizedElementType,
     xypunchComp: xypunchMeta ? xypunchMeta.comp : null,
     xypunchKind: xypunchMeta ? xypunchMeta.kind : null,
-    xypunchEntity: xypunchMeta ? xypunchMeta.entityId : null,
+    xypunchEntity: xypunchMeta ? xypunchMeta.entityKey : null,
     sourceKind: "SPREADSHEET",
+    sourceSheetName: sheetName || null,
+    importDiagnostics: [],
     traceStore: {},
     rawLines: [
       "$SPREADSHEET IMPORT",
       `$SOURCE FILE = ${runName}`,
-      `$SUBCASE ID = ${subcaseId}`,
+      `$SUBCASE ID = ${subcaseId !== null ? subcaseId : subcaseKey}`,
+      ...(subcaseLabel ? [`$SUBCASE LABEL = ${subcaseLabel}`] : []),
       `$RESULT FAMILY = ${family}`,
     ],
     dataLines: [],
@@ -826,14 +940,17 @@ function createSpreadsheetBlock(blockIndex, runName, subcaseId, family, xypunchM
 }
 
 function addSpreadsheetTrace(block, traceData, meta) {
-  const key = makeTraceStoreKey(meta.entityId, meta.component);
+  const entityKey = meta.entityKey !== undefined && meta.entityKey !== null ? meta.entityKey : meta.entityId;
+  const key = makeTraceStoreKey(entityKey, meta.component);
   block.traceStore[key] = traceData;
-  if (!block.entityIds.includes(meta.entityId)) block.entityIds.push(meta.entityId);
+  if (!block.entityIds.includes(entityKey)) block.entityIds.push(entityKey);
+  if (meta.entityLabel) block.entityLabels[entityKey] = meta.entityLabel;
+  if (meta.subcaseLabel && !block.subcaseLabel) block.subcaseLabel = meta.subcaseLabel;
   if (block.resultFamily === "ELEMENT_FORCES" && meta.elementType) {
     block.elementType = normalizeElementType(meta.elementType);
   }
   if (block.resultFamily === "XYPUNCH") {
-    block.xypunchEntity = meta.entityId;
+    block.xypunchEntity = entityKey;
     block.xypunchComp = meta.component;
   }
   if (block.resultFamily === "ELEMENT_FORCES" && block.elementType) {
@@ -841,14 +958,14 @@ function addSpreadsheetTrace(block, traceData, meta) {
     if (!block.rawLines.includes(marker)) block.rawLines.push(marker);
   }
   block.rawLines.push(
-    `$TRACE ID = ${meta.entityId} ${meta.component} (${meta.storageKind === "DERIVED" ? meta.lockedRepr : "RAW"})`
+    `$TRACE ID = ${entityKey} ${meta.component} (${meta.storageKind === "DERIVED" ? meta.lockedRepr : "RAW"})`
   );
 }
 
 function finalizeSpreadsheetRun(run) {
   run.blocks.forEach((block, idx) => {
     block.blockIndex = idx;
-    if (block.entityIds.length > 1) block.entityIds.sort((a, b) => a - b);
+    if (block.entityIds.length > 1) block.entityIds.sort(compareSpreadsheetIdentityKeys);
     if (run.displayName) block.title = run.displayName;
     block.subtitle = run.importSheetName ? `Spreadsheet Import (${run.importSheetName})` : "Spreadsheet Import";
   });
@@ -872,20 +989,32 @@ function scanSpreadsheetRegions(rows) {
         if (!label || labelRows[label] !== undefined) continue;
         labelRows[label] = scan;
       }
+      let headerHintCount = 0;
+      for (let headerCol = colIdx + 1; headerCol < row.length; headerCol++) {
+        if (parseSpreadsheetHeaderHint(csvCell(rows, rowIdx, headerCol))) headerHintCount++;
+      }
+      const recognizedLabelCount = Object.keys(labelRows).length;
       const hasRequired = SPREADSHEET_REQUIRED_LABELS.every(label => labelRows[label] !== undefined);
-      if (!hasRequired) continue;
+      const hasRecoverableMetadata = labelRows["RESULT FAMILY"] !== undefined &&
+        headerHintCount > 0 &&
+        recognizedLabelCount >= 2;
+      if (!hasRequired && !hasRecoverableMetadata) continue;
       const startRow = Math.min(rowIdx, ...Object.values(labelRows));
       candidates.push({
         anchorCol: colIdx,
         headerRowIdx: rowIdx,
         startRow,
         labelRows,
+        headerHintCount,
+        recognizedLabelCount,
       });
     }
   }
   candidates.sort((a, b) => {
     if (a.startRow !== b.startRow) return a.startRow - b.startRow;
     if (a.anchorCol !== b.anchorCol) return a.anchorCol - b.anchorCol;
+    if (a.recognizedLabelCount !== b.recognizedLabelCount) return b.recognizedLabelCount - a.recognizedLabelCount;
+    if (a.headerHintCount !== b.headerHintCount) return b.headerHintCount - a.headerHintCount;
     return a.headerRowIdx - b.headerRowIdx;
   });
   return candidates.filter((candidate, idx) => {
@@ -895,6 +1024,72 @@ function scanSpreadsheetRegions(rows) {
       candidate.anchorCol !== prev.anchorCol ||
       candidate.headerRowIdx !== prev.headerRowIdx;
   });
+}
+
+function countSpreadsheetRecognizedLabels(rows) {
+  const labels = new Set();
+  const rowLimit = Math.min(rows.length, 64);
+  for (let rowIdx = 0; rowIdx < rowLimit; rowIdx++) {
+    const row = rows[rowIdx] || [];
+    for (let colIdx = 0; colIdx < row.length; colIdx++) {
+      const label = canonicalSpreadsheetLabel(row[colIdx]);
+      if (label) labels.add(`${rowIdx}:${colIdx}:${label}`);
+    }
+  }
+  return labels.size;
+}
+
+function countSpreadsheetHeaderHints(rows) {
+  let count = 0;
+  const rowLimit = Math.min(rows.length, 64);
+  for (let rowIdx = 0; rowIdx < rowLimit; rowIdx++) {
+    const row = rows[rowIdx] || [];
+    for (let colIdx = 0; colIdx < row.length; colIdx++) {
+      if (parseSpreadsheetHeaderHint(row[colIdx])) count++;
+    }
+  }
+  return count;
+}
+
+function countSpreadsheetTraceEntries(runs) {
+  let count = 0;
+  (runs || []).forEach(run => {
+    (run.blocks || []).forEach(block => {
+      count += Object.keys(block.traceStore || {}).length;
+    });
+  });
+  return count;
+}
+
+function scoreSpreadsheetParseCandidate(rows, parsed) {
+  const nonEmptyRows = rows.reduce((count, row) => (
+    row && row.some(cell => normalizeSpreadsheetWhitespace(cell)) ? count + 1 : count
+  ), 0);
+  const maxCols = rows.reduce((max, row) => Math.max(max, (row || []).length), 0);
+  const blockCount = (parsed.runs || []).reduce((sum, run) => sum + ((run.blocks || []).length), 0);
+  const traceCount = countSpreadsheetTraceEntries(parsed.runs || []);
+  const labelCount = countSpreadsheetRecognizedLabels(rows);
+  const headerHintCount = countSpreadsheetHeaderHints(rows);
+  return ((parsed.runs || []).length * 1000000) +
+    (blockCount * 10000) +
+    (traceCount * 100) +
+    (labelCount * 20) +
+    (headerHintCount * 5) +
+    Math.min(maxCols, 512) +
+    Math.min(nonEmptyRows, 512) -
+    ((parsed.warnings || []).length * 2);
+}
+
+function appendSpreadsheetWarning(result, warning) {
+  if (!result || !warning) return result;
+  result.warnings = [warning, ...(result.warnings || [])];
+  (result.runs || []).forEach(run => {
+    run.warnings = [warning, ...(run.warnings || [])];
+    (run.blocks || []).forEach(block => {
+      block.importDiagnostics = [warning, ...(block.importDiagnostics || [])];
+    });
+  });
+  return result;
 }
 
 function parseSpreadsheetRows(fileName, rows, sheetName, options) {
@@ -920,13 +1115,17 @@ function parseSpreadsheetRows(fileName, rows, sheetName, options) {
   const anchorCol = candidate.anchorCol;
   const sourceFileRowIdx = candidate.labelRows["SOURCE FILE"];
   const subcaseRowIdx = candidate.labelRows["SUBCASE"];
+  const subcaseLabelRowIdx = candidate.labelRows["SUBCASE LABEL"];
   const familyRowIdx = candidate.labelRows["RESULT FAMILY"];
   const entityIdRowIdx = candidate.labelRows["ENTITY ID"];
+  const entityLabelRowIdx = candidate.labelRows["ENTITY LABEL"];
   const directionRowIdx = candidate.labelRows["DIRECTION"];
   const representationRowIdx = candidate.labelRows["REPRESENTATION"];
   const elementTypeRowIdx = candidate.labelRows["ELEMENT TYPE"];
   const sheetFallbackName = sheetName ? `${fileName} [${sheetName}]` : fileName;
   const sourceFileFallbackUsed = new Set();
+  const textOnlySubcases = new Set();
+  const textOnlyEntities = new Set();
 
   const rowLimit = nextCandidate ? nextCandidate.startRow : normalizedRows.length;
   let columnCount = 0;
@@ -938,32 +1137,55 @@ function parseSpreadsheetRows(fileName, rows, sheetName, options) {
   const dataColumns = [];
 
   for (let col = anchorCol + 1; col < columnCount; col++) {
+    const header = normalizeSpreadsheetWhitespace(csvCell(normalizedRows, headerRowIdx, col));
+    const headerHint = parseSpreadsheetHeaderHint(header);
     const rawSourceFile = normalizeSpreadsheetWhitespace(csvCell(normalizedRows, sourceFileRowIdx, col));
-    const sourceFile = rawSourceFile || sheetFallbackName;
-    const subcaseId = parseSpreadsheetSubcase(csvCell(normalizedRows, subcaseRowIdx, col));
+    const sourceFile = rawSourceFile || (headerHint && headerHint.sourceFile) || sheetFallbackName;
+    const subcaseInfo = mergeSpreadsheetIdentity(
+      parseSpreadsheetSubcaseInfo(
+        csvCell(normalizedRows, subcaseRowIdx, col),
+        csvCell(normalizedRows, subcaseLabelRowIdx, col)
+      ),
+      headerHint ? headerHint.subcase : null
+    );
     const family = normalizeSpreadsheetFamily(csvCell(normalizedRows, familyRowIdx, col));
-    const entityId = parseSpreadsheetEntity(csvCell(normalizedRows, entityIdRowIdx, col));
-    const component = normalizeComponentLabel(csvCell(normalizedRows, directionRowIdx, col));
+    const entityInfo = mergeSpreadsheetIdentity(
+      parseSpreadsheetEntityInfo(
+        csvCell(normalizedRows, entityIdRowIdx, col),
+        csvCell(normalizedRows, entityLabelRowIdx, col)
+      ),
+      headerHint ? headerHint.entity : null
+    );
+    const component = normalizeComponentLabel(
+      csvCell(normalizedRows, directionRowIdx, col) || (headerHint ? headerHint.component : "")
+    );
     const elementType = family === "ELEMENT_FORCES"
       ? (normalizeElementType(elementTypeRowIdx === undefined ? "" : csvCell(normalizedRows, elementTypeRowIdx, col))
         || inferElementForceTypeFromComponent(component))
       : null;
-    const reprLabel = normalizeSpreadsheetWhitespace(csvCell(normalizedRows, representationRowIdx, col));
+    const reprLabel = normalizeSpreadsheetWhitespace(
+      csvCell(normalizedRows, representationRowIdx, col) || (headerHint ? headerHint.reprLabel : "")
+    );
     const reprKey = parseRepresentationLabel(reprLabel);
-    const header = normalizeSpreadsheetWhitespace(csvCell(normalizedRows, headerRowIdx, col));
 
-    if (!rawSourceFile && !subcaseId && !family && !entityId && !component && !reprLabel && !header && !elementType) continue;
-    if (subcaseId === null || !family || entityId === null || !component || !reprLabel) {
+    if (!rawSourceFile && !subcaseInfo.key && !family && !entityInfo.key && !component && !reprLabel && !header && !elementType) continue;
+    if (!subcaseInfo.key || !family || !entityInfo.key || !component || !reprLabel) {
       warnings.push(`${prefix}: skipping column ${col + 1} due to incomplete metadata.`);
       continue;
     }
-    if (!rawSourceFile) sourceFileFallbackUsed.add(sourceFile);
+    if (!rawSourceFile && !(headerHint && headerHint.sourceFile)) sourceFileFallbackUsed.add(sourceFile);
+    if (subcaseInfo.id === null && subcaseInfo.label) textOnlySubcases.add(subcaseInfo.label);
+    if (entityInfo.id === null && entityInfo.label) textOnlyEntities.add(entityInfo.label);
     dataColumns.push({
       col,
       sourceFile,
-      subcaseId,
+      subcaseId: subcaseInfo.id,
+      subcaseKey: subcaseInfo.key,
+      subcaseLabel: subcaseInfo.label,
       family,
-      entityId,
+      entityId: entityInfo.id !== null ? entityInfo.id : entityInfo.key,
+      entityKey: entityInfo.key || String(entityInfo.id),
+      entityLabel: entityInfo.label,
       component,
       elementType,
       reprLabel,
@@ -981,6 +1203,12 @@ function parseSpreadsheetRows(fileName, rows, sheetName, options) {
   if (sourceFileFallbackUsed.size > 0) {
     warnings.push(`${prefix}: blank Source File metadata encountered; using spreadsheet file name fallback.`);
   }
+  textOnlySubcases.forEach(label => {
+    warnings.push(`${prefix}: imported subcase "${label}" as a text label because no numeric subcase ID was found.`);
+  });
+  textOnlyEntities.forEach(label => {
+    warnings.push(`${prefix}: imported entity "${label}" as a text label because no numeric entity ID was found.`);
+  });
 
   for (let rowIdx = headerRowIdx + 1; rowIdx < rowLimit; rowIdx++) {
     const rawX = normalizeSpreadsheetWhitespace(csvCell(normalizedRows, rowIdx, anchorCol));
@@ -1018,21 +1246,23 @@ function parseSpreadsheetRows(fileName, rows, sheetName, options) {
   function getBlock(run, meta) {
     const isXypunch = meta.family === "XYPUNCH";
     let block = run.blocks.find(b => {
-      if (b.resultFamily !== meta.family || b.subcaseId !== meta.subcaseId) return false;
+      if (b.resultFamily !== meta.family || String(b.subcaseKey || b.subcaseId) !== String(meta.subcaseKey || meta.subcaseId)) return false;
       if (meta.family === "ELEMENT_FORCES" && normalizeElementType(b.elementType) !== normalizeElementType(meta.elementType)) {
         return false;
       }
       if (!isXypunch) return true;
-      return b.xypunchEntity === meta.entityId && normalizeTraceComponentKey(b.xypunchComp) === normalizeTraceComponentKey(meta.component);
+      return String(b.xypunchEntity) === String(meta.entityKey || meta.entityId) &&
+        normalizeTraceComponentKey(b.xypunchComp) === normalizeTraceComponentKey(meta.component);
     });
     if (!block) {
       block = createSpreadsheetBlock(
         run.blocks.length,
         run.runName,
-        meta.subcaseId,
+        { id: meta.subcaseId, key: meta.subcaseKey, label: meta.subcaseLabel },
         meta.family,
-        isXypunch ? { entityId: meta.entityId, comp: meta.component, kind: "XYPUNCH" } : null,
-        meta.elementType
+        isXypunch ? { entityKey: meta.entityKey || meta.entityId, comp: meta.component, kind: "XYPUNCH" } : null,
+        meta.elementType,
+        sheetName
       );
       run.blocks.push(block);
     }
@@ -1049,9 +1279,9 @@ function parseSpreadsheetRows(fileName, rows, sheetName, options) {
       const next = dataColumns[i + 1];
       if (!next || next.reprKey !== "IMAG" ||
           next.sourceFile !== col.sourceFile ||
-          next.subcaseId !== col.subcaseId ||
+          String(next.subcaseKey) !== String(col.subcaseKey) ||
           next.family !== col.family ||
-          next.entityId !== col.entityId ||
+          String(next.entityKey) !== String(col.entityKey) ||
           normalizeElementType(next.elementType) !== normalizeElementType(col.elementType) ||
           normalizeTraceComponentKey(next.component) !== normalizeTraceComponentKey(col.component)) {
         warnings.push(`${prefix}: skipping column ${col.col + 1} because the matching Imaginary column is missing or mismatched.`);
@@ -1065,16 +1295,18 @@ function parseSpreadsheetRows(fileName, rows, sheetName, options) {
         isComplex: true,
         complexRep: "REAL_IMAG",
         component: col.component,
-        entityId: col.entityId,
+        entityId: col.entityKey,
         domain: "FREQUENCY_RESPONSE",
         storageKind: "COMPLEX",
         lockedRepr: null,
         sourceLines: [
           `$SOURCE FILE = ${col.sourceFile}`,
-          `$SUBCASE ID = ${col.subcaseId}`,
+          `$SUBCASE ID = ${col.subcaseId !== null ? col.subcaseId : col.subcaseKey}`,
+          ...(col.subcaseLabel ? [`$SUBCASE LABEL = ${col.subcaseLabel}`] : []),
           `$RESULT FAMILY = ${col.family}`,
           ...(col.elementType ? [`$ELEMENT TYPE = ${col.elementType}`] : []),
-          `$ENTITY ID = ${col.entityId}`,
+          `$ENTITY ID = ${col.entityKey}`,
+          ...(col.entityLabel ? [`$ENTITY LABEL = ${col.entityLabel}`] : []),
           `$DIRECTION = ${col.component}`,
           "$REPRESENTATION = RAW",
         ],
@@ -1083,8 +1315,11 @@ function parseSpreadsheetRows(fileName, rows, sheetName, options) {
       const block = getBlock(run, col);
       addSpreadsheetTrace(block, traceData, {
         entityId: col.entityId,
+        entityKey: col.entityKey,
+        entityLabel: col.entityLabel,
         component: col.component,
         elementType: col.elementType,
+        subcaseLabel: col.subcaseLabel,
         storageKind: "COMPLEX",
         lockedRepr: null,
       });
@@ -1103,16 +1338,18 @@ function parseSpreadsheetRows(fileName, rows, sheetName, options) {
       isComplex: false,
       complexRep: "UNKNOWN",
       component: col.component,
-      entityId: col.entityId,
+      entityId: col.entityKey,
       domain: "FREQUENCY_RESPONSE",
       storageKind: "DERIVED",
       lockedRepr: col.reprKey,
       sourceLines: [
         `$SOURCE FILE = ${col.sourceFile}`,
-        `$SUBCASE ID = ${col.subcaseId}`,
+        `$SUBCASE ID = ${col.subcaseId !== null ? col.subcaseId : col.subcaseKey}`,
+        ...(col.subcaseLabel ? [`$SUBCASE LABEL = ${col.subcaseLabel}`] : []),
         `$RESULT FAMILY = ${col.family}`,
         ...(col.elementType ? [`$ELEMENT TYPE = ${col.elementType}`] : []),
-        `$ENTITY ID = ${col.entityId}`,
+        `$ENTITY ID = ${col.entityKey}`,
+        ...(col.entityLabel ? [`$ENTITY LABEL = ${col.entityLabel}`] : []),
         `$DIRECTION = ${col.component}`,
         `$REPRESENTATION = ${col.reprKey}`,
       ],
@@ -1121,8 +1358,11 @@ function parseSpreadsheetRows(fileName, rows, sheetName, options) {
     const block = getBlock(run, col);
     addSpreadsheetTrace(block, traceData, {
       entityId: col.entityId,
+      entityKey: col.entityKey,
+      entityLabel: col.entityLabel,
       component: col.component,
       elementType: col.elementType,
+      subcaseLabel: col.subcaseLabel,
       storageKind: "DERIVED",
       lockedRepr: col.reprKey,
     });
@@ -1134,6 +1374,9 @@ function parseSpreadsheetRows(fileName, rows, sheetName, options) {
     run.importSheetName = sheetName || null;
     run.sourceRunName = run.runName;
     run.warnings.push(...warnings);
+    run.blocks.forEach(block => {
+      block.importDiagnostics = warnings.slice();
+    });
     return finalizeSpreadsheetRun(run);
   });
 
@@ -1151,10 +1394,43 @@ function parseSpreadsheetRows(fileName, rows, sheetName, options) {
 
 function parseSpreadsheetCsv(fileName, textOrRows, sheetName) {
   const isRowMatrix = Array.isArray(textOrRows);
-  const rows = isRowMatrix ? normalizeSpreadsheetRows(textOrRows) : parseCsvRows(textOrRows);
-  return parseSpreadsheetRows(fileName, rows, sheetName, {
-    delimiter: isRowMatrix ? null : rows.csvDelimiter,
+  if (isRowMatrix) {
+    const rows = normalizeSpreadsheetRows(textOrRows);
+    return parseSpreadsheetRows(fileName, rows, sheetName, {
+      delimiter: null,
+    });
+  }
+
+  const text = String(textOrRows || "");
+  const detectedDelimiter = detectCsvDelimiter(text);
+  const delimiterCandidates = [
+    detectedDelimiter,
+    ...CSV_DELIMITER_CANDIDATES.filter(delim => delim !== detectedDelimiter),
+  ];
+  let best = null;
+
+  delimiterCandidates.forEach(delim => {
+    const rows = parseCsvRows(text, delim);
+    const parsed = parseSpreadsheetRows(fileName, rows, sheetName, {
+      delimiter: delim,
+    });
+    const score = scoreSpreadsheetParseCandidate(rows, parsed);
+    if (!best || score > best.score) best = { delimiter: delim, parsed, score };
   });
+
+  if (!best) {
+    return parseSpreadsheetRows(fileName, [], sheetName, {
+      delimiter: detectedDelimiter,
+    });
+  }
+
+  if (best.delimiter !== detectedDelimiter && best.parsed.runs.length > 0) {
+    appendSpreadsheetWarning(
+      best.parsed,
+      `${sheetName ? `${fileName} [${sheetName}]` : fileName}: auto-selected "${best.delimiter}" as the spreadsheet delimiter.`
+    );
+  }
+  return best.parsed;
 }
 
 function parseSpreadsheetText(fileName, text) {
@@ -1163,6 +1439,22 @@ function parseSpreadsheetText(fileName, text) {
     throw new Error(result.warnings[0] || `${fileName}: no importable spreadsheet data found.`);
   }
   return result.runs;
+}
+
+function getXlsxApi() {
+  if (typeof XLSX !== "undefined" && XLSX && typeof XLSX.read === "function") return XLSX;
+  if (typeof globalThis !== "undefined" && globalThis.XLSX && typeof globalThis.XLSX.read === "function") {
+    return globalThis.XLSX;
+  }
+  if (typeof module !== "undefined" && module.exports) {
+    try {
+      const xlsxApi = require("./vendor/xlsx.full.min.js");
+      if (xlsxApi && typeof xlsxApi.read === "function") return xlsxApi;
+    } catch (err) {
+      // Fall back to the local ZIP/XML decoder below.
+    }
+  }
+  return null;
 }
 
 function readUint16LE(bytes, offset) {
@@ -1405,8 +1697,33 @@ async function parseWorkbookBuffer(fileName, arrayBuffer) {
   if (lower.endsWith(".xls") && !lower.endsWith(".xlsx")) {
     throw new Error(`${fileName}: legacy .xls files are not supported by the standalone importer. Save as .xlsx or .csv.`);
   }
-  const entries = await unzipEntries(arrayBuffer);
-  return parseWorkbook(fileName, buildWorkbookFromXlsxEntries(entries));
+  const xlsxApi = getXlsxApi();
+  let xlsxReadError = null;
+
+  if (xlsxApi && typeof xlsxApi.read === "function") {
+    try {
+      const bytes = arrayBuffer instanceof Uint8Array ? arrayBuffer : new Uint8Array(arrayBuffer);
+      const workbook = xlsxApi.read(bytes, {
+        type: "array",
+        raw: false,
+        cellText: true,
+        cellDates: false,
+      });
+      return parseWorkbook(fileName, workbook, xlsxApi);
+    } catch (err) {
+      xlsxReadError = err;
+    }
+  }
+
+  try {
+    const entries = await unzipEntries(arrayBuffer);
+    return parseWorkbook(fileName, buildWorkbookFromXlsxEntries(entries));
+  } catch (err) {
+    if (xlsxReadError) {
+      throw new Error(`${fileName}: workbook decode failed. ${xlsxReadError.message}`);
+    }
+    throw err;
+  }
 }
 
 function workbookSheetRows(sheet, xlsxApi) {
