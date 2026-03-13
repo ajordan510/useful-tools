@@ -1,0 +1,4215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOL 111 .dat Builder</title>
+<style>
+/* =========================================================
+   Reset & Base
+   ========================================================= */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --accent:       #1a5fa8;
+  --accent-hover: #174e8a;
+  --accent-light: #e8f0fe;
+  --bg:           #f4f5f7;
+  --surface:      #ffffff;
+  --surface2:     #f0f1f3;
+  --border:       #d1d5db;
+  --border-light: #e4e6ea;
+  --text:         #1f2937;
+  --text-secondary: #6b7280;
+  --text-light:   #9ca3af;
+  --success:      #059669;
+  --warning:      #d97706;
+  --error:        #dc2626;
+  --font:         -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono:         "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  --radius:       6px;
+  --shadow:       0 1px 3px rgba(0,0,0,0.1);
+  --shadow-md:    0 4px 16px rgba(0,0,0,0.12);
+  --header-h:     50px;
+  --footer-h:     56px;
+  --input-height: 36px;
+  --label-size:   0.85rem;
+  --field-gap:    12px;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font);
+  font-size: 14px;
+  color: var(--text);
+  background: var(--bg);
+}
+
+/* =========================================================
+   Layout Shell
+   ========================================================= */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* =========================================================
+   Header
+   ========================================================= */
+#header {
+  height: var(--header-h);
+  background: var(--accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 12px;
+  flex-shrink: 0;
+  box-shadow: var(--shadow);
+  z-index: 100;
+}
+#header h1 {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+#header .subtitle {
+  font-size: 11.5px;
+  opacity: 0.75;
+  margin-right: auto;
+}
+#header .header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.server-indicator {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  opacity: 0.8;
+}
+.server-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #f87171;
+}
+.server-dot.connected { background: #6ee7b7; }
+#btn-job-queue {
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.3);
+  padding: 5px 14px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: var(--font);
+}
+#btn-job-queue:hover { background: rgba(255,255,255,0.25); }
+
+/* =========================================================
+   Progress Bar
+   ========================================================= */
+#progress-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 24px;
+  gap: 0;
+  flex-shrink: 0;
+}
+.progress-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius);
+  transition: background 0.15s;
+  user-select: none;
+}
+.progress-step:hover { background: var(--surface2); }
+.progress-step.disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.progress-step.disabled:hover { background: transparent; }
+.step-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  border: 2px solid var(--border);
+  color: var(--text-secondary);
+  background: var(--surface);
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.progress-step.active .step-circle {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.progress-step.visited .step-circle {
+  background: var(--accent-light);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.step-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.progress-step.active .step-label { color: var(--accent); font-weight: 600; }
+.progress-step.visited .step-label { color: var(--text); }
+.step-connector {
+  width: 32px;
+  height: 2px;
+  background: var(--border);
+  flex-shrink: 0;
+  margin: 0 2px;
+}
+.step-connector.active { background: var(--accent); }
+
+/* =========================================================
+   Wizard Content Area
+   ========================================================= */
+#wizard-area {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+#wizard-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 32px;
+}
+.wizard-step {
+  display: none;
+  animation: fadeIn 0.2s ease;
+}
+.wizard-step.active { display: block; }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Step title */
+.step-header {
+  margin-bottom: 20px;
+}
+.step-header h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.step-header p {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* Split-pane layout for steps 2-4 */
+.split-pane {
+  display: flex;
+  gap: 24px;
+  min-height: 0;
+}
+.split-pane .input-panel {
+  flex: 1;
+  min-width: 0;
+}
+.split-pane .preview-panel {
+  width: 380px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.preview-panel-header {
+  padding: 10px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border-light);
+}
+.preview-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 14px;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+}
+
+/* Placeholder styling for empty steps */
+.step-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  color: var(--text-light);
+}
+.step-placeholder .placeholder-icon {
+  font-size: 40px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+.step-placeholder p {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* =========================================================
+   Job Queue Panel (Step 7 — separate from wizard flow)
+   ========================================================= */
+#job-queue-panel {
+  display: none;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+}
+#job-queue-panel.active {
+  display: flex;
+}
+.jq-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 32px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.jq-header h2 { font-size: 18px; font-weight: 600; }
+#btn-back-wizard {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px 16px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: background 0.15s;
+}
+#btn-back-wizard:hover { background: var(--surface2); }
+.jq-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 32px;
+}
+.jq-placeholder {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-light);
+}
+.jq-placeholder p { font-size: 14px; line-height: 1.6; }
+.jq-placeholder code {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 8px 16px;
+  background: var(--surface2);
+  border-radius: var(--radius);
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* =========================================================
+   Footer
+   ========================================================= */
+#footer {
+  height: var(--footer-h);
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 12px;
+  flex-shrink: 0;
+}
+#btn-back, #btn-next {
+  padding: 8px 24px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  font-family: var(--font);
+  border: none;
+}
+#btn-back {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+#btn-back:hover { background: var(--border-light); }
+#btn-back:disabled { opacity: 0.4; cursor: default; }
+#btn-back:disabled:hover { background: var(--surface2); }
+#btn-next {
+  background: var(--accent);
+  color: #fff;
+}
+#btn-next:hover { background: var(--accent-hover); }
+#btn-next:disabled { opacity: 0.4; cursor: default; }
+#btn-next:disabled:hover { background: var(--accent); }
+#status-bar {
+  flex: 1;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+  transition: color 0.2s;
+}
+#status-bar.status-success { color: var(--success); }
+#status-bar.status-warning { color: var(--warning); }
+#status-bar.status-error   { color: var(--error); }
+
+/* =========================================================
+   Form Elements (base styles for future phases)
+   ========================================================= */
+.form-group {
+  margin-bottom: var(--field-gap);
+}
+.form-group label {
+  display: block;
+  font-size: var(--label-size);
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  height: var(--input-height);
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--font);
+  font-size: 13px;
+  color: var(--text);
+  background: var(--surface);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(26,95,168,0.12);
+}
+.form-group textarea {
+  height: auto;
+  min-height: 80px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+.form-group .field-hint {
+  font-size: 11px;
+  color: var(--text-light);
+  margin-top: 3px;
+}
+
+/* Section cards within steps */
+.section-card {
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin-bottom: 16px;
+}
+.section-card h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text);
+}
+
+/* =========================================================
+   Drop Zone (BDF file import)
+   ========================================================= */
+.drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 20px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin-top: 4px;
+}
+.drop-zone:hover, .drop-zone.drag-over {
+  border-color: var(--accent);
+  background: var(--accent-light);
+  color: var(--accent);
+}
+.drop-zone .drop-icon { font-size: 22px; display: block; margin-bottom: 4px; }
+.drop-zone .drop-hint { font-size: 11px; color: var(--text-light); margin-top: 4px; }
+.bdf-file-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--accent-light);
+  border-radius: var(--radius);
+  font-size: 12px;
+  color: var(--accent);
+  margin-top: 6px;
+}
+.bdf-file-info .bdf-name { flex: 1; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bdf-file-info .bdf-remove {
+  cursor: pointer; font-size: 16px; line-height: 1; padding: 0 4px; border-radius: 3px;
+}
+.bdf-file-info .bdf-remove:hover { background: rgba(26,95,168,0.15); }
+
+/* =========================================================
+   Inline Form Rows
+   ========================================================= */
+.form-row {
+  display: flex;
+  gap: 16px;
+}
+.form-row .form-group { flex: 1; min-width: 0; }
+.form-row .form-group.narrow { flex: 0 0 140px; }
+
+/* =========================================================
+   Radio Group
+   ========================================================= */
+.radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+.radio-group label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text);
+  background: var(--surface);
+  transition: all 0.15s;
+  margin-bottom: 0;
+}
+.radio-group label:hover { border-color: var(--accent); background: var(--accent-light); }
+.radio-group input[type="radio"] { display: none; }
+.radio-group input[type="radio"]:checked + span {
+  color: var(--accent);
+  font-weight: 500;
+}
+.radio-group label:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+
+/* =========================================================
+   Toggle Switch
+   ========================================================= */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: var(--field-gap);
+}
+.toggle-row .toggle-label { font-size: 13px; font-weight: 500; color: var(--text); }
+.toggle-switch {
+  position: relative;
+  width: 38px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.toggle-switch input { display: none; }
+.toggle-switch .slider {
+  position: absolute;
+  inset: 0;
+  background: var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.toggle-switch .slider::before {
+  content: '';
+  position: absolute;
+  width: 16px; height: 16px;
+  left: 2px; top: 2px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+.toggle-switch input:checked + .slider { background: var(--accent); }
+.toggle-switch input:checked + .slider::before { transform: translateX(18px); }
+
+/* =========================================================
+   Editable Table Widget
+   ========================================================= */
+.table-widget {
+  width: 100%;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-top: 8px;
+}
+.table-widget table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.table-widget th {
+  background: var(--surface2);
+  padding: 6px 10px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-light);
+}
+.table-widget td {
+  padding: 2px 4px;
+  border-bottom: 1px solid var(--border-light);
+}
+.table-widget td:last-child { width: 32px; text-align: center; }
+.table-widget input {
+  width: 100%;
+  height: 28px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 12px;
+  background: transparent;
+  color: var(--text);
+  transition: border-color 0.15s;
+}
+.table-widget input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--surface);
+}
+.table-widget .row-remove {
+  cursor: pointer;
+  color: var(--text-light);
+  font-size: 15px;
+  line-height: 1;
+  border: none;
+  background: none;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+.table-widget .row-remove:hover { color: var(--error); background: #fde8e8; }
+.table-actions {
+  display: flex;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--surface2);
+  border-top: 1px solid var(--border-light);
+}
+.btn-sm {
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  font-family: var(--font);
+  transition: background 0.15s;
+}
+.btn-sm:hover { background: var(--surface2); }
+
+/* =========================================================
+   Validation & Warnings
+   ========================================================= */
+.form-group.has-error input,
+.form-group.has-error select {
+  border-color: var(--error);
+}
+.form-group .field-error {
+  font-size: 11px;
+  color: var(--error);
+  margin-top: 3px;
+  display: none;
+}
+.form-group.has-error .field-error { display: block; }
+.warning-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: var(--radius);
+  font-size: 12px;
+  color: #92400e;
+  margin-bottom: 12px;
+}
+.warning-banner .warn-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+/* =========================================================
+   Collapsible Section
+   ========================================================= */
+.section-card.collapsible .section-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+.section-card.collapsible .section-toggle .chevron {
+  font-size: 11px;
+  color: var(--text-light);
+  transition: transform 0.2s;
+}
+.section-card.collapsible.collapsed .section-toggle .chevron {
+  transform: rotate(-90deg);
+}
+.section-card.collapsible .section-body {
+  overflow: hidden;
+  transition: max-height 0.25s ease;
+}
+.section-card.collapsible.collapsed .section-body {
+  max-height: 0 !important;
+  margin-top: 0;
+}
+.section-card.collapsible:not(.collapsed) .section-body {
+  margin-top: 12px;
+}
+
+/* =========================================================
+   Conditional field groups (show/hide by freq type)
+   ========================================================= */
+.freq-fields { display: none; }
+.freq-fields.active { display: block; }
+
+/* =========================================================
+   Preview Syntax Highlighting
+   ========================================================= */
+.preview-panel-body .pv-comment { color: var(--success); }
+.preview-panel-body .pv-card    { color: var(--accent); font-weight: 600; }
+.preview-panel-body .pv-cont    { color: var(--text-light); }
+.preview-panel-body .pv-kw      { font-weight: 600; }
+
+/* =========================================================
+   Template Selector (Step 1)
+   ========================================================= */
+.template-selector {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+.template-selector select { flex: 1; min-width: 200px; }
+.template-selector .btn-sm { height: var(--input-height); }
+.template-file-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* =========================================================
+   Subcase Card (Step 3)
+   ========================================================= */
+.subcase-card {
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.subcase-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border-light);
+  cursor: pointer;
+  user-select: none;
+}
+.subcase-header .sc-label { flex: 1; font-size: 13px; font-weight: 600; color: var(--text); }
+.subcase-header .sc-remove {
+  color: var(--text-light); cursor: pointer; font-size: 16px;
+  border: none; background: none; padding: 0 4px; border-radius: 3px;
+}
+.subcase-header .sc-remove:hover { color: var(--error); background: #fde8e8; }
+.subcase-header .chevron { font-size: 10px; color: var(--text-light); transition: transform 0.2s; }
+.subcase-card.collapsed .subcase-header .chevron { transform: rotate(-90deg); }
+.subcase-body { padding: 12px 14px; }
+.subcase-card.collapsed .subcase-body { display: none; }
+
+.load-card {
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: var(--bg);
+}
+.load-card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.load-card-header .load-remove {
+  margin-left: auto; cursor: pointer; color: var(--text-light); font-size: 14px;
+  border: none; background: none; padding: 0 4px; border-radius: 3px;
+}
+.load-card-header .load-remove:hover { color: var(--error); background: #fde8e8; }
+
+/* =========================================================
+   Output Request Grid (Step 4)
+   ========================================================= */
+.output-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.output-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+.output-row:last-child { border-bottom: none; }
+.output-row .out-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 150px;
+  flex-shrink: 0;
+}
+.output-row .out-check input[type="checkbox"] { accent-color: var(--accent); }
+.output-row .out-check label { font-size: 13px; font-weight: 500; cursor: pointer; margin-bottom: 0; }
+.output-row .out-config {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+}
+.output-row .out-config select {
+  height: 28px;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: var(--font);
+  background: var(--surface);
+  color: var(--text);
+}
+.output-row .out-config select:disabled { opacity: 0.4; }
+
+.set-card {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+.set-card:last-child { border-bottom: none; }
+.set-card .set-id { font-weight: 600; font-size: 12px; color: var(--accent); width: 60px; flex-shrink: 0; padding-top: 4px; }
+.set-card .set-fields { flex: 1; }
+.set-card .set-remove {
+  cursor: pointer; color: var(--text-light); font-size: 16px; margin-top: 2px;
+  border: none; background: none; padding: 0 4px; border-radius: 3px;
+}
+.set-card .set-remove:hover { color: var(--error); background: #fde8e8; }
+
+/* =========================================================
+   Model Summary (Step 1 BDF parse result)
+   ========================================================= */
+.model-summary {
+  margin-top: 12px;
+  padding: 12px 16px;
+  background: var(--surface2);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  font-size: 12px;
+}
+.model-summary h4 { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+.model-summary table { width: 100%; border-collapse: collapse; }
+.model-summary td { padding: 2px 0; }
+.model-summary td:first-child { color: var(--text-secondary); width: 140px; }
+.model-summary td:last-child { font-weight: 500; }
+.model-summary .ms-warnings { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border-light); }
+.model-summary .ms-warn-item { color: var(--warning); font-size: 11px; padding: 2px 0; }
+.model-summary .ms-actions { margin-top: 10px; display: flex; gap: 8px; }
+.parse-progress { margin-top: 8px; font-size: 12px; color: var(--text-secondary); }
+.spinner {
+  display: inline-block;
+  width: 14px; height: 14px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* =========================================================
+   Pre-Check Results (Step 5)
+   ========================================================= */
+.check-list { margin-bottom: 20px; }
+.check-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-light);
+}
+.check-item:last-child { border-bottom: none; }
+.check-icon {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  flex-shrink: 0;
+  font-weight: 700;
+}
+.check-icon.pass    { background: #d1fae5; color: #065f46; }
+.check-icon.warn    { background: #fef3c7; color: #92400e; }
+.check-icon.fail    { background: #fee2e2; color: #991b1b; }
+.check-msg { flex: 1; font-size: 13px; }
+.check-fix {
+  font-size: 11px;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 2px 8px;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  background: none;
+  font-family: var(--font);
+  transition: background 0.15s;
+}
+.check-fix:hover { background: var(--accent-light); }
+
+.check-summary {
+  display: flex;
+  gap: 12px;
+  padding: 12px 0;
+  margin-bottom: 16px;
+}
+.check-badge {
+  padding: 6px 16px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 600;
+}
+.check-badge.pass { background: #d1fae5; color: #065f46; }
+.check-badge.warn { background: #fef3c7; color: #92400e; }
+.check-badge.fail { background: #fee2e2; color: #991b1b; }
+
+.review-summary {
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  font-size: 13px;
+  line-height: 1.7;
+  font-family: var(--mono);
+  white-space: pre-wrap;
+  color: var(--text-secondary);
+}
+.review-summary .rv-section {
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.review-summary .rv-section:hover { color: var(--accent); }
+
+.step5-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+.btn-primary {
+  padding: 8px 20px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: background 0.15s;
+}
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-primary:disabled { opacity: 0.4; cursor: default; }
+.btn-primary:disabled:hover { background: var(--accent); }
+
+/* =========================================================
+   Step 6: Generate & Download
+   ========================================================= */
+.dat-preview-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.dat-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border-light);
+  font-size: 13px;
+  font-weight: 600;
+}
+.dat-preview-header .dat-actions {
+  display: flex;
+  gap: 6px;
+}
+.dat-preview-body {
+  position: relative;
+  max-height: calc(100vh - 340px);
+  overflow: auto;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.dat-preview-body pre {
+  margin: 0;
+  padding: 10px 14px 10px 54px;
+  white-space: pre;
+  tab-size: 8;
+  color: var(--text);
+}
+.dat-preview-body textarea {
+  width: 100%;
+  min-height: 400px;
+  padding: 10px 14px;
+  border: none;
+  outline: none;
+  resize: vertical;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text);
+  background: var(--surface);
+  tab-size: 8;
+}
+.dat-line-numbers {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 44px;
+  padding: 10px 6px 10px 0;
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text-light);
+  background: var(--surface2);
+  border-right: 1px solid var(--border-light);
+  user-select: none;
+  pointer-events: none;
+}
+.dat-stats {
+  padding: 8px 14px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border-light);
+  background: var(--surface2);
+}
+.step6-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.step6-buttons .btn-sm { height: 34px; padding: 0 16px; font-size: 12px; }
+.btn-download {
+  padding: 8px 20px;
+  background: var(--success);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: background 0.15s;
+}
+.btn-download:hover { background: #047857; }
+/* Syntax highlighting tokens */
+.dat-preview-body .hl-comment { color: var(--success); }
+.dat-preview-body .hl-card    { color: var(--accent); font-weight: 600; }
+.dat-preview-body .hl-cont    { color: var(--text-light); }
+.dat-preview-body .hl-keyword { font-weight: 700; }
+.dat-preview-body .hl-section { color: var(--warning); font-weight: 600; }
+
+/* =========================================================
+   Scrollbar
+   ========================================================= */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-light); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ===== HEADER ===== -->
+  <div id="header">
+    <h1>SOL 111 .dat Builder</h1>
+    <span class="subtitle">Nastran Frequency Response Setup Tool</span>
+    <div class="header-right">
+      <div class="server-indicator">
+        <span class="server-dot" id="server-dot"></span>
+        <span id="server-label">Disconnected</span>
+      </div>
+      <button id="btn-job-queue">Job Queue</button>
+    </div>
+  </div>
+
+  <!-- ===== PROGRESS BAR ===== -->
+  <div id="progress-bar"></div>
+
+  <!-- ===== WIZARD AREA (steps 1-6) ===== -->
+  <div id="wizard-area">
+    <div id="wizard-content">
+
+      <!-- Step 1: Project Setup -->
+      <div class="wizard-step" id="step-1">
+        <div class="step-header">
+          <h2>Project Setup</h2>
+          <p>Define your job identity, select your Nastran solver version, and import your model BDF file.</p>
+        </div>
+
+        <div class="section-card">
+          <h3>Start from Template</h3>
+          <div class="template-selector">
+            <div class="form-group" style="margin-bottom:0;flex:1;min-width:200px">
+              <select id="inp-template">
+                <option value="">-- Select a template --</option>
+                <option value="point-force">Point Force Excitation</option>
+                <option value="base-excitation">Simple Base Excitation</option>
+                <option value="white-noise-random">White Noise Random Vibration</option>
+              </select>
+            </div>
+            <button class="btn-sm" id="btn-apply-template">Apply Template</button>
+          </div>
+          <div class="template-file-row">
+            <button class="btn-sm" id="btn-load-config">Load Saved Config</button>
+            <input type="file" id="config-file-input" accept=".json" style="display:none">
+          </div>
+          <div class="field-hint" style="margin-top:6px">Templates pre-fill all wizard fields. You can also load a previously saved configuration file.</div>
+        </div>
+
+        <div class="section-card">
+          <h3>Job Identity</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="inp-job-name">Job Name</label>
+              <input type="text" id="inp-job-name" placeholder="e.g. vibration_analysis_01" data-bind="jobName">
+              <div class="field-hint">Used as the output filename</div>
+            </div>
+            <div class="form-group">
+              <label for="inp-analyst">Analyst</label>
+              <input type="text" id="inp-analyst" placeholder="e.g. J. Smith" data-bind="analyst">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="inp-title">Title</label>
+            <input type="text" id="inp-title" placeholder="Analysis title (appears in .dat header)" data-bind="title">
+            <div class="field-hint">Maps to TITLE card in Case Control</div>
+          </div>
+          <div class="form-group">
+            <label for="inp-subtitle">Subtitle</label>
+            <input type="text" id="inp-subtitle" placeholder="Optional subtitle" data-bind="subtitle">
+            <div class="field-hint">Maps to SUBTITLE card in Case Control</div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <h3>Solver</h3>
+          <div class="form-row">
+            <div class="form-group narrow">
+              <label for="inp-nastran-version">Nastran Version</label>
+              <select id="inp-nastran-version" data-bind="nastranVersion">
+                <option value="msc">MSC Nastran</option>
+                <option value="nx">NX Nastran</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <h3>Model File (BDF)</h3>
+          <div class="form-group">
+            <label for="inp-bdf-path">BDF / DAT File Path</label>
+            <input type="text" id="inp-bdf-path" placeholder="Path used in INCLUDE statement (e.g. model.bdf)" data-bind="bdfFilePath">
+            <div class="field-hint">This path is written directly into the INCLUDE card. Use a relative or absolute path as needed.</div>
+          </div>
+          <div class="drop-zone" id="bdf-drop-zone">
+            <span class="drop-icon">&#128194;</span>
+            Drop a .bdf or .dat file here, or click to browse
+            <span class="drop-hint">File will be stored for optional parsing in Step 5</span>
+          </div>
+          <input type="file" id="bdf-file-input" accept=".bdf,.dat" style="display:none">
+          <div id="bdf-file-info" class="bdf-file-info" style="display:none">
+            <span class="bdf-name" id="bdf-file-name"></span>
+            <button class="btn-sm" id="btn-parse-bdf" style="margin-left:8px">Parse Model</button>
+            <span class="bdf-remove" id="bdf-file-remove" title="Remove file">&times;</span>
+          </div>
+          <div id="bdf-parse-progress" style="display:none; margin-top:8px">
+            <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-secondary)">
+              <span class="spinner"></span> Parsing BDF file...
+            </div>
+          </div>
+          <div id="bdf-model-summary" class="model-summary" style="display:none">
+            <h4>Model Summary</h4>
+            <table><tbody id="bdf-summary-table"></tbody></table>
+            <div id="bdf-summary-warnings" class="ms-warnings" style="display:none"></div>
+            <div class="ms-actions">
+              <button class="btn-sm" id="btn-autofill" style="display:none">Auto-fill Wizard Fields</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: Analysis Parameters -->
+      <div class="wizard-step" id="step-2">
+        <div class="step-header">
+          <h2>Analysis Parameters</h2>
+          <p>Configure modal extraction, frequency definition, and damping for your SOL 111 analysis.</p>
+        </div>
+        <div class="split-pane">
+          <div class="input-panel">
+
+            <!-- Section A: Modal Extraction (EIGRL) -->
+            <div class="section-card collapsible" id="sec-eigrl">
+              <div class="section-toggle" onclick="App.toggleSection('sec-eigrl')">
+                <h3>Modal Extraction (EIGRL)</h3>
+                <span class="chevron">&#9660;</span>
+              </div>
+              <div class="section-body">
+                <div class="form-row">
+                  <div class="form-group narrow">
+                    <label for="inp-eigrl-method">Method</label>
+                    <select id="inp-eigrl-method" disabled>
+                      <option value="lanczos" selected>Lanczos (EIGRL)</option>
+                    </select>
+                    <div class="field-hint">EIGRL uses Lanczos method</div>
+                  </div>
+                  <div class="form-group narrow">
+                    <label for="inp-eigrl-norm">Normalization</label>
+                    <select id="inp-eigrl-norm" data-bind="eigrl.norm">
+                      <option value="MASS">MASS</option>
+                      <option value="MAX">MAX</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="inp-eigrl-v1">Lower Frequency, V1 (Hz)</label>
+                    <input type="number" id="inp-eigrl-v1" step="any" data-bind="eigrl.v1">
+                  </div>
+                  <div class="form-group">
+                    <label for="inp-eigrl-v2">Upper Frequency, V2 (Hz)</label>
+                    <input type="number" id="inp-eigrl-v2" step="any" data-bind="eigrl.v2">
+                    <div class="field-error">V2 must be greater than V1</div>
+                  </div>
+                  <div class="form-group">
+                    <label for="inp-eigrl-nd">Number of Modes (ND)</label>
+                    <input type="number" id="inp-eigrl-nd" min="1" step="1" data-bind="eigrl.nd">
+                    <div class="field-error">ND must be a positive integer</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Section B: Frequency Definition -->
+            <div class="section-card collapsible" id="sec-freq">
+              <div class="section-toggle" onclick="App.toggleSection('sec-freq')">
+                <h3>Frequency Definition</h3>
+                <span class="chevron">&#9660;</span>
+              </div>
+              <div class="section-body">
+                <div class="form-group">
+                  <label>Spacing Type</label>
+                  <div class="radio-group" id="freq-type-radios">
+                    <label><input type="radio" name="freq-type" value="FREQ1" checked><span>FREQ1 &mdash; Linear</span></label>
+                    <label><input type="radio" name="freq-type" value="FREQ2"><span>FREQ2 &mdash; Logarithmic</span></label>
+                    <label><input type="radio" name="freq-type" value="FREQ4"><span>FREQ4 &mdash; Modal Spread</span></label>
+                    <label><input type="radio" name="freq-type" value="FREQ"><span>FREQ &mdash; Explicit List</span></label>
+                  </div>
+                </div>
+
+                <!-- FREQ1 fields -->
+                <div class="freq-fields active" id="freq-fields-FREQ1">
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="inp-freq1-f1">Start Frequency, F1 (Hz)</label>
+                      <input type="number" id="inp-freq1-f1" step="any" data-bind="freq.f1">
+                    </div>
+                    <div class="form-group">
+                      <label for="inp-freq1-df">Frequency Increment, DF (Hz)</label>
+                      <input type="number" id="inp-freq1-df" step="any" data-bind="freq.df">
+                      <div class="field-error">DF must be positive</div>
+                    </div>
+                    <div class="form-group">
+                      <label for="inp-freq1-ndf">Number of Increments (NDF)</label>
+                      <input type="number" id="inp-freq1-ndf" min="1" step="1" data-bind="freq.ndf">
+                      <div class="field-error">NDF must be a positive integer</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- FREQ2 fields -->
+                <div class="freq-fields" id="freq-fields-FREQ2">
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="inp-freq2-f1">Start Frequency, F1 (Hz)</label>
+                      <input type="number" id="inp-freq2-f1" step="any" data-bind="freq.f1">
+                      <div class="field-error">F1 must be positive for logarithmic spacing</div>
+                    </div>
+                    <div class="form-group">
+                      <label for="inp-freq2-f2">End Frequency, F2 (Hz)</label>
+                      <input type="number" id="inp-freq2-f2" step="any" data-bind="freq.f2">
+                    </div>
+                    <div class="form-group">
+                      <label for="inp-freq2-nf">Number of Frequencies (NF)</label>
+                      <input type="number" id="inp-freq2-nf" min="1" step="1" data-bind="freq.nf">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- FREQ4 fields -->
+                <div class="freq-fields" id="freq-fields-FREQ4">
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="inp-freq4-f1">Start Frequency, F1 (Hz)</label>
+                      <input type="number" id="inp-freq4-f1" step="any" data-bind="freq.f1">
+                    </div>
+                    <div class="form-group">
+                      <label for="inp-freq4-f2">End Frequency, F2 (Hz)</label>
+                      <input type="number" id="inp-freq4-f2" step="any" data-bind="freq.f2">
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="inp-freq4-fspd">Spread Factor (FSPD)</label>
+                      <input type="number" id="inp-freq4-fspd" step="any" data-bind="freq.fspd">
+                      <div class="field-hint">Fraction of modal frequency used to spread points (e.g. 0.1)</div>
+                    </div>
+                    <div class="form-group">
+                      <label for="inp-freq4-nfm">Points per Mode (NFM)</label>
+                      <input type="number" id="inp-freq4-nfm" min="1" step="1" data-bind="freq.nfm">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- FREQ explicit list fields -->
+                <div class="freq-fields" id="freq-fields-FREQ">
+                  <div class="form-group">
+                    <label for="inp-freq-list">Frequency List (Hz)</label>
+                    <textarea id="inp-freq-list" rows="3" placeholder="Enter frequencies separated by commas or spaces, e.g.: 10, 20, 50, 100, 200, 500, 1000"></textarea>
+                    <div class="field-hint">Values will be written to a FREQ card</div>
+                    <div class="field-error">Enter at least one positive frequency value</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Section C: Damping -->
+            <div class="section-card collapsible" id="sec-damping">
+              <div class="section-toggle" onclick="App.toggleSection('sec-damping')">
+                <h3>Damping</h3>
+                <span class="chevron">&#9660;</span>
+              </div>
+              <div class="section-body">
+                <div id="damping-warning" class="warning-banner" style="display:none">
+                  <span class="warn-icon">&#9888;</span>
+                  <span>No damping defined &mdash; resonant response will be infinite. Set a structural damping value or enable the modal damping table.</span>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="inp-damping-g">Structural Damping, G</label>
+                    <input type="number" id="inp-damping-g" step="any" data-bind="damping.g">
+                    <div class="field-hint">PARAM,G — global structural damping coefficient</div>
+                  </div>
+                  <div class="form-group narrow">
+                    <label for="inp-damping-kdamp">KDAMP</label>
+                    <select id="inp-damping-kdamp" data-bind="damping.kdamp">
+                      <option value="1">1 (Structural)</option>
+                      <option value="-1">-1 (Viscous)</option>
+                    </select>
+                    <div class="field-hint">PARAM,KDAMP</div>
+                  </div>
+                </div>
+                <div class="toggle-row">
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="inp-tabdmp1-toggle">
+                    <span class="slider"></span>
+                  </label>
+                  <span class="toggle-label">Enable Modal Damping Table (TABDMP1)</span>
+                </div>
+                <div id="tabdmp1-section" style="display:none">
+                  <div class="form-row">
+                    <div class="form-group narrow">
+                      <label for="inp-tabdmp1-type">Table Type</label>
+                      <select id="inp-tabdmp1-type" data-bind="damping.tabdmp1.type">
+                        <option value="CRIT">CRIT (Critical Ratio)</option>
+                        <option value="G">G (Structural)</option>
+                        <option value="Q">Q (Quality Factor)</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="table-widget" id="tabdmp1-table">
+                    <table>
+                      <thead><tr><th>Frequency (Hz)</th><th>Damping Value</th><th></th></tr></thead>
+                      <tbody id="tabdmp1-tbody"></tbody>
+                    </table>
+                    <div class="table-actions">
+                      <button class="btn-sm" id="btn-tabdmp1-add">+ Add Row</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div><!-- /input-panel -->
+          <div class="preview-panel">
+            <div class="preview-panel-header">Card Preview</div>
+            <div class="preview-panel-body" id="preview-2"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Boundary Conditions & Loads -->
+      <div class="wizard-step" id="step-3">
+        <div class="step-header">
+          <h2>Boundary Conditions &amp; Loads</h2>
+          <p>Define SPC constraints, dynamic loads (DLOAD/RLOAD1), and configure subcases.</p>
+        </div>
+        <div class="split-pane">
+          <div class="input-panel">
+
+            <!-- SPC Reference -->
+            <div class="section-card">
+              <h3>SPC (Boundary Conditions) Reference</h3>
+              <div class="form-row">
+                <div class="form-group narrow">
+                  <label for="inp-spc-id">SPC Set ID</label>
+                  <input type="number" id="inp-spc-id" min="1" step="1" value="1">
+                  <div class="field-hint">References SPC/SPC1 cards in your model BDF</div>
+                </div>
+                <div class="form-group">
+                  <label for="inp-spc-desc">Description (comment only)</label>
+                  <input type="text" id="inp-spc-desc" placeholder="e.g. Fixed base grids">
+                </div>
+              </div>
+            </div>
+
+            <!-- Subcases & Loads -->
+            <div class="section-card">
+              <h3>Subcases &amp; Dynamic Loads</h3>
+              <div id="subcase-list"></div>
+              <button class="btn-sm" id="btn-add-subcase" style="margin-top:8px">+ Add Subcase</button>
+            </div>
+
+          </div><!-- /input-panel -->
+          <div class="preview-panel">
+            <div class="preview-panel-header">Card Preview</div>
+            <div class="preview-panel-body" id="preview-3"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4: Output Requests -->
+      <div class="wizard-step" id="step-4">
+        <div class="step-header">
+          <h2>Output Requests</h2>
+          <p>Select output types (displacement, acceleration, stress, etc.), define SETs, and choose output formats.</p>
+        </div>
+        <div class="split-pane">
+          <div class="input-panel">
+
+            <!-- Output Types -->
+            <div class="section-card">
+              <h3>Output Types</h3>
+              <div class="output-grid" id="output-grid"></div>
+            </div>
+
+            <!-- SET Definitions -->
+            <div class="section-card">
+              <h3>SET Definitions</h3>
+              <div id="set-list"></div>
+              <button class="btn-sm" id="btn-add-set" style="margin-top:8px">+ Add SET</button>
+              <div class="field-hint" style="margin-top:6px">Define node/element sets for output requests. Use Nastran syntax: 1,2,3,10 THRU 100</div>
+            </div>
+
+            <!-- Output Format -->
+            <div class="section-card">
+              <h3>Output File Formats</h3>
+              <div class="toggle-row">
+                <label class="toggle-switch"><input type="checkbox" id="inp-gen-pch" checked><span class="slider"></span></label>
+                <span class="toggle-label">Generate .pch (punch) file</span>
+              </div>
+              <div class="toggle-row">
+                <label class="toggle-switch"><input type="checkbox" id="inp-gen-op2" checked><span class="slider"></span></label>
+                <span class="toggle-label">Generate .op2 (OUTPUT2) file</span>
+              </div>
+            </div>
+
+          </div><!-- /input-panel -->
+          <div class="preview-panel">
+            <div class="preview-panel-header">Card Preview</div>
+            <div class="preview-panel-body" id="preview-4"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 5: Pre-Check & Review -->
+      <div class="wizard-step" id="step-5">
+        <div class="step-header">
+          <h2>Pre-Check &amp; Review</h2>
+          <p>Validate your analysis setup and review a summary of all selections before generating the .dat file.</p>
+        </div>
+        <div style="max-width:800px; margin:0 auto">
+          <div class="section-card">
+            <h3>Pre-Analysis Checks</h3>
+            <div class="check-list" id="check-list"></div>
+            <div class="check-summary" id="check-summary"></div>
+          </div>
+          <div class="section-card">
+            <h3>Configuration Summary</h3>
+            <div class="review-summary" id="review-summary"></div>
+          </div>
+          <div class="step5-actions" id="step5-actions">
+            <button class="btn-primary" id="btn-proceed-generate">Proceed to Generate</button>
+            <button class="btn-sm" id="btn-review-all">Review All Steps</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 6: Generate & Download -->
+      <div class="wizard-step" id="step-6">
+        <div class="step-header">
+          <h2>Generate &amp; Download</h2>
+          <p>Preview your complete .dat file, make final edits, and download or submit to the server.</p>
+        </div>
+        <div style="max-width:900px; margin:0 auto">
+          <div class="dat-preview-wrap">
+            <div class="dat-preview-header">
+              <span>.dat File Preview</span>
+              <div class="dat-actions">
+                <button class="btn-sm" id="btn-dat-edit" title="Toggle edit mode">Edit</button>
+                <button class="btn-sm" id="btn-dat-regenerate" title="Discard edits and regenerate from wizard">Regenerate</button>
+              </div>
+            </div>
+            <div class="dat-preview-body" id="dat-preview-body">
+              <div class="dat-line-numbers" id="dat-line-numbers"></div>
+              <pre id="dat-preview-pre"></pre>
+              <textarea id="dat-edit-textarea" style="display:none" spellcheck="false"></textarea>
+            </div>
+            <div class="dat-stats" id="dat-stats"></div>
+          </div>
+          <div class="step6-buttons">
+            <button class="btn-download" id="btn-download-dat">Download .dat</button>
+            <button class="btn-sm" id="btn-copy-dat">Copy to Clipboard</button>
+            <button class="btn-sm" id="btn-save-config">Save Configuration</button>
+            <button class="btn-sm" id="btn-submit-server" disabled title="Start server.py to enable">Submit to Server</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /wizard-content -->
+
+    <!-- ===== FOOTER ===== -->
+    <div id="footer">
+      <button id="btn-back" disabled>Back</button>
+      <div id="status-bar"></div>
+      <button id="btn-next">Next</button>
+    </div>
+  </div><!-- /wizard-area -->
+
+  <!-- ===== JOB QUEUE PANEL (Step 7, separate from wizard) ===== -->
+  <div id="job-queue-panel">
+    <div class="jq-header">
+      <h2>Job Queue</h2>
+      <button id="btn-back-wizard">Back to Wizard</button>
+    </div>
+    <div class="jq-body">
+      <div class="jq-placeholder">
+        <p>Server not connected.</p>
+        <p>To enable job management, start the Python server:</p>
+        <code>python server.py --nastran-exe /path/to/nastran --work-dir ./runs</code>
+        <p style="margin-top:16px; font-size:13px;">Job queue UI will be fully implemented in Phase 7.</p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<script>
+/* =========================================================
+   Utilities
+   ========================================================= */
+function el(id) { return document.getElementById(id); }
+
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function setStatus(msg, type) {
+  const bar = el('status-bar');
+  bar.textContent = msg;
+  bar.className = type ? 'status-' + type : '';
+  if (msg) {
+    clearTimeout(setStatus._timer);
+    setStatus._timer = setTimeout(function() { bar.textContent = ''; bar.className = ''; }, 5000);
+  }
+}
+setStatus._timer = null;
+
+/* =========================================================
+   State
+   ========================================================= */
+const State = {
+  currentStep: 1,
+  maxVisitedStep: 1,
+  showingJobQueue: false,
+
+  // Step 1: Project Setup
+  jobName: '',
+  analyst: '',
+  title: '',
+  subtitle: '',
+  nastranVersion: 'msc',
+  bdfFilePath: '',
+  bdfFile: null,
+  bdfParsed: null,
+
+  // Step 2: Analysis Parameters
+  eigrl: { sid: 1, v1: 0.0, v2: 2000.0, nd: 50, norm: 'MASS' },
+  freqType: 'FREQ1',
+  freq: {
+    sid: 2,
+    frequencies: [],
+    f1: 10.0,
+    df: 5.0,
+    f2: 2000.0,
+    ndf: 400,
+    nf: 200,
+    fspd: 0.1,
+    nfm: 3,
+  },
+  damping: {
+    g: 0.0,
+    kdamp: 1,
+    useTabdmp1: false,
+    tabdmp1: {
+      sid: 3,
+      type: 'CRIT',
+      pairs: [
+        { f: 0.0, g: 0.02 },
+        { f: 2000.0, g: 0.02 },
+      ],
+    },
+  },
+
+  // Step 3: Boundary Conditions & Loads
+  spcSetId: 1,
+  subcases: [
+    {
+      id: 1,
+      label: 'Subcase 1',
+      dloadSid: null,
+      loads: [
+        { type: 'simple', gridId: null, dof: 3, magnitude: 1.0, delay: 0.0, phase: 0.0,
+          tcTable: null, tdTable: null }
+      ],
+    }
+  ],
+
+  // Step 4: Output Requests
+  outputRequests: {
+    displacement:  { enabled: true,  format: 'PUNCH', sort: 'SORT1', set: 'ALL' },
+    velocity:      { enabled: false, format: 'PUNCH', sort: 'SORT1', set: 'ALL' },
+    acceleration:  { enabled: true,  format: 'PUNCH', sort: 'SORT1', set: 'ALL' },
+    spcforces:     { enabled: false, format: 'PRINT', sort: 'SORT1', set: 'ALL' },
+    mpcforces:     { enabled: false, format: 'PRINT', sort: 'SORT1', set: 'ALL' },
+    force:         { enabled: false, format: 'PRINT', sort: 'SORT1', set: 'ALL' },
+    stress:        { enabled: false, format: 'PRINT', sort: 'SORT1', set: 'ALL' },
+    ese:           { enabled: false, format: 'PRINT', sort: 'SORT1', set: 'ALL' },
+  },
+  sets: [],
+  generatePch: true,
+  generateOp2: true,
+
+  // Step 5: Check results
+  bdfSummary: null,
+  checkResults: [],
+
+  // Step 6: Generated text
+  generatedDatText: '',
+  editedDatText: null,
+  isEditMode: false,
+  // Step 7: Jobs — added in Phase 7
+
+  serverUrl: 'http://localhost:8111',
+  serverConnected: false,
+};
+
+/* =========================================================
+   Nastran Card Formatting Module
+   ========================================================= */
+const NastranCards = {
+
+  /** Format a value into an 8-character Nastran fixed-field. */
+  field8: function(value) {
+    if (value === null || value === undefined || value === '') return '        ';
+    if (typeof value === 'string') {
+      return (value + '        ').slice(0, 8);
+    }
+    // Integer
+    if (Number.isInteger(value) && Math.abs(value) < 1e7) {
+      var s = String(value);
+      return ('        ' + s).slice(-8);
+    }
+    // Real number
+    return this._formatReal8(value);
+  },
+
+  /** Format a real number to fit in 8 characters using Nastran conventions. */
+  _formatReal8: function(v) {
+    if (v === 0) return '     0.0';
+    var av = Math.abs(v);
+    var sign = v < 0 ? '-' : '';
+
+    // Try fixed decimal if it fits in 8 chars
+    for (var d = 6; d >= 1; d--) {
+      var s = v.toFixed(d);
+      if (s.length <= 8) return ('        ' + s).slice(-8);
+    }
+    // Try integer representation
+    if (Number.isInteger(v) && String(v).length <= 8) {
+      var si = String(v) + '.';
+      if (si.length <= 8) return ('        ' + si).slice(-8);
+    }
+    // Nastran shorthand: 1.5+3 instead of 1.5E+03
+    var exp = Math.floor(Math.log10(av));
+    var mant = v / Math.pow(10, exp);
+    // Try various mantissa precisions
+    for (var p = 5; p >= 1; p--) {
+      var ms = mant.toFixed(p);
+      // Remove trailing zeros from mantissa
+      ms = ms.replace(/0+$/, '');
+      if (ms.endsWith('.')) ms = ms.slice(0, -1) + '.';
+      var es = (exp >= 0 ? '+' : '-') + Math.abs(exp);
+      var full = ms + es;
+      if (full.length <= 8) return ('        ' + full).slice(-8);
+    }
+    // Fallback: scientific notation
+    var sci = v.toExponential(1);
+    return ('        ' + sci).slice(-8);
+  },
+
+  /** Build a standard 80-char card line from card name + up to 8 fields + optional continuation. */
+  cardLine: function(name, fields, cont) {
+    var line = (name + '        ').slice(0, 8);
+    for (var i = 0; i < 8; i++) {
+      line += this.field8(i < fields.length ? fields[i] : null);
+    }
+    if (cont) {
+      line = line.slice(0, 72) + (cont + '        ').slice(0, 8);
+    }
+    return line;
+  },
+
+  /** Format a $ comment line. */
+  comment: function(text) {
+    return '$ ' + text;
+  },
+
+  /** Format EIGRL card. */
+  formatEIGRL: function(p) {
+    // EIGRL SID V1 V2 ND (blank) (blank) (blank) NORM
+    return [this.cardLine('EIGRL', [p.sid, p.v1, p.v2, p.nd, null, null, null, p.norm])];
+  },
+
+  /** Format FREQ card (explicit frequency list). */
+  formatFREQ: function(p) {
+    var lines = [];
+    var freqs = p.frequencies;
+    if (!freqs || freqs.length === 0) return [this.comment('FREQ card: no frequencies defined')];
+    // First line: FREQ SID f1 f2 f3 f4 f5 f6 f7
+    var contNum = 0;
+    var idx = 0;
+    var firstFields = [p.sid];
+    while (idx < freqs.length && firstFields.length < 8) {
+      firstFields.push(freqs[idx++]);
+    }
+    var needsCont = idx < freqs.length;
+    var contId = needsCont ? '+FRQ' + (++contNum) : null;
+    lines.push(this.cardLine('FREQ', firstFields, contId));
+    // Continuation lines
+    while (idx < freqs.length) {
+      var contFields = [];
+      while (idx < freqs.length && contFields.length < 8) {
+        contFields.push(freqs[idx++]);
+      }
+      var prevCont = contId;
+      needsCont = idx < freqs.length;
+      contId = needsCont ? '+FRQ' + (++contNum) : null;
+      lines.push(this.cardLine(prevCont, contFields, contId));
+    }
+    return lines;
+  },
+
+  /** Format FREQ1 card: linear spacing. */
+  formatFREQ1: function(p) {
+    return [this.cardLine('FREQ1', [p.sid, p.f1, p.df, p.ndf])];
+  },
+
+  /** Format FREQ2 card: logarithmic spacing. */
+  formatFREQ2: function(p) {
+    return [this.cardLine('FREQ2', [p.sid, p.f1, p.f2, p.nf])];
+  },
+
+  /** Format FREQ4 card: spread around modes. */
+  formatFREQ4: function(p) {
+    return [this.cardLine('FREQ4', [p.sid, p.f1, p.f2, p.fspd, p.nfm])];
+  },
+
+  /** Format TABDMP1 card: modal damping table with continuation lines. */
+  formatTABDMP1: function(p) {
+    var lines = [];
+    // Build all data entries: f1 g1 f2 g2 ... ENDT
+    var entries = [];
+    for (var i = 0; i < p.pairs.length; i++) {
+      entries.push(p.pairs[i].f);
+      entries.push(p.pairs[i].g);
+    }
+    entries.push('ENDT');
+
+    var contNum = 0;
+    // First line: TABDMP1 SID TYPE (blank x6) +cont
+    var needsCont = true;
+    var contId = '+TDP' + (++contNum);
+    lines.push(this.cardLine('TABDMP1', [p.sid, p.type], contId));
+
+    // Data continuation lines: 8 fields each
+    var idx = 0;
+    while (idx < entries.length) {
+      var prevCont = contId;
+      var fields = [];
+      while (idx < entries.length && fields.length < 8) {
+        fields.push(entries[idx++]);
+      }
+      needsCont = idx < entries.length;
+      contId = needsCont ? '+TDP' + (++contNum) : null;
+      lines.push(this.cardLine(prevCont, fields, contId));
+    }
+    return lines;
+  },
+
+  /** Format a PARAM card. */
+  formatPARAM: function(name, value) {
+    return [this.cardLine('PARAM', [name, value])];
+  },
+
+  /** Format DAREA card. */
+  formatDAREA: function(p) {
+    return [this.cardLine('DAREA', [p.sid, p.gridId, p.dof, p.scale])];
+  },
+
+  /** Format RLOAD1 card. */
+  formatRLOAD1: function(p) {
+    // RLOAD1 SID EXCITEID DELAY DPHASE TC TD
+    return [this.cardLine('RLOAD1', [p.sid, p.exciteId, p.delay || null, p.dphase || null, p.tcSid || null, p.tdSid || null])];
+  },
+
+  /** Format DLOAD card: combine multiple loads with scale factors. */
+  formatDLOAD: function(p) {
+    // DLOAD SID S S1 L1 S2 L2 ...
+    var fields = [p.sid, p.scale];
+    for (var i = 0; i < p.loads.length; i++) {
+      fields.push(p.loads[i].scale);
+      fields.push(p.loads[i].sid);
+    }
+    // May need continuation if > 3 loads (8 fields = SID S S1 L1 S2 L2 S3 L3)
+    if (fields.length <= 8) {
+      return [this.cardLine('DLOAD', fields)];
+    }
+    var lines = [];
+    var contNum = 0;
+    var first = fields.slice(0, 8);
+    var contId = '+DL' + (++contNum);
+    lines.push(this.cardLine('DLOAD', first, contId));
+    var idx = 8;
+    while (idx < fields.length) {
+      var chunk = fields.slice(idx, idx + 8);
+      idx += 8;
+      var prevCont = contId;
+      contId = idx < fields.length ? '+DL' + (++contNum) : null;
+      lines.push(this.cardLine(prevCont, chunk, contId));
+    }
+    return lines;
+  },
+
+  /** Format TABLED1 card. */
+  formatTABLED1: function(p) {
+    var lines = [];
+    var entries = [];
+    for (var i = 0; i < p.pairs.length; i++) {
+      entries.push(p.pairs[i].x);
+      entries.push(p.pairs[i].y);
+    }
+    entries.push('ENDT');
+    var contNum = 0;
+    var contId = '+TB' + (++contNum);
+    lines.push(this.cardLine('TABLED1', [p.sid, p.interp || null], contId));
+    var idx = 0;
+    while (idx < entries.length) {
+      var prevCont = contId;
+      var chunk = [];
+      while (idx < entries.length && chunk.length < 8) chunk.push(entries[idx++]);
+      contId = idx < entries.length ? '+TB' + (++contNum) : null;
+      lines.push(this.cardLine(prevCont, chunk, contId));
+    }
+    return lines;
+  },
+};
+
+/* =========================================================
+   BDF Parser — scoped metadata extraction
+   ========================================================= */
+const BDFParser = {
+
+  /** Main entry: parse BDF text, return summary object. */
+  parse: function(text) {
+    var summary = {
+      gridIds: new Set(),
+      gridCount: 0,
+      elemTypes: {},
+      elemCount: 0,
+      matIds: new Set(),
+      spcSets: {},
+      existingEigrl: [],
+      existingFreq: [],
+      existingDloads: [],
+      properties: {},
+      coordSystems: new Set(),
+      includeFiles: [],
+      parseWarnings: [],
+      rawLineCount: 0,
+      cardCount: 0,
+    };
+
+    var rawLines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+    summary.rawLineCount = rawLines.length;
+
+    // Assemble continuations into logical cards
+    var cards = this._assembleContinuations(rawLines, summary);
+
+    // Process each logical card
+    for (var i = 0; i < cards.length; i++) {
+      this._processCard(cards[i], summary);
+    }
+
+    summary.gridCount = summary.gridIds.size;
+    return summary;
+  },
+
+  /** Assemble continuation lines into logical cards. */
+  _assembleContinuations: function(rawLines, summary) {
+    var logical = []; // array of { name, fields[] }
+    var current = null;
+
+    for (var i = 0; i < rawLines.length; i++) {
+      var line = rawLines[i];
+
+      // Skip empty lines
+      if (!line || line.trim() === '') continue;
+
+      // Comment
+      if (line.charAt(0) === '$') continue;
+
+      // INCLUDE
+      var trimmed = line.trim().toUpperCase();
+      if (trimmed.indexOf('INCLUDE') === 0) {
+        var incMatch = line.match(/INCLUDE\s+['"](.*?)['"]/i);
+        if (incMatch) summary.includeFiles.push(incMatch[1]);
+        else summary.includeFiles.push(line.trim().substring(7).trim().replace(/['"]/g, ''));
+        continue;
+      }
+
+      // ENDDATA — stop
+      if (trimmed === 'ENDDATA') break;
+
+      // Skip executive / case control lines that aren't cards
+      if (trimmed === 'BEGIN BULK' || trimmed === 'CEND' || trimmed.indexOf('SOL ') === 0 ||
+          trimmed.indexOf('TIME ') === 0 || trimmed.indexOf('TITLE') === 0 ||
+          trimmed.indexOf('SUBTITLE') === 0 || trimmed.indexOf('SUBCASE') === 0 ||
+          trimmed.indexOf('LABEL') === 0 || trimmed.indexOf('SET ') === 0 ||
+          trimmed.indexOf('SPC =') === 0 || trimmed.indexOf('DLOAD =') === 0 ||
+          trimmed.indexOf('METHOD =') === 0 || trimmed.indexOf('FREQUENCY =') === 0 ||
+          trimmed.indexOf('DISPLACEMENT') === 0 || trimmed.indexOf('VELOCITY') === 0 ||
+          trimmed.indexOf('ACCELERATION') === 0 || trimmed.indexOf('STRESS') === 0 ||
+          trimmed.indexOf('FORCE') === 0 || trimmed.indexOf('SPCFORCE') === 0 ||
+          trimmed.indexOf('MPCFORCE') === 0 || trimmed.indexOf('ESE') === 0 ||
+          trimmed.indexOf('OUTPUT') === 0 || trimmed.indexOf('ECHO') === 0 ||
+          trimmed.indexOf('PARAM') === 0 && line.indexOf(',') > 0 && this._detectFormat(line) === 'case') {
+        continue;
+      }
+
+      var fmt = this._detectFormat(line);
+
+      // Free-format continuation: starts with comma or whitespace then comma
+      if (fmt === 'free' && (line.charAt(0) === ',' || (line.charAt(0) === ' ' && line.trim().charAt(0) === ','))) {
+        if (current) {
+          var contFields = this._splitFreeFields(line);
+          // First field is blank (continuation marker)
+          for (var j = 1; j < contFields.length; j++) current.fields.push(contFields[j]);
+        }
+        continue;
+      }
+
+      // Fixed-format continuation: starts with + or *+ or spaces then +
+      if (line.charAt(0) === '+' || line.charAt(0) === '*' && line.charAt(1) === '+' ||
+          (line.length >= 8 && line.substring(0, 8).trim().charAt(0) === '+')) {
+        if (current) {
+          var cFields;
+          if (line.charAt(0) === '*' || (current && current.name && current.name.charAt(current.name.length - 1) === '*')) {
+            cFields = this._splitLargeFields(line);
+          } else {
+            cFields = this._splitFixedFields(line);
+          }
+          // Skip field 0 (continuation ID) and field 9 (next continuation)
+          for (var k = 1; k < cFields.length - 1; k++) current.fields.push(cFields[k]);
+        }
+        continue;
+      }
+
+      // New card — flush previous
+      if (current) {
+        logical.push(current);
+        summary.cardCount++;
+      }
+
+      if (fmt === 'free') {
+        var freeFields = this._splitFreeFields(line);
+        current = { name: (freeFields[0] || '').toUpperCase().replace('*', ''), fields: freeFields.slice(1) };
+      } else if (fmt === 'large') {
+        var lgFields = this._splitLargeFields(line);
+        current = { name: (lgFields[0] || '').toUpperCase().replace('*', ''), fields: lgFields.slice(1) };
+      } else {
+        var smFields = this._splitFixedFields(line);
+        current = { name: (smFields[0] || '').toUpperCase().trim(), fields: smFields.slice(1) };
+      }
+    }
+    if (current) { logical.push(current); summary.cardCount++; }
+
+    return logical;
+  },
+
+  /** Detect format of a line: 'free', 'large', 'small', or 'case'. */
+  _detectFormat: function(line) {
+    // Free-format: contains commas in the data portion
+    if (line.indexOf(',') >= 0) {
+      // Distinguish case control like "PARAM,G,0.02" from "GRID,1,,0.,0.,0."
+      // Case control PARAM lines are handled above; bulk data with commas is free format
+      return 'free';
+    }
+    // Large-field: card name ends with * or has * in col 1-8
+    if (line.length >= 1) {
+      var nameField = line.substring(0, Math.min(8, line.length)).trim();
+      if (nameField.indexOf('*') >= 0) return 'large';
+    }
+    return 'small';
+  },
+
+  /** Split a free-format line on commas. */
+  _splitFreeFields: function(line) {
+    return line.split(',').map(function(f) { return f.trim(); });
+  },
+
+  /** Split a small-field (8-char) fixed-format line. */
+  _splitFixedFields: function(line) {
+    var fields = [];
+    // Pad to 80 chars
+    var padded = line + '                                                                                ';
+    for (var i = 0; i < 10; i++) {
+      fields.push(padded.substring(i * 8, (i + 1) * 8).trim());
+    }
+    return fields;
+  },
+
+  /** Split a large-field (16-char) fixed-format line. */
+  _splitLargeFields: function(line) {
+    var fields = [];
+    var padded = line + '                                                                                ';
+    // Field 0: columns 1-8 (card name)
+    fields.push(padded.substring(0, 8).trim());
+    // Fields 1-4: 16 chars each
+    for (var i = 0; i < 4; i++) {
+      fields.push(padded.substring(8 + i * 16, 8 + (i + 1) * 16).trim());
+    }
+    // Field 5: columns 73-80 (continuation)
+    fields.push(padded.substring(72, 80).trim());
+    return fields;
+  },
+
+  /** Parse a field value as number, returning NaN for blanks/non-numeric. */
+  _num: function(s) {
+    if (!s || s.trim() === '') return NaN;
+    s = s.trim();
+    // Handle Nastran shorthand: 1.5+3 → 1.5e+3, -.7-2 → -.7e-2
+    s = s.replace(/([0-9.])([\+\-])([0-9])/g, '$1E$2$3');
+    return parseFloat(s);
+  },
+
+  /** Parse a field value as integer. */
+  _int: function(s) {
+    if (!s || s.trim() === '') return NaN;
+    return parseInt(s.trim(), 10);
+  },
+
+  /** Process a single logical card and update summary. */
+  _processCard: function(card, summary) {
+    var name = card.name;
+    var f = card.fields;
+    if (!name) return;
+
+    // Strip trailing digit for element type families
+    var ELEM_TYPES = ['CBAR','CBEAM','CBUSH','CELAS1','CELAS2','CELAS3','CELAS4',
+      'CQUAD4','CQUAD8','CTRIA3','CTRIA6','CHEXA','CPENTA','CTETRA','CROD','CONROD',
+      'CSHEAR','CGAP','CDAMP1','CDAMP2','CMASS1','CMASS2','CVISC'];
+    var MAT_TYPES = ['MAT1','MAT2','MAT8','MAT9','MAT10'];
+    var PROP_TYPES = ['PBAR','PBEAM','PBUSH','PSHELL','PSOLID','PCOMP','PELAS','PROD',
+      'PSHEAR','PGAP','PDAMP','PMASS','PVISC'];
+
+    // GRID
+    if (name === 'GRID') {
+      var gid = this._int(f[0]);
+      if (!isNaN(gid)) summary.gridIds.add(gid);
+      // Coord system in field 1
+      var cp = this._int(f[1]);
+      if (!isNaN(cp) && cp !== 0) summary.coordSystems.add(cp);
+      return;
+    }
+
+    // Elements
+    if (ELEM_TYPES.indexOf(name) >= 0) {
+      var eid = this._int(f[0]);
+      if (!isNaN(eid)) {
+        summary.elemTypes[name] = (summary.elemTypes[name] || 0) + 1;
+        summary.elemCount++;
+      }
+      return;
+    }
+
+    // Materials
+    if (MAT_TYPES.indexOf(name) >= 0) {
+      var mid = this._int(f[0]);
+      if (!isNaN(mid)) summary.matIds.add(mid);
+      return;
+    }
+
+    // Properties
+    if (PROP_TYPES.indexOf(name) >= 0) {
+      var pid = this._int(f[0]);
+      if (!isNaN(pid)) summary.properties[pid] = name;
+      return;
+    }
+
+    // SPC
+    if (name === 'SPC') {
+      var sid = this._int(f[0]);
+      var grid = this._int(f[1]);
+      var dofs = (f[2] || '').trim();
+      if (!isNaN(sid)) {
+        if (!summary.spcSets[sid]) summary.spcSets[sid] = { grids: new Set(), dofs: '' };
+        if (!isNaN(grid)) summary.spcSets[sid].grids.add(grid);
+        summary.spcSets[sid].dofs = dofs;
+      }
+      return;
+    }
+
+    // SPC1
+    if (name === 'SPC1') {
+      var sid1 = this._int(f[0]);
+      var dofs1 = (f[1] || '').trim();
+      if (!isNaN(sid1)) {
+        if (!summary.spcSets[sid1]) summary.spcSets[sid1] = { grids: new Set(), dofs: '' };
+        summary.spcSets[sid1].dofs = dofs1;
+        // Remaining fields are grids, may contain THRU
+        var gi = 2;
+        while (gi < f.length) {
+          var val = (f[gi] || '').trim().toUpperCase();
+          if (val === 'THRU' && gi + 1 < f.length) {
+            var start = this._int(f[gi - 1]);
+            var end = this._int(f[gi + 1]);
+            if (!isNaN(start) && !isNaN(end)) {
+              // Store range boundaries rather than expanding large ranges
+              var lo = Math.min(start, end);
+              var hi = Math.max(start, end);
+              if (hi - lo <= 10000) {
+                for (var r = lo; r <= hi; r++) summary.spcSets[sid1].grids.add(r);
+              } else {
+                // Too large — store boundaries only
+                summary.spcSets[sid1].grids.add(lo);
+                summary.spcSets[sid1].grids.add(hi);
+                summary.parseWarnings.push('SPC1 set ' + sid1 + ': THRU range ' + lo + '-' + hi + ' too large to expand');
+              }
+            }
+            gi += 2;
+          } else {
+            var gv = this._int(f[gi]);
+            if (!isNaN(gv)) summary.spcSets[sid1].grids.add(gv);
+            gi++;
+          }
+        }
+      }
+      return;
+    }
+
+    // Existing analysis cards
+    if (name === 'EIGRL' || name === 'EIGR') {
+      summary.existingEigrl.push({ type: name, sid: this._int(f[0]), fields: f });
+      return;
+    }
+    if (name === 'FREQ' || name === 'FREQ1' || name === 'FREQ2' || name === 'FREQ3' ||
+        name === 'FREQ4' || name === 'FREQ5') {
+      summary.existingFreq.push({ type: name, sid: this._int(f[0]), fields: f });
+      return;
+    }
+    if (name === 'DLOAD' || name === 'RLOAD1' || name === 'RLOAD2') {
+      summary.existingDloads.push({ type: name, sid: this._int(f[0]) });
+      return;
+    }
+
+    // CORD systems
+    if (name.indexOf('CORD') === 0) {
+      var csid = this._int(f[0]);
+      if (!isNaN(csid)) summary.coordSystems.add(csid);
+      return;
+    }
+  },
+
+  /** Render model summary into the Step 1 UI panel. */
+  renderSummary: function(summary) {
+    var table = el('bdf-summary-table');
+    var rows = '';
+
+    rows += '<tr><td>Lines parsed</td><td>' + summary.rawLineCount.toLocaleString() + '</td></tr>';
+    rows += '<tr><td>Bulk data cards</td><td>' + summary.cardCount.toLocaleString() + '</td></tr>';
+    rows += '<tr><td>Grid points</td><td>' + summary.gridCount.toLocaleString() + '</td></tr>';
+    rows += '<tr><td>Elements</td><td>' + summary.elemCount.toLocaleString() + '</td></tr>';
+
+    // Element type breakdown
+    var types = Object.keys(summary.elemTypes).sort();
+    for (var i = 0; i < types.length; i++) {
+      rows += '<tr><td style="padding-left:16px">' + escHtml(types[i]) + '</td><td>' +
+        summary.elemTypes[types[i]].toLocaleString() + '</td></tr>';
+    }
+
+    rows += '<tr><td>Materials</td><td>' + summary.matIds.size + '</td></tr>';
+    rows += '<tr><td>Properties</td><td>' + Object.keys(summary.properties).length + '</td></tr>';
+
+    var spcIds = Object.keys(summary.spcSets).map(Number).sort(function(a, b) { return a - b; });
+    rows += '<tr><td>SPC Sets</td><td>' + spcIds.length +
+      (spcIds.length > 0 ? ' (IDs: ' + spcIds.join(', ') + ')' : '') + '</td></tr>';
+    rows += '<tr><td>Coord Systems</td><td>' + summary.coordSystems.size + '</td></tr>';
+
+    table.innerHTML = rows;
+
+    // Warnings
+    var warnDiv = el('bdf-summary-warnings');
+    var warnings = [];
+    if (summary.includeFiles.length > 0) {
+      warnings.push(summary.includeFiles.length + ' INCLUDE file(s) detected — not parsed');
+    }
+    for (var e = 0; e < summary.existingEigrl.length; e++) {
+      warnings.push('Existing ' + summary.existingEigrl[e].type + ' card found (SID ' + summary.existingEigrl[e].sid + ')');
+    }
+    for (var ef = 0; ef < summary.existingFreq.length; ef++) {
+      warnings.push('Existing ' + summary.existingFreq[ef].type + ' card found (SID ' + summary.existingFreq[ef].sid + ')');
+    }
+    for (var ed = 0; ed < summary.existingDloads.length; ed++) {
+      warnings.push('Existing ' + summary.existingDloads[ed].type + ' card found (SID ' + summary.existingDloads[ed].sid + ')');
+    }
+    summary.parseWarnings.forEach(function(w) { warnings.push(w); });
+
+    if (warnings.length > 0) {
+      warnDiv.innerHTML = warnings.map(function(w) {
+        return '<div class="ms-warn-item">&#9888; ' + escHtml(w) + '</div>';
+      }).join('');
+      warnDiv.style.display = '';
+    } else {
+      warnDiv.style.display = 'none';
+    }
+
+    // Show auto-fill button if we found useful data
+    var hasUsefulData = spcIds.length > 0 || summary.existingEigrl.length > 0;
+    el('btn-autofill').style.display = hasUsefulData ? '' : 'none';
+
+    el('bdf-model-summary').style.display = '';
+  },
+
+  /** Auto-fill wizard fields from parsed BDF data. */
+  autoFill: function(summary) {
+    // If SPC sets found, set the first one
+    var spcIds = Object.keys(summary.spcSets).map(Number).sort(function(a, b) { return a - b; });
+    if (spcIds.length > 0) {
+      State.spcSetId = spcIds[0];
+      var spcInput = el('inp-spc-set-id');
+      if (spcInput) spcInput.value = spcIds[0];
+    }
+
+    setStatus('Wizard fields updated from BDF data', 'success');
+  },
+};
+
+/* =========================================================
+   Pre-Check & Review (Step 5)
+   ========================================================= */
+const PreChecks = {
+
+  /** Run all checks and return array of result objects. */
+  run: function() {
+    var results = [];
+
+    // ---- Required Checks ----
+
+    // EIGRL defined
+    if (State.eigrl.v2 > State.eigrl.v1 && State.eigrl.nd > 0) {
+      results.push({ id: 'eigrl', cat: 'required', status: 'pass',
+        msg: 'EIGRL defined (' + State.eigrl.v1 + '-' + State.eigrl.v2 + ' Hz, ' + State.eigrl.nd + ' modes)' });
+    } else {
+      results.push({ id: 'eigrl', cat: 'required', status: 'fail',
+        msg: 'EIGRL not properly defined — check V1 < V2 and ND > 0', fixStep: 2 });
+    }
+
+    // Frequency set defined
+    var freqOk = false;
+    if (State.freqType === 'FREQ') {
+      freqOk = State.freq.frequencies && State.freq.frequencies.length > 0;
+    } else if (State.freqType === 'FREQ1') {
+      freqOk = State.freq.f1 >= 0 && State.freq.df > 0 && State.freq.ndf > 0;
+    } else if (State.freqType === 'FREQ2') {
+      freqOk = State.freq.f1 > 0 && State.freq.f2 > State.freq.f1 && State.freq.nf > 0;
+    } else if (State.freqType === 'FREQ4') {
+      freqOk = State.freq.f1 >= 0 && State.freq.f2 > State.freq.f1;
+    }
+    if (freqOk) {
+      var freqDesc = State.freqType;
+      if (State.freqType === 'FREQ1') freqDesc += ' (' + State.freq.ndf + ' points, \u0394' + State.freq.df + ' Hz)';
+      else if (State.freqType === 'FREQ2') freqDesc += ' (' + State.freq.nf + ' points)';
+      results.push({ id: 'freq', cat: 'required', status: 'pass', msg: 'Frequency set: ' + freqDesc });
+    } else {
+      results.push({ id: 'freq', cat: 'required', status: 'fail',
+        msg: 'Frequency set not properly defined', fixStep: 2 });
+    }
+
+    // At least one subcase
+    if (State.subcases.length > 0) {
+      results.push({ id: 'subcases', cat: 'required', status: 'pass',
+        msg: State.subcases.length + ' subcase(s) defined' });
+    } else {
+      results.push({ id: 'subcases', cat: 'required', status: 'fail',
+        msg: 'No subcases defined', fixStep: 3 });
+    }
+
+    // Each subcase has loads with grid IDs
+    var loadOk = true;
+    var loadMsg = [];
+    for (var i = 0; i < State.subcases.length; i++) {
+      var sc = State.subcases[i];
+      if (sc.loads.length === 0) {
+        loadOk = false;
+        loadMsg.push(sc.label + ' has no loads');
+      } else {
+        for (var j = 0; j < sc.loads.length; j++) {
+          if (!sc.loads[j].gridId) {
+            loadOk = false;
+            loadMsg.push(sc.label + ' load ' + (j + 1) + ': grid ID not specified');
+          }
+        }
+      }
+    }
+    if (loadOk) {
+      results.push({ id: 'loads', cat: 'required', status: 'pass', msg: 'All load grid IDs specified' });
+    } else {
+      results.push({ id: 'loads', cat: 'required', status: 'fail',
+        msg: loadMsg.join('; '), fixStep: 3 });
+    }
+
+    // ---- Warning Checks ----
+
+    // No damping
+    if (State.damping.g === 0 && !State.damping.useTabdmp1) {
+      results.push({ id: 'damping', cat: 'warning', status: 'warn',
+        msg: 'No damping defined \u2014 response at resonance will be infinite', fixStep: 2 });
+    }
+
+    // Few frequency points
+    if (State.freqType === 'FREQ1' && State.freq.ndf < 100) {
+      results.push({ id: 'freqres', cat: 'warning', status: 'warn',
+        msg: 'Low frequency resolution (' + State.freq.ndf + ' points) may miss resonant peaks', fixStep: 2 });
+    }
+
+    // Freq range vs EIGRL range mismatch
+    var freqMax = 0;
+    if (State.freqType === 'FREQ1') freqMax = State.freq.f1 + State.freq.df * State.freq.ndf;
+    else if (State.freqType === 'FREQ2') freqMax = State.freq.f2;
+    else if (State.freqType === 'FREQ4') freqMax = State.freq.f2;
+    if (freqMax > 0 && freqMax > State.eigrl.v2 * 1.05) {
+      results.push({ id: 'freqrange', cat: 'warning', status: 'warn',
+        msg: 'Frequency response range (' + freqMax.toFixed(0) + ' Hz) exceeds modal extraction range (' + State.eigrl.v2 + ' Hz)', fixStep: 2 });
+    }
+
+    // BDF-based warnings
+    if (State.bdfSummary) {
+      var bdf = State.bdfSummary;
+
+      // Existing analysis cards
+      if (bdf.existingEigrl.length > 0) {
+        results.push({ id: 'bdf-eigrl', cat: 'warning', status: 'warn',
+          msg: 'Model file contains ' + bdf.existingEigrl.length + ' existing EIGRL/EIGR card(s) \u2014 may conflict' });
+      }
+      if (bdf.existingFreq.length > 0) {
+        results.push({ id: 'bdf-freq', cat: 'warning', status: 'warn',
+          msg: 'Model file contains ' + bdf.existingFreq.length + ' existing FREQi card(s) \u2014 may conflict' });
+      }
+      if (bdf.existingDloads.length > 0) {
+        results.push({ id: 'bdf-dload', cat: 'warning', status: 'warn',
+          msg: 'Model file contains existing DLOAD/RLOAD card(s) \u2014 may conflict' });
+      }
+
+      // Large model with SORT2
+      if (bdf.gridCount > 10000) {
+        var hasSort2 = false;
+        var orKeys = Object.keys(State.outputRequests);
+        for (var k = 0; k < orKeys.length; k++) {
+          if (State.outputRequests[orKeys[k]].enabled && State.outputRequests[orKeys[k]].sort === 'SORT2') {
+            hasSort2 = true; break;
+          }
+        }
+        if (hasSort2) {
+          results.push({ id: 'sort2', cat: 'warning', status: 'warn',
+            msg: 'SORT2 with ' + bdf.gridCount.toLocaleString() + ' grids generates very large output', fixStep: 4 });
+        }
+      }
+
+      // ---- Info Checks (grid validation) ----
+
+      // Load grid exists in model
+      for (var li = 0; li < State.subcases.length; li++) {
+        var scl = State.subcases[li];
+        for (var lj = 0; lj < scl.loads.length; lj++) {
+          var gid = scl.loads[lj].gridId;
+          if (gid && !bdf.gridIds.has(gid)) {
+            results.push({ id: 'loadgrid-' + li + '-' + lj, cat: 'info', status: 'warn',
+              msg: 'Load grid ' + gid + ' (' + scl.label + ') not found in model', fixStep: 3 });
+          }
+        }
+      }
+    }
+
+    // BDF file present
+    if (State.bdfFilePath) {
+      results.push({ id: 'bdf', cat: 'info', status: 'pass', msg: 'BDF file: ' + State.bdfFilePath });
+    } else {
+      results.push({ id: 'bdf', cat: 'warning', status: 'warn',
+        msg: 'No BDF file specified \u2014 INCLUDE statement will be empty', fixStep: 1 });
+    }
+
+    State.checkResults = results;
+    return results;
+  },
+};
+
+const Step5 = {
+
+  init: function() {
+    el('btn-proceed-generate').addEventListener('click', function() {
+      Wizard.goToStep(6);
+    });
+    el('btn-review-all').addEventListener('click', function() {
+      Wizard.goToStep(1);
+    });
+  },
+
+  render: function() {
+    var results = PreChecks.run();
+    this._renderCheckList(results);
+    this._renderSummary(results);
+    this._renderReview();
+  },
+
+  _renderCheckList: function(results) {
+    var html = '';
+    for (var i = 0; i < results.length; i++) {
+      var r = results[i];
+      var iconClass = r.status === 'pass' ? 'pass' : (r.status === 'warn' ? 'warn' : 'fail');
+      var iconChar = r.status === 'pass' ? '\u2713' : (r.status === 'warn' ? '!' : '\u2717');
+      html += '<div class="check-item">';
+      html += '<span class="check-icon ' + iconClass + '">' + iconChar + '</span>';
+      html += '<span class="check-msg">' + escHtml(r.msg) + '</span>';
+      if (r.fixStep) {
+        html += '<button class="check-fix" data-step="' + r.fixStep + '">Fix</button>';
+      }
+      html += '</div>';
+    }
+    el('check-list').innerHTML = html;
+
+    // Bind fix buttons
+    var fixBtns = el('check-list').querySelectorAll('.check-fix');
+    fixBtns.forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        Wizard.goToStep(parseInt(btn.getAttribute('data-step'), 10));
+      });
+    });
+  },
+
+  _renderSummary: function(results) {
+    var pass = 0, warn = 0, fail = 0;
+    for (var i = 0; i < results.length; i++) {
+      if (results[i].status === 'pass') pass++;
+      else if (results[i].status === 'warn') warn++;
+      else fail++;
+    }
+    var html = '<span class="check-badge pass">' + pass + ' Passed</span>';
+    html += '<span class="check-badge warn">' + warn + ' Warning' + (warn !== 1 ? 's' : '') + '</span>';
+    html += '<span class="check-badge fail">' + fail + ' Failed</span>';
+    el('check-summary').innerHTML = html;
+
+    // Disable proceed button if any required check fails
+    el('btn-proceed-generate').disabled = fail > 0;
+  },
+
+  _renderReview: function() {
+    var lines = [];
+
+    // Project
+    lines.push('<span class="rv-section" data-step="1">Project: ' +
+      escHtml(State.jobName || '(unnamed)') + ' | ' +
+      (State.nastranVersion === 'msc' ? 'MSC' : 'NX') + ' Nastran' +
+      (State.bdfFilePath ? ' | BDF: ' + escHtml(State.bdfFilePath) : '') + '</span>');
+
+    // Modal
+    lines.push('<span class="rv-section" data-step="2">Modal: Lanczos, ' +
+      State.eigrl.v1 + '-' + State.eigrl.v2 + ' Hz, ' + State.eigrl.nd + ' modes</span>');
+
+    // Freq
+    var freqLine = 'Freq: ' + State.freqType;
+    if (State.freqType === 'FREQ1') {
+      var endF = State.freq.f1 + State.freq.df * State.freq.ndf;
+      freqLine += ', ' + State.freq.f1 + '-' + endF.toFixed(1) + ' Hz, \u0394' + State.freq.df + ' Hz (' + State.freq.ndf + ' pts)';
+    } else if (State.freqType === 'FREQ2') {
+      freqLine += ', ' + State.freq.f1 + '-' + State.freq.f2 + ' Hz (' + State.freq.nf + ' pts, log)';
+    } else if (State.freqType === 'FREQ4') {
+      freqLine += ', ' + State.freq.f1 + '-' + State.freq.f2 + ' Hz (spread=' + State.freq.fspd + ')';
+    }
+    lines.push('<span class="rv-section" data-step="2">' + escHtml(freqLine) + '</span>');
+
+    // Damping
+    var dampLine = 'Damping: G=' + State.damping.g + ', KDAMP=' + State.damping.kdamp;
+    if (State.damping.useTabdmp1) dampLine += ', TABDMP1 (' + State.damping.tabdmp1.pairs.length + ' pts)';
+    lines.push('<span class="rv-section" data-step="2">' + escHtml(dampLine) + '</span>');
+
+    // SPC
+    lines.push('<span class="rv-section" data-step="3">SPC: Set ' + State.spcSetId + '</span>');
+
+    // Subcases
+    lines.push('<span class="rv-section" data-step="3">Subcases: ' + State.subcases.length + '</span>');
+    for (var i = 0; i < State.subcases.length; i++) {
+      var sc = State.subcases[i];
+      for (var j = 0; j < sc.loads.length; j++) {
+        var ld = sc.loads[j];
+        var dofNames = ['T1','T2','T3','R1','R2','R3'];
+        lines.push('<span class="rv-section" data-step="3">  ' + sc.label + ': Grid ' +
+          (ld.gridId || '?') + ', DOF ' + (dofNames[ld.dof - 1] || ld.dof) + ', Mag ' + ld.magnitude + '</span>');
+      }
+    }
+
+    // Outputs
+    var outParts = [];
+    var orKeys = Object.keys(State.outputRequests);
+    for (var k = 0; k < orKeys.length; k++) {
+      var or = State.outputRequests[orKeys[k]];
+      if (or.enabled) {
+        outParts.push(orKeys[k].toUpperCase() + '(' + or.format + ')');
+      }
+    }
+    lines.push('<span class="rv-section" data-step="4">Output: ' + (outParts.length > 0 ? outParts.join(', ') : 'None') + '</span>');
+
+    el('review-summary').innerHTML = lines.join('\n');
+
+    // Bind click-to-navigate
+    var spans = el('review-summary').querySelectorAll('.rv-section');
+    spans.forEach(function(sp) {
+      sp.addEventListener('click', function() {
+        Wizard.goToStep(parseInt(sp.getAttribute('data-step'), 10));
+      });
+    });
+  },
+};
+
+/* =========================================================
+   .dat File Assembly
+   ========================================================= */
+const DatAssembler = {
+
+  /** Map output request keys to Nastran case control card names. */
+  _outputCardName: {
+    displacement: 'DISPLACEMENT', velocity: 'VELOCITY', acceleration: 'ACCELERATION',
+    spcforces: 'SPCFORCES', mpcforces: 'MPCFORCES', force: 'FORCE',
+    stress: 'STRESS', ese: 'ESE',
+  },
+
+  /** Generate the complete .dat file text from current State. Returns string. */
+  generate: function() {
+    var all = [];
+    all.push.apply(all, this._execControl());
+    all.push.apply(all, this._caseControl());
+    all.push.apply(all, this._bulkData());
+    return all.join('\n');
+  },
+
+  /** Executive Control section (before CEND). */
+  _execControl: function() {
+    var lines = [];
+    var sep = '================================================================';
+    lines.push(NastranCards.comment(sep));
+    lines.push(NastranCards.comment(' SOL 111 Frequency Response Analysis'));
+    lines.push(NastranCards.comment(' Generated by SOL 111 .dat Builder'));
+    lines.push(NastranCards.comment(' Date: ' + new Date().toISOString().slice(0, 10)));
+    if (State.analyst) lines.push(NastranCards.comment(' Analyst: ' + State.analyst));
+    if (State.jobName) lines.push(NastranCards.comment(' Job: ' + State.jobName));
+    lines.push(NastranCards.comment(sep));
+
+    if (State.nastranVersion === 'msc') {
+      lines.push('NASTRAN SYSTEM(316)=19');
+    }
+    lines.push('ID SOL111,BUILDER');
+    lines.push('SOL 111');
+    lines.push('TIME 600');
+    lines.push('CEND');
+    return lines;
+  },
+
+  /** Case Control section (between CEND and BEGIN BULK). */
+  _caseControl: function() {
+    var lines = [];
+    var sep = '================================================================';
+    lines.push(NastranCards.comment(sep));
+    lines.push(NastranCards.comment('                    CASE CONTROL SECTION'));
+    lines.push(NastranCards.comment(sep));
+
+    if (State.title) lines.push('TITLE = ' + State.title);
+    if (State.subtitle) lines.push('SUBTITLE = ' + State.subtitle);
+    lines.push('ECHO = NONE');
+    lines.push('SPC = ' + State.spcSetId);
+    lines.push('METHOD = ' + State.eigrl.sid);
+    lines.push('FREQUENCY = ' + State.freq.sid);
+
+    // SET definitions
+    if (State.sets.length > 0) {
+      lines.push(NastranCards.comment(''));
+      lines.push(NastranCards.comment(' Output SETs'));
+      for (var si = 0; si < State.sets.length; si++) {
+        var s = State.sets[si];
+        lines.push('SET ' + s.id + ' = ' + s.members);
+      }
+    }
+
+    lines.push(NastranCards.comment(''));
+
+    // Ensure subcases have dloadSids assigned
+    this._assignLoadSids();
+
+    // Subcases
+    for (var i = 0; i < State.subcases.length; i++) {
+      var sc = State.subcases[i];
+      lines.push('SUBCASE ' + sc.id);
+      lines.push('  SUBTITLE = ' + sc.label);
+      if (sc.dloadSid) {
+        lines.push('  DLOAD = ' + sc.dloadSid);
+      }
+
+      // Output requests
+      var outKeys = Object.keys(State.outputRequests);
+      for (var k = 0; k < outKeys.length; k++) {
+        var cfg = State.outputRequests[outKeys[k]];
+        if (!cfg.enabled) continue;
+        var cardName = this._outputCardName[outKeys[k]] || outKeys[k].toUpperCase();
+        var opts = cfg.sort + ',' + cfg.format;
+        var setRef = cfg.set === 'ALL' ? 'ALL' : cfg.set;
+        lines.push('  ' + cardName + '(' + opts + ') = ' + setRef);
+      }
+    }
+
+    return lines;
+  },
+
+  /** Bulk Data section (BEGIN BULK to ENDDATA). */
+  _bulkData: function() {
+    var lines = [];
+    var sep = '================================================================';
+    lines.push(NastranCards.comment(sep));
+    lines.push(NastranCards.comment('                      BULK DATA SECTION'));
+    lines.push(NastranCards.comment(sep));
+    lines.push('BEGIN BULK');
+
+    // INCLUDE
+    if (State.bdfFilePath) {
+      lines.push(NastranCards.comment(''));
+      lines.push("INCLUDE '" + State.bdfFilePath + "'");
+    }
+
+    // Modal extraction
+    lines.push(NastranCards.comment(''));
+    lines.push(NastranCards.comment(' ---- Modal Extraction ----'));
+    lines.push.apply(lines, NastranCards.formatEIGRL(State.eigrl));
+
+    // Frequency definition
+    lines.push(NastranCards.comment(''));
+    lines.push(NastranCards.comment(' ---- Frequency Definition ----'));
+    var fp = State.freq;
+    switch (State.freqType) {
+      case 'FREQ1': lines.push.apply(lines, NastranCards.formatFREQ1({ sid: fp.sid, f1: fp.f1, df: fp.df, ndf: fp.ndf })); break;
+      case 'FREQ2': lines.push.apply(lines, NastranCards.formatFREQ2({ sid: fp.sid, f1: fp.f1, f2: fp.f2, nf: fp.nf })); break;
+      case 'FREQ4': lines.push.apply(lines, NastranCards.formatFREQ4({ sid: fp.sid, f1: fp.f1, f2: fp.f2, fspd: fp.fspd, nfm: fp.nfm })); break;
+      case 'FREQ':  lines.push.apply(lines, NastranCards.formatFREQ({ sid: fp.sid, frequencies: fp.frequencies })); break;
+    }
+
+    // Damping
+    lines.push(NastranCards.comment(''));
+    lines.push(NastranCards.comment(' ---- Damping ----'));
+    if (State.damping.g !== 0) {
+      lines.push.apply(lines, NastranCards.formatPARAM('G', State.damping.g));
+    }
+    lines.push.apply(lines, NastranCards.formatPARAM('KDAMP', State.damping.kdamp));
+    if (State.damping.useTabdmp1) {
+      lines.push.apply(lines, NastranCards.formatTABDMP1(State.damping.tabdmp1));
+    }
+
+    // Dynamic loads
+    lines.push(NastranCards.comment(''));
+    lines.push(NastranCards.comment(' ---- Dynamic Loads ----'));
+    for (var i = 0; i < State.subcases.length; i++) {
+      var sc = State.subcases[i];
+      lines.push(NastranCards.comment(' ' + sc.label));
+      this._generateSubcaseLoadCards(sc, lines);
+    }
+
+    // Parameters
+    lines.push(NastranCards.comment(''));
+    lines.push(NastranCards.comment(' ---- Parameters ----'));
+    if (State.generatePch) lines.push.apply(lines, NastranCards.formatPARAM('POST', -1));
+    if (State.generateOp2 && !State.generatePch) lines.push.apply(lines, NastranCards.formatPARAM('POST', 0));
+    lines.push.apply(lines, NastranCards.formatPARAM('GRDPNT', 0));
+
+    lines.push(NastranCards.comment(''));
+    lines.push('ENDDATA');
+    return lines;
+  },
+
+  /** Assign SIDs to all load cards across subcases. Must be called before case control or bulk data generation. */
+  _assignLoadSids: function() {
+    var sid = 100;
+    for (var i = 0; i < State.subcases.length; i++) {
+      var sc = State.subcases[i];
+      var dloadLoads = [];
+
+      for (var j = 0; j < sc.loads.length; j++) {
+        var ld = sc.loads[j];
+        if (!ld.gridId) continue;
+        ld._dareaSid = sid++;
+        ld._tableSid = sid++;
+        ld._rloadSid = sid++;
+        dloadLoads.push(ld);
+      }
+
+      if (dloadLoads.length > 0) {
+        sc.dloadSid = sid++;
+      } else {
+        sc.dloadSid = null;
+      }
+    }
+  },
+
+  /** Generate bulk data cards for one subcase's loads and push onto lines array. */
+  _generateSubcaseLoadCards: function(sc, lines) {
+    var dloadLoads = [];
+
+    for (var j = 0; j < sc.loads.length; j++) {
+      var ld = sc.loads[j];
+      if (!ld.gridId || !ld._dareaSid) continue;
+
+      lines.push.apply(lines, NastranCards.formatDAREA({
+        sid: ld._dareaSid, gridId: ld.gridId, dof: ld.dof, scale: ld.magnitude
+      }));
+
+      // Flat spectrum table (simple mode)
+      lines.push.apply(lines, NastranCards.formatTABLED1({
+        sid: ld._tableSid, interp: 'LINEAR',
+        pairs: [{ x: 0.0, y: 1.0 }, { x: 99999.0, y: 1.0 }]
+      }));
+
+      lines.push.apply(lines, NastranCards.formatRLOAD1({
+        sid: ld._rloadSid, exciteId: ld._dareaSid,
+        delay: null, dphase: null,
+        tcSid: ld._tableSid, tdSid: null
+      }));
+
+      dloadLoads.push({ scale: 1.0, sid: ld._rloadSid });
+    }
+
+    if (dloadLoads.length > 0 && sc.dloadSid) {
+      lines.push.apply(lines, NastranCards.formatDLOAD({
+        sid: sc.dloadSid, scale: 1.0, loads: dloadLoads
+      }));
+    }
+  },
+};
+
+/* =========================================================
+   Step 6: Generate & Download — preview, edit, actions
+   ========================================================= */
+const Step6 = {
+
+  init: function() {
+    el('btn-dat-edit').addEventListener('click', function() { Step6.toggleEdit(); });
+    el('btn-dat-regenerate').addEventListener('click', function() { Step6.regenerate(); });
+    el('btn-download-dat').addEventListener('click', function() { Step6.download(); });
+    el('btn-copy-dat').addEventListener('click', function() { Step6.copyToClipboard(); });
+    el('btn-save-config').addEventListener('click', function() { Step6.saveConfig(); });
+  },
+
+  render: function() {
+    // Generate .dat text
+    var text = DatAssembler.generate();
+    State.generatedDatText = text;
+
+    if (State.isEditMode) {
+      this._showEditMode(State.editedDatText || text);
+    } else {
+      State.editedDatText = null;
+      this._showPreviewMode(text);
+    }
+  },
+
+  /** Show syntax-highlighted read-only preview. */
+  _showPreviewMode: function(text) {
+    var pre = el('dat-preview-pre');
+    var textarea = el('dat-edit-textarea');
+    var lineNums = el('dat-line-numbers');
+
+    pre.style.display = '';
+    textarea.style.display = 'none';
+    el('btn-dat-edit').textContent = 'Edit';
+
+    var rawLines = text.split('\n');
+    pre.innerHTML = rawLines.map(function(line) {
+      return Step6._highlightLine(line);
+    }).join('\n');
+
+    // Line numbers
+    var nums = [];
+    for (var i = 1; i <= rawLines.length; i++) nums.push(i);
+    lineNums.textContent = nums.join('\n');
+    lineNums.style.display = '';
+
+    this._updateStats(text);
+  },
+
+  /** Show editable textarea. */
+  _showEditMode: function(text) {
+    var pre = el('dat-preview-pre');
+    var textarea = el('dat-edit-textarea');
+    var lineNums = el('dat-line-numbers');
+
+    pre.style.display = 'none';
+    textarea.style.display = '';
+    textarea.value = text;
+    lineNums.style.display = 'none';
+    el('btn-dat-edit').textContent = 'Preview';
+
+    this._updateStats(text);
+  },
+
+  /** Toggle between preview and edit modes. */
+  toggleEdit: function() {
+    if (State.isEditMode) {
+      // Switching back to preview — capture edits
+      State.editedDatText = el('dat-edit-textarea').value;
+      State.isEditMode = false;
+      this._showPreviewMode(State.editedDatText);
+    } else {
+      // Switching to edit
+      State.isEditMode = true;
+      var text = State.editedDatText || State.generatedDatText;
+      this._showEditMode(text);
+    }
+  },
+
+  /** Discard manual edits and regenerate from State. */
+  regenerate: function() {
+    State.editedDatText = null;
+    State.isEditMode = false;
+    var text = DatAssembler.generate();
+    State.generatedDatText = text;
+    this._showPreviewMode(text);
+    setStatus('Regenerated from wizard settings', 'success');
+  },
+
+  /** Update the stats bar. */
+  _updateStats: function(text) {
+    var lineCount = text.split('\n').length;
+    // Count bulk data cards (non-comment, non-empty lines between BEGIN BULK and ENDDATA)
+    var bulkLines = text.split('\n');
+    var inBulk = false;
+    var cardCount = 0;
+    for (var i = 0; i < bulkLines.length; i++) {
+      var ln = bulkLines[i].trim();
+      if (ln === 'BEGIN BULK') { inBulk = true; continue; }
+      if (ln === 'ENDDATA') break;
+      if (inBulk && ln && ln.charAt(0) !== '$' && ln.charAt(0) !== '+' && ln.charAt(0) !== '*') {
+        // Skip INCLUDE lines
+        if (ln.indexOf('INCLUDE') !== 0) cardCount++;
+      }
+    }
+    var bytes = new Blob([text]).size;
+    var sizeStr = bytes < 1024 ? bytes + ' B' : (bytes / 1024).toFixed(1) + ' KB';
+    el('dat-stats').textContent = lineCount + ' lines | ' + cardCount + ' bulk data cards | ' + sizeStr;
+  },
+
+  /** Syntax-highlight a single line for the .dat preview. */
+  _highlightLine: function(line) {
+    if (!line || line.length === 0) return '';
+    var safe = escHtml(line);
+
+    // Comment lines
+    if (line.charAt(0) === '$') {
+      return '<span class="hl-comment">' + safe + '</span>';
+    }
+    // Keywords
+    var trimmed = line.trim();
+    if (trimmed === 'BEGIN BULK' || trimmed === 'ENDDATA' || trimmed === 'CEND') {
+      return '<span class="hl-keyword">' + safe + '</span>';
+    }
+    // Executive control keywords
+    if (trimmed.indexOf('SOL ') === 0 || trimmed.indexOf('TIME ') === 0 ||
+        trimmed.indexOf('ID ') === 0 || trimmed.indexOf('NASTRAN ') === 0) {
+      return '<span class="hl-section">' + safe + '</span>';
+    }
+    // Case control lines (TITLE, SPC, METHOD, SUBCASE, etc.)
+    if (trimmed.indexOf('TITLE') === 0 || trimmed.indexOf('SUBTITLE') === 0 ||
+        trimmed.indexOf('ECHO') === 0 || trimmed.indexOf('SPC =') === 0 ||
+        trimmed.indexOf('METHOD =') === 0 || trimmed.indexOf('FREQUENCY =') === 0 ||
+        trimmed.indexOf('DLOAD =') === 0 || trimmed.indexOf('SET ') === 0 ||
+        trimmed.indexOf('INCLUDE') === 0) {
+      return '<span class="hl-section">' + safe + '</span>';
+    }
+    if (trimmed.indexOf('SUBCASE') === 0) {
+      return '<span class="hl-keyword">' + safe + '</span>';
+    }
+    // Output request lines (indented, like  DISPLACEMENT(...))
+    if (/^\s+(DISPLACEMENT|VELOCITY|ACCELERATION|SPCFORCES|MPCFORCES|FORCE|STRESS|ESE)\(/.test(line)) {
+      return '<span class="hl-section">' + safe + '</span>';
+    }
+    // Continuation lines
+    if (line.charAt(0) === '+' || line.charAt(0) === '*') {
+      return '<span class="hl-cont">' + escHtml(line.slice(0, 8)) + '</span>' + escHtml(line.slice(8));
+    }
+    // Bulk data card lines: highlight card name
+    if (/^[A-Z]/.test(line) && line.length >= 8) {
+      return '<span class="hl-card">' + escHtml(line.slice(0, 8)) + '</span>' + escHtml(line.slice(8));
+    }
+    return safe;
+  },
+
+  /** Get the current .dat text (edited or generated). */
+  _getText: function() {
+    if (State.isEditMode) {
+      return el('dat-edit-textarea').value;
+    }
+    return State.editedDatText || State.generatedDatText;
+  },
+
+  /** Download the .dat file. */
+  download: function() {
+    var text = this._getText();
+    var filename = (State.jobName || 'sol111') + '.dat';
+    var blob = new Blob([text], { type: 'text/plain' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setStatus('Downloaded ' + filename, 'success');
+  },
+
+  /** Copy .dat text to clipboard. */
+  copyToClipboard: function() {
+    var text = this._getText();
+    navigator.clipboard.writeText(text).then(function() {
+      setStatus('Copied to clipboard', 'success');
+    }, function() {
+      // Fallback for older browsers
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      setStatus('Copied to clipboard', 'success');
+    });
+  },
+
+  /** Save current wizard configuration as JSON. */
+  saveConfig: function() {
+    var config = {
+      version: 1,
+      savedAt: new Date().toISOString(),
+      tool: 'SOL111-DAT-Builder',
+      state: {
+        jobName: State.jobName,
+        analyst: State.analyst,
+        title: State.title,
+        subtitle: State.subtitle,
+        nastranVersion: State.nastranVersion,
+        bdfFilePath: State.bdfFilePath,
+        eigrl: State.eigrl,
+        freqType: State.freqType,
+        freq: State.freq,
+        damping: JSON.parse(JSON.stringify(State.damping)),
+        spcSetId: State.spcSetId,
+        subcases: JSON.parse(JSON.stringify(State.subcases)),
+        outputRequests: JSON.parse(JSON.stringify(State.outputRequests)),
+        sets: JSON.parse(JSON.stringify(State.sets)),
+        generatePch: State.generatePch,
+        generateOp2: State.generateOp2,
+      },
+    };
+    var blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+    var filename = (State.jobName || 'sol111') + '_config.json';
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setStatus('Configuration saved as ' + filename, 'success');
+  },
+};
+
+/* =========================================================
+   Wizard Navigation
+   ========================================================= */
+const Wizard = {
+  STEPS: [
+    { id: 1, name: 'Project Setup' },
+    { id: 2, name: 'Analysis Parameters' },
+    { id: 3, name: 'Boundary Conditions & Loads' },
+    { id: 4, name: 'Output Requests' },
+    { id: 5, name: 'Pre-Check & Review' },
+    { id: 6, name: 'Generate & Download' },
+  ],
+
+  goToStep: function(n) {
+    if (n < 1 || n > this.STEPS.length) return;
+    if (n > State.maxVisitedStep + 1) return;
+
+    if (State.showingJobQueue) {
+      State.showingJobQueue = false;
+      el('job-queue-panel').classList.remove('active');
+      el('wizard-area').style.display = '';
+      el('progress-bar').style.display = '';
+    }
+
+    State.currentStep = n;
+    if (n > State.maxVisitedStep) State.maxVisitedStep = n;
+
+    this.renderProgressBar();
+    this.renderStep();
+    this.updateButtons();
+  },
+
+  next: function() {
+    if (State.currentStep < this.STEPS.length) {
+      this.goToStep(State.currentStep + 1);
+    }
+  },
+
+  back: function() {
+    if (State.currentStep > 1) {
+      this.goToStep(State.currentStep - 1);
+    }
+  },
+
+  renderProgressBar: function() {
+    var bar = el('progress-bar');
+    var html = '';
+    for (var i = 0; i < this.STEPS.length; i++) {
+      var step = this.STEPS[i];
+      var isActive = step.id === State.currentStep;
+      var isVisited = step.id < State.currentStep || step.id <= State.maxVisitedStep;
+      var isDisabled = step.id > State.maxVisitedStep + 1;
+      var cls = 'progress-step';
+      if (isActive) cls += ' active';
+      else if (isVisited) cls += ' visited';
+      if (isDisabled) cls += ' disabled';
+
+      if (i > 0) {
+        var connActive = step.id <= State.maxVisitedStep ? ' active' : '';
+        html += '<div class="step-connector' + connActive + '"></div>';
+      }
+
+      html += '<div class="' + cls + '" data-step="' + step.id + '">';
+      html += '<div class="step-circle">' + step.id + '</div>';
+      html += '<span class="step-label">' + escHtml(step.name) + '</span>';
+      html += '</div>';
+    }
+    bar.innerHTML = html;
+
+    var steps = bar.querySelectorAll('.progress-step:not(.disabled)');
+    for (var j = 0; j < steps.length; j++) {
+      steps[j].addEventListener('click', function() {
+        var n = parseInt(this.getAttribute('data-step'));
+        Wizard.goToStep(n);
+      });
+    }
+  },
+
+  renderStep: function() {
+    var panels = document.querySelectorAll('.wizard-step');
+    for (var i = 0; i < panels.length; i++) {
+      panels[i].classList.remove('active');
+    }
+    var current = el('step-' + State.currentStep);
+    if (current) current.classList.add('active');
+
+    // Trigger step-specific rendering
+    if (State.currentStep === 2) Step2.updatePreview();
+    if (State.currentStep === 3) Step3.updatePreview();
+    if (State.currentStep === 4) Step4.updatePreview();
+    if (State.currentStep === 5) Step5.render();
+    if (State.currentStep === 6) Step6.render();
+  },
+
+  updateButtons: function() {
+    el('btn-back').disabled = State.currentStep <= 1;
+    var nextBtn = el('btn-next');
+    if (State.currentStep >= this.STEPS.length) {
+      nextBtn.disabled = true;
+      nextBtn.textContent = 'Finish';
+    } else {
+      nextBtn.disabled = false;
+      nextBtn.textContent = 'Next';
+    }
+  },
+
+  showJobQueue: function() {
+    State.showingJobQueue = true;
+    el('wizard-area').style.display = 'none';
+    el('progress-bar').style.display = 'none';
+    el('job-queue-panel').classList.add('active');
+  },
+
+  hideJobQueue: function() {
+    State.showingJobQueue = false;
+    el('job-queue-panel').classList.remove('active');
+    el('wizard-area').style.display = '';
+    el('progress-bar').style.display = '';
+  },
+};
+
+/* =========================================================
+   Step 1: Project Setup — binding & BDF import
+   ========================================================= */
+const Step1 = {
+  init: function() {
+    // Bind simple text/select inputs to State using data-bind
+    var inputs = el('step-1').querySelectorAll('[data-bind]');
+    inputs.forEach(function(inp) {
+      var key = inp.getAttribute('data-bind');
+      // Set initial value from State
+      inp.value = Step1._getState(key);
+      inp.addEventListener('input', function() {
+        Step1._setState(key, inp.value);
+      });
+      inp.addEventListener('change', function() {
+        Step1._setState(key, inp.value);
+      });
+    });
+
+    // BDF drop zone
+    var dropZone = el('bdf-drop-zone');
+    var fileInput = el('bdf-file-input');
+
+    dropZone.addEventListener('click', function() { fileInput.click(); });
+    dropZone.addEventListener('dragover', function(e) { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', function() { dropZone.classList.remove('drag-over'); });
+    dropZone.addEventListener('drop', function(e) {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      if (e.dataTransfer.files.length > 0) Step1.handleBdfFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', function() {
+      if (fileInput.files.length > 0) Step1.handleBdfFile(fileInput.files[0]);
+      fileInput.value = '';
+    });
+    el('bdf-file-remove').addEventListener('click', function() { Step1.removeBdfFile(); });
+
+    // Parse Model button
+    el('btn-parse-bdf').addEventListener('click', function() { Step1.parseBdf(); });
+
+    // Auto-fill button
+    el('btn-autofill').addEventListener('click', function() {
+      if (State.bdfSummary) BDFParser.autoFill(State.bdfSummary);
+    });
+  },
+
+  handleBdfFile: function(file) {
+    State.bdfFile = file;
+    // Auto-set the path field to the filename if it's empty
+    if (!State.bdfFilePath) {
+      State.bdfFilePath = file.name;
+      el('inp-bdf-path').value = file.name;
+    }
+    el('bdf-file-name').textContent = file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+    el('bdf-file-info').style.display = '';
+    el('bdf-drop-zone').style.display = 'none';
+    setStatus('BDF file loaded: ' + file.name, 'success');
+  },
+
+  parseBdf: function() {
+    if (!State.bdfFile) return;
+    el('bdf-parse-progress').style.display = '';
+    el('btn-parse-bdf').disabled = true;
+
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        var text = e.target.result;
+        var summary = BDFParser.parse(text);
+        State.bdfSummary = summary;
+        State.bdfParsed = summary;
+        BDFParser.renderSummary(summary);
+        setStatus('BDF parsed: ' + summary.gridCount.toLocaleString() + ' grids, ' +
+          summary.elemCount.toLocaleString() + ' elements', 'success');
+      } catch (err) {
+        setStatus('BDF parse error: ' + err.message, 'error');
+      }
+      el('bdf-parse-progress').style.display = 'none';
+      el('btn-parse-bdf').disabled = false;
+    };
+    reader.onerror = function() {
+      setStatus('Failed to read BDF file', 'error');
+      el('bdf-parse-progress').style.display = 'none';
+      el('btn-parse-bdf').disabled = false;
+    };
+    reader.readAsText(State.bdfFile);
+  },
+
+  removeBdfFile: function() {
+    State.bdfFile = null;
+    State.bdfParsed = null;
+    State.bdfSummary = null;
+    el('bdf-file-info').style.display = 'none';
+    el('bdf-drop-zone').style.display = '';
+    el('bdf-model-summary').style.display = 'none';
+    el('bdf-parse-progress').style.display = 'none';
+  },
+
+  _getState: function(path) {
+    var parts = path.split('.');
+    var obj = State;
+    for (var i = 0; i < parts.length; i++) obj = obj[parts[i]];
+    return obj;
+  },
+
+  _setState: function(path, value) {
+    var parts = path.split('.');
+    var obj = State;
+    for (var i = 0; i < parts.length - 1; i++) obj = obj[parts[i]];
+    obj[parts[parts.length - 1]] = value;
+  },
+};
+
+/* =========================================================
+   Step 2: Analysis Parameters — binding, validation, preview
+   ========================================================= */
+const Step2 = {
+  _debounceTimer: null,
+
+  init: function() {
+    var self = this;
+
+    // EIGRL fields
+    self._bindNum('inp-eigrl-v1', 'eigrl', 'v1');
+    self._bindNum('inp-eigrl-v2', 'eigrl', 'v2');
+    self._bindInt('inp-eigrl-nd', 'eigrl', 'nd');
+    self._bindSelect('inp-eigrl-norm', 'eigrl', 'norm');
+
+    // Frequency type radio buttons
+    var radios = document.querySelectorAll('input[name="freq-type"]');
+    radios.forEach(function(r) {
+      r.addEventListener('change', function() {
+        State.freqType = r.value;
+        self._showFreqFields(r.value);
+        self._schedulePreview();
+      });
+    });
+
+    // FREQ1 fields
+    self._bindNum('inp-freq1-f1', 'freq', 'f1');
+    self._bindNum('inp-freq1-df', 'freq', 'df');
+    self._bindInt('inp-freq1-ndf', 'freq', 'ndf');
+
+    // FREQ2 fields
+    self._bindNum('inp-freq2-f1', 'freq', 'f1');
+    self._bindNum('inp-freq2-f2', 'freq', 'f2');
+    self._bindInt('inp-freq2-nf', 'freq', 'nf');
+
+    // FREQ4 fields
+    self._bindNum('inp-freq4-f1', 'freq', 'f1');
+    self._bindNum('inp-freq4-f2', 'freq', 'f2');
+    self._bindNum('inp-freq4-fspd', 'freq', 'fspd');
+    self._bindInt('inp-freq4-nfm', 'freq', 'nfm');
+
+    // FREQ explicit list
+    el('inp-freq-list').addEventListener('input', function() {
+      self._parseFreqList();
+      self._schedulePreview();
+    });
+
+    // Damping fields
+    self._bindNum('inp-damping-g', 'damping', 'g');
+    self._bindSelect('inp-damping-kdamp', 'damping', 'kdamp', true);
+
+    // TABDMP1 toggle
+    el('inp-tabdmp1-toggle').addEventListener('change', function() {
+      State.damping.useTabdmp1 = this.checked;
+      el('tabdmp1-section').style.display = this.checked ? '' : 'none';
+      self._schedulePreview();
+      self._checkDampingWarning();
+    });
+    self._bindSelect('inp-tabdmp1-type', 'damping.tabdmp1', 'type');
+
+    // TABDMP1 table
+    el('btn-tabdmp1-add').addEventListener('click', function() {
+      State.damping.tabdmp1.pairs.push({ f: 0.0, g: 0.0 });
+      self.renderTabdmp1Table();
+      self._schedulePreview();
+    });
+    self.renderTabdmp1Table();
+
+    // Set initial values in DOM
+    self._setInitialValues();
+    self._showFreqFields(State.freqType);
+    self._checkDampingWarning();
+    self.updatePreview();
+  },
+
+  _setInitialValues: function() {
+    el('inp-eigrl-v1').value = State.eigrl.v1;
+    el('inp-eigrl-v2').value = State.eigrl.v2;
+    el('inp-eigrl-nd').value = State.eigrl.nd;
+    el('inp-eigrl-norm').value = State.eigrl.norm;
+
+    el('inp-freq1-f1').value = State.freq.f1;
+    el('inp-freq1-df').value = State.freq.df;
+    el('inp-freq1-ndf').value = State.freq.ndf;
+    el('inp-freq2-f1').value = State.freq.f1;
+    el('inp-freq2-f2').value = State.freq.f2;
+    el('inp-freq2-nf').value = State.freq.nf;
+    el('inp-freq4-f1').value = State.freq.f1;
+    el('inp-freq4-f2').value = State.freq.f2;
+    el('inp-freq4-fspd').value = State.freq.fspd;
+    el('inp-freq4-nfm').value = State.freq.nfm;
+
+    el('inp-damping-g').value = State.damping.g;
+    el('inp-damping-kdamp').value = State.damping.kdamp;
+    el('inp-tabdmp1-type').value = State.damping.tabdmp1.type;
+  },
+
+  _bindNum: function(inputId, obj, key) {
+    var self = this;
+    var inp = el(inputId);
+    inp.addEventListener('input', function() {
+      var v = parseFloat(inp.value);
+      if (!isNaN(v)) {
+        if (typeof obj === 'string') {
+          var parts = obj.split('.');
+          var target = State;
+          for (var i = 0; i < parts.length; i++) target = target[parts[i]];
+          target[key] = v;
+        } else {
+          State[obj][key] = v;
+        }
+      }
+      self._schedulePreview();
+      self._validate();
+    });
+  },
+
+  _bindInt: function(inputId, obj, key) {
+    var self = this;
+    var inp = el(inputId);
+    inp.addEventListener('input', function() {
+      var v = parseInt(inp.value);
+      if (!isNaN(v)) {
+        if (typeof obj === 'string') {
+          var parts = obj.split('.');
+          var target = State;
+          for (var i = 0; i < parts.length; i++) target = target[parts[i]];
+          target[key] = v;
+        } else {
+          State[obj][key] = v;
+        }
+      }
+      self._schedulePreview();
+      self._validate();
+    });
+  },
+
+  _bindSelect: function(selectId, obj, key, asInt) {
+    var self = this;
+    var sel = el(selectId);
+    sel.addEventListener('change', function() {
+      var v = asInt ? parseInt(sel.value) : sel.value;
+      if (typeof obj === 'string') {
+        var parts = obj.split('.');
+        var target = State;
+        for (var i = 0; i < parts.length; i++) target = target[parts[i]];
+        target[key] = v;
+      } else {
+        State[obj][key] = v;
+      }
+      self._schedulePreview();
+    });
+  },
+
+  _showFreqFields: function(type) {
+    var panels = document.querySelectorAll('.freq-fields');
+    panels.forEach(function(p) { p.classList.remove('active'); });
+    var target = el('freq-fields-' + type);
+    if (target) target.classList.add('active');
+  },
+
+  _parseFreqList: function() {
+    var raw = el('inp-freq-list').value;
+    var tokens = raw.split(/[\s,;]+/).filter(function(t) { return t.length > 0; });
+    var freqs = [];
+    tokens.forEach(function(t) {
+      var v = parseFloat(t);
+      if (!isNaN(v)) freqs.push(v);
+    });
+    State.freq.frequencies = freqs;
+  },
+
+  _checkDampingWarning: function() {
+    var show = State.damping.g === 0 && !State.damping.useTabdmp1;
+    el('damping-warning').style.display = show ? '' : 'none';
+  },
+
+  _validate: function() {
+    // EIGRL: V2 > V1
+    var v2Group = el('inp-eigrl-v2').closest('.form-group');
+    if (State.eigrl.v2 <= State.eigrl.v1) v2Group.classList.add('has-error');
+    else v2Group.classList.remove('has-error');
+
+    // EIGRL: ND > 0
+    var ndGroup = el('inp-eigrl-nd').closest('.form-group');
+    if (State.eigrl.nd < 1) ndGroup.classList.add('has-error');
+    else ndGroup.classList.remove('has-error');
+
+    // FREQ1: DF > 0
+    var dfGroup = el('inp-freq1-df').closest('.form-group');
+    if (State.freqType === 'FREQ1' && State.freq.df <= 0) dfGroup.classList.add('has-error');
+    else dfGroup.classList.remove('has-error');
+
+    // FREQ1: NDF > 0
+    var ndfGroup = el('inp-freq1-ndf').closest('.form-group');
+    if (State.freqType === 'FREQ1' && State.freq.ndf < 1) ndfGroup.classList.add('has-error');
+    else ndfGroup.classList.remove('has-error');
+
+    // FREQ2: F1 > 0
+    var f2f1Group = el('inp-freq2-f1').closest('.form-group');
+    if (State.freqType === 'FREQ2' && State.freq.f1 <= 0) f2f1Group.classList.add('has-error');
+    else f2f1Group.classList.remove('has-error');
+
+    // Damping warning
+    this._checkDampingWarning();
+  },
+
+  renderTabdmp1Table: function() {
+    var self = this;
+    var tbody = el('tabdmp1-tbody');
+    var html = '';
+    State.damping.tabdmp1.pairs.forEach(function(pair, idx) {
+      html += '<tr data-idx="' + idx + '">';
+      html += '<td><input type="number" step="any" class="tabdmp1-f" value="' + pair.f + '"></td>';
+      html += '<td><input type="number" step="any" class="tabdmp1-g" value="' + pair.g + '"></td>';
+      html += '<td>' + (State.damping.tabdmp1.pairs.length > 2
+        ? '<button class="row-remove" title="Remove row">&times;</button>'
+        : '') + '</td>';
+      html += '</tr>';
+    });
+    tbody.innerHTML = html;
+
+    // Bind table inputs
+    tbody.querySelectorAll('tr').forEach(function(row) {
+      var idx = parseInt(row.getAttribute('data-idx'));
+      row.querySelector('.tabdmp1-f').addEventListener('input', function() {
+        var v = parseFloat(this.value);
+        if (!isNaN(v)) State.damping.tabdmp1.pairs[idx].f = v;
+        self._schedulePreview();
+      });
+      row.querySelector('.tabdmp1-g').addEventListener('input', function() {
+        var v = parseFloat(this.value);
+        if (!isNaN(v)) State.damping.tabdmp1.pairs[idx].g = v;
+        self._schedulePreview();
+      });
+      var removeBtn = row.querySelector('.row-remove');
+      if (removeBtn) {
+        removeBtn.addEventListener('click', function() {
+          State.damping.tabdmp1.pairs.splice(idx, 1);
+          self.renderTabdmp1Table();
+          self._schedulePreview();
+        });
+      }
+    });
+  },
+
+  _schedulePreview: function() {
+    var self = this;
+    clearTimeout(self._debounceTimer);
+    self._debounceTimer = setTimeout(function() { self.updatePreview(); }, 80);
+  },
+
+  /** Generate syntax-highlighted preview HTML for Step 2 cards. */
+  updatePreview: function() {
+    var lines = [];
+
+    // EIGRL
+    lines.push(NastranCards.comment('---- Modal Extraction ----'));
+    lines.push.apply(lines, NastranCards.formatEIGRL(State.eigrl));
+
+    // Frequency
+    lines.push('');
+    lines.push(NastranCards.comment('---- Frequency Definition ----'));
+    var fp = State.freq;
+    switch (State.freqType) {
+      case 'FREQ1': lines.push.apply(lines, NastranCards.formatFREQ1({ sid: fp.sid, f1: fp.f1, df: fp.df, ndf: fp.ndf })); break;
+      case 'FREQ2': lines.push.apply(lines, NastranCards.formatFREQ2({ sid: fp.sid, f1: fp.f1, f2: fp.f2, nf: fp.nf })); break;
+      case 'FREQ4': lines.push.apply(lines, NastranCards.formatFREQ4({ sid: fp.sid, f1: fp.f1, f2: fp.f2, fspd: fp.fspd, nfm: fp.nfm })); break;
+      case 'FREQ':  lines.push.apply(lines, NastranCards.formatFREQ({ sid: fp.sid, frequencies: fp.frequencies })); break;
+    }
+
+    // Damping
+    lines.push('');
+    lines.push(NastranCards.comment('---- Damping ----'));
+    if (State.damping.g !== 0) {
+      lines.push.apply(lines, NastranCards.formatPARAM('G', State.damping.g));
+    }
+    lines.push.apply(lines, NastranCards.formatPARAM('KDAMP', State.damping.kdamp));
+    if (State.damping.useTabdmp1) {
+      lines.push.apply(lines, NastranCards.formatTABDMP1(State.damping.tabdmp1));
+    }
+
+    // Syntax highlight and render
+    el('preview-2').innerHTML = lines.map(function(line) {
+      return Step2._highlightLine(line);
+    }).join('\n');
+  },
+
+  /** Apply syntax highlighting to a single Nastran line. */
+  _highlightLine: function(line) {
+    if (!line || line.length === 0) return '';
+    var safe = escHtml(line);
+    // Comment lines
+    if (line.charAt(0) === '$') {
+      return '<span class="pv-comment">' + safe + '</span>';
+    }
+    // Continuation lines
+    if (line.charAt(0) === '+') {
+      return '<span class="pv-cont">' + escHtml(line.slice(0, 8)) + '</span>' + escHtml(line.slice(8));
+    }
+    // Card lines: highlight card name (first 8 chars)
+    var cardName = line.slice(0, 8);
+    var rest = line.slice(8);
+    return '<span class="pv-card">' + escHtml(cardName) + '</span>' + escHtml(rest);
+  },
+};
+
+/* =========================================================
+   Step 3: Boundary Conditions & Loads
+   ========================================================= */
+const Step3 = {
+  _nextSid: 100,
+  _debounce: null,
+
+  init: function() {
+    var self = this;
+    // SPC field
+    el('inp-spc-id').addEventListener('input', function() {
+      var v = parseInt(this.value);
+      if (!isNaN(v) && v > 0) State.spcSetId = v;
+      self._schedulePreview();
+    });
+    // Add subcase button
+    el('btn-add-subcase').addEventListener('click', function() {
+      var nextId = State.subcases.length > 0
+        ? Math.max.apply(null, State.subcases.map(function(s) { return s.id; })) + 1
+        : 1;
+      State.subcases.push({
+        id: nextId,
+        label: 'Subcase ' + nextId,
+        dloadSid: null,
+        loads: [{ type: 'simple', gridId: null, dof: 3, magnitude: 1.0, delay: 0.0, phase: 0.0, tcTable: null, tdTable: null }],
+      });
+      self.renderSubcases();
+      self._schedulePreview();
+    });
+    self.renderSubcases();
+    self.updatePreview();
+  },
+
+  renderSubcases: function() {
+    var self = this;
+    var container = el('subcase-list');
+    var html = '';
+    State.subcases.forEach(function(sc, si) {
+      html += '<div class="subcase-card" data-sc="' + si + '">';
+      html += '<div class="subcase-header">';
+      html += '<span class="chevron">&#9660;</span>';
+      html += '<span class="sc-label">Subcase ' + sc.id + ': ' + escHtml(sc.label) + '</span>';
+      if (State.subcases.length > 1) html += '<button class="sc-remove" data-sc-rm="' + si + '" title="Remove subcase">&times;</button>';
+      html += '</div>';
+      html += '<div class="subcase-body">';
+      html += '<div class="form-group"><label>Subcase Label</label>';
+      html += '<input type="text" class="sc-label-input" data-sc="' + si + '" value="' + escHtml(sc.label) + '">';
+      html += '</div>';
+
+      // Loads within this subcase
+      sc.loads.forEach(function(ld, li) {
+        html += '<div class="load-card" data-sc="' + si + '" data-ld="' + li + '">';
+        html += '<div class="load-card-header"><span>Load ' + (li + 1) + ' (Simple)</span>';
+        if (sc.loads.length > 1) html += '<button class="load-remove" data-sc="' + si + '" data-ld-rm="' + li + '">&times;</button>';
+        html += '</div>';
+        html += '<div class="form-row">';
+        html += '<div class="form-group"><label>Grid ID</label>';
+        html += '<input type="number" class="ld-grid" data-sc="' + si + '" data-ld="' + li + '" min="1" step="1" value="' + (ld.gridId || '') + '" placeholder="Node ID">';
+        html += '</div>';
+        html += '<div class="form-group narrow"><label>DOF</label>';
+        html += '<select class="ld-dof" data-sc="' + si + '" data-ld="' + li + '">';
+        [1,2,3,4,5,6].forEach(function(d) {
+          var labels = {1:'T1 (X)',2:'T2 (Y)',3:'T3 (Z)',4:'R1 (RX)',5:'R2 (RY)',6:'R3 (RZ)'};
+          html += '<option value="' + d + '"' + (ld.dof === d ? ' selected' : '') + '>' + labels[d] + '</option>';
+        });
+        html += '</select></div>';
+        html += '<div class="form-group narrow"><label>Magnitude</label>';
+        html += '<input type="number" class="ld-mag" data-sc="' + si + '" data-ld="' + li + '" step="any" value="' + ld.magnitude + '">';
+        html += '</div>';
+        html += '</div>';
+        html += '</div>';
+      });
+
+      html += '<button class="btn-sm add-load-btn" data-sc="' + si + '" style="margin-top:4px">+ Add Load</button>';
+      html += '</div></div>';
+    });
+    container.innerHTML = html;
+
+    // Bind events
+    container.querySelectorAll('.subcase-header').forEach(function(hdr) {
+      hdr.addEventListener('click', function(e) {
+        if (e.target.classList.contains('sc-remove')) return;
+        hdr.closest('.subcase-card').classList.toggle('collapsed');
+      });
+    });
+    container.querySelectorAll('.sc-remove').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var si = parseInt(btn.getAttribute('data-sc-rm'));
+        State.subcases.splice(si, 1);
+        self.renderSubcases();
+        self._schedulePreview();
+      });
+    });
+    container.querySelectorAll('.sc-label-input').forEach(function(inp) {
+      inp.addEventListener('input', function() {
+        var si = parseInt(inp.getAttribute('data-sc'));
+        State.subcases[si].label = inp.value;
+        self._schedulePreview();
+      });
+    });
+    container.querySelectorAll('.ld-grid').forEach(function(inp) {
+      inp.addEventListener('input', function() {
+        var si = parseInt(inp.getAttribute('data-sc'));
+        var li = parseInt(inp.getAttribute('data-ld'));
+        var v = parseInt(inp.value);
+        State.subcases[si].loads[li].gridId = isNaN(v) ? null : v;
+        self._schedulePreview();
+      });
+    });
+    container.querySelectorAll('.ld-dof').forEach(function(sel) {
+      sel.addEventListener('change', function() {
+        var si = parseInt(sel.getAttribute('data-sc'));
+        var li = parseInt(sel.getAttribute('data-ld'));
+        State.subcases[si].loads[li].dof = parseInt(sel.value);
+        self._schedulePreview();
+      });
+    });
+    container.querySelectorAll('.ld-mag').forEach(function(inp) {
+      inp.addEventListener('input', function() {
+        var si = parseInt(inp.getAttribute('data-sc'));
+        var li = parseInt(inp.getAttribute('data-ld'));
+        var v = parseFloat(inp.value);
+        if (!isNaN(v)) State.subcases[si].loads[li].magnitude = v;
+        self._schedulePreview();
+      });
+    });
+    container.querySelectorAll('.load-remove').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var si = parseInt(btn.getAttribute('data-sc'));
+        var li = parseInt(btn.getAttribute('data-ld-rm'));
+        State.subcases[si].loads.splice(li, 1);
+        self.renderSubcases();
+        self._schedulePreview();
+      });
+    });
+    container.querySelectorAll('.add-load-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var si = parseInt(btn.getAttribute('data-sc'));
+        State.subcases[si].loads.push({ type: 'simple', gridId: null, dof: 3, magnitude: 1.0, delay: 0.0, phase: 0.0, tcTable: null, tdTable: null });
+        self.renderSubcases();
+        self._schedulePreview();
+      });
+    });
+  },
+
+  _schedulePreview: function() {
+    var self = this;
+    clearTimeout(self._debounce);
+    self._debounce = setTimeout(function() { self.updatePreview(); }, 80);
+  },
+
+  /** Build preview for Step 3 — all load-related bulk data cards. */
+  updatePreview: function() {
+    var lines = [];
+    var sid = 100;
+
+    State.subcases.forEach(function(sc) {
+      lines.push(NastranCards.comment('==== ' + sc.label + ' ===='));
+      var dloadLoads = [];
+
+      sc.loads.forEach(function(ld, li) {
+        if (!ld.gridId) {
+          lines.push(NastranCards.comment('Load ' + (li + 1) + ': Grid ID not set'));
+          return;
+        }
+        var dareaSid = sid++;
+        var tableSid = sid++;
+        var rloadSid = sid++;
+
+        lines.push(NastranCards.comment('DAREA for Grid ' + ld.gridId + ', DOF ' + ld.dof));
+        lines.push.apply(lines, NastranCards.formatDAREA({ sid: dareaSid, gridId: ld.gridId, dof: ld.dof, scale: ld.magnitude }));
+
+        // Flat spectrum table
+        lines.push.apply(lines, NastranCards.formatTABLED1({
+          sid: tableSid, interp: 'LINEAR',
+          pairs: [{ x: 0.0, y: 1.0 }, { x: 99999.0, y: 1.0 }]
+        }));
+
+        lines.push.apply(lines, NastranCards.formatRLOAD1({
+          sid: rloadSid, exciteId: dareaSid, delay: null, dphase: null, tcSid: tableSid, tdSid: null
+        }));
+
+        dloadLoads.push({ scale: 1.0, sid: rloadSid });
+      });
+
+      if (dloadLoads.length > 0) {
+        var dloadSid = sid++;
+        sc.dloadSid = dloadSid;
+        lines.push.apply(lines, NastranCards.formatDLOAD({ sid: dloadSid, scale: 1.0, loads: dloadLoads }));
+      }
+      lines.push('');
+    });
+
+    el('preview-3').innerHTML = lines.map(Step2._highlightLine).join('\n');
+  },
+};
+
+/* =========================================================
+   Step 4: Output Requests
+   ========================================================= */
+const OUTPUT_TYPES = [
+  { key: 'displacement', label: 'Displacement', card: 'DISPLACEMENT' },
+  { key: 'velocity',     label: 'Velocity',     card: 'VELOCITY' },
+  { key: 'acceleration', label: 'Acceleration',  card: 'ACCELERATION' },
+  { key: 'spcforces',    label: 'SPC Forces',    card: 'SPCFORCES' },
+  { key: 'mpcforces',    label: 'MPC Forces',    card: 'MPCFORCES' },
+  { key: 'force',        label: 'Element Forces', card: 'FORCE' },
+  { key: 'stress',       label: 'Element Stress', card: 'STRESS' },
+  { key: 'ese',          label: 'Strain Energy',  card: 'ESE' },
+];
+
+const Step4 = {
+  _nextSetId: 901,
+  _debounce: null,
+
+  init: function() {
+    var self = this;
+    self.renderOutputGrid();
+    self.renderSets();
+
+    // Add SET button
+    el('btn-add-set').addEventListener('click', function() {
+      State.sets.push({ id: self._nextSetId++, name: '', members: '' });
+      self.renderSets();
+      self._refreshSetDropdowns();
+      self._schedulePreview();
+    });
+
+    // Output format toggles
+    el('inp-gen-pch').addEventListener('change', function() {
+      State.generatePch = this.checked;
+      self._schedulePreview();
+    });
+    el('inp-gen-op2').addEventListener('change', function() {
+      State.generateOp2 = this.checked;
+      self._schedulePreview();
+    });
+
+    self.updatePreview();
+  },
+
+  renderOutputGrid: function() {
+    var self = this;
+    var container = el('output-grid');
+    var html = '';
+    OUTPUT_TYPES.forEach(function(ot) {
+      var cfg = State.outputRequests[ot.key];
+      var chk = cfg.enabled ? ' checked' : '';
+      var dis = cfg.enabled ? '' : ' disabled';
+      html += '<div class="output-row" data-key="' + ot.key + '">';
+      html += '<div class="out-check">';
+      html += '<input type="checkbox" id="out-chk-' + ot.key + '"' + chk + '>';
+      html += '<label for="out-chk-' + ot.key + '">' + ot.label + '</label>';
+      html += '</div>';
+      html += '<div class="out-config">';
+      html += '<select class="out-fmt" data-key="' + ot.key + '"' + dis + '>';
+      ['PRINT','PUNCH','PLOT','PRINT,PUNCH'].forEach(function(f) {
+        html += '<option value="' + f + '"' + (cfg.format === f ? ' selected' : '') + '>' + f + '</option>';
+      });
+      html += '</select>';
+      html += '<select class="out-sort" data-key="' + ot.key + '"' + dis + '>';
+      ['SORT1','SORT2'].forEach(function(s) {
+        html += '<option value="' + s + '"' + (cfg.sort === s ? ' selected' : '') + '>' + s + '</option>';
+      });
+      html += '</select>';
+      html += '<select class="out-set" data-key="' + ot.key + '"' + dis + '>';
+      html += '<option value="ALL"' + (cfg.set === 'ALL' ? ' selected' : '') + '>ALL</option>';
+      State.sets.forEach(function(st) {
+        html += '<option value="' + st.id + '"' + (cfg.set === String(st.id) ? ' selected' : '') + '>SET ' + st.id + '</option>';
+      });
+      html += '</select>';
+      html += '</div></div>';
+    });
+    container.innerHTML = html;
+
+    // Bind checkbox
+    container.querySelectorAll('input[type="checkbox"]').forEach(function(chk) {
+      chk.addEventListener('change', function() {
+        var key = chk.id.replace('out-chk-', '');
+        State.outputRequests[key].enabled = chk.checked;
+        var row = chk.closest('.output-row');
+        row.querySelectorAll('.out-config select').forEach(function(s) { s.disabled = !chk.checked; });
+        self._schedulePreview();
+      });
+    });
+    // Bind selects
+    container.querySelectorAll('.out-fmt').forEach(function(sel) {
+      sel.addEventListener('change', function() {
+        State.outputRequests[sel.getAttribute('data-key')].format = sel.value;
+        self._schedulePreview();
+      });
+    });
+    container.querySelectorAll('.out-sort').forEach(function(sel) {
+      sel.addEventListener('change', function() {
+        State.outputRequests[sel.getAttribute('data-key')].sort = sel.value;
+        self._schedulePreview();
+      });
+    });
+    container.querySelectorAll('.out-set').forEach(function(sel) {
+      sel.addEventListener('change', function() {
+        State.outputRequests[sel.getAttribute('data-key')].set = sel.value;
+        self._schedulePreview();
+      });
+    });
+  },
+
+  renderSets: function() {
+    var self = this;
+    var container = el('set-list');
+    var html = '';
+    State.sets.forEach(function(st, idx) {
+      html += '<div class="set-card" data-idx="' + idx + '">';
+      html += '<div class="set-id">SET ' + st.id + '</div>';
+      html += '<div class="set-fields">';
+      html += '<input type="text" class="set-name" data-idx="' + idx + '" placeholder="Description" value="' + escHtml(st.name) + '" style="height:28px;font-size:12px;margin-bottom:4px">';
+      html += '<input type="text" class="set-members" data-idx="' + idx + '" placeholder="e.g. 1,2,3,10 THRU 100" value="' + escHtml(st.members) + '" style="height:28px;font-size:12px;font-family:var(--mono)">';
+      html += '</div>';
+      html += '<button class="set-remove" data-idx="' + idx + '">&times;</button>';
+      html += '</div>';
+    });
+    container.innerHTML = html;
+
+    container.querySelectorAll('.set-name').forEach(function(inp) {
+      inp.addEventListener('input', function() {
+        State.sets[parseInt(inp.getAttribute('data-idx'))].name = inp.value;
+      });
+    });
+    container.querySelectorAll('.set-members').forEach(function(inp) {
+      inp.addEventListener('input', function() {
+        State.sets[parseInt(inp.getAttribute('data-idx'))].members = inp.value;
+        self._schedulePreview();
+      });
+    });
+    container.querySelectorAll('.set-remove').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        State.sets.splice(parseInt(btn.getAttribute('data-idx')), 1);
+        self.renderSets();
+        self._refreshSetDropdowns();
+        self._schedulePreview();
+      });
+    });
+  },
+
+  _refreshSetDropdowns: function() {
+    document.querySelectorAll('.out-set').forEach(function(sel) {
+      var key = sel.getAttribute('data-key');
+      var cur = State.outputRequests[key].set;
+      var html = '<option value="ALL"' + (cur === 'ALL' ? ' selected' : '') + '>ALL</option>';
+      State.sets.forEach(function(st) {
+        html += '<option value="' + st.id + '"' + (cur === String(st.id) ? ' selected' : '') + '>SET ' + st.id + '</option>';
+      });
+      sel.innerHTML = html;
+    });
+  },
+
+  _schedulePreview: function() {
+    var self = this;
+    clearTimeout(self._debounce);
+    self._debounce = setTimeout(function() { self.updatePreview(); }, 80);
+  },
+
+  updatePreview: function() {
+    var lines = [];
+    lines.push(NastranCards.comment('---- Case Control Output Requests ----'));
+
+    // SET definitions
+    State.sets.forEach(function(st) {
+      if (st.members) {
+        lines.push('SET ' + st.id + ' = ' + st.members);
+      }
+    });
+
+    // Output requests (shown as Case Control lines)
+    OUTPUT_TYPES.forEach(function(ot) {
+      var cfg = State.outputRequests[ot.key];
+      if (!cfg.enabled) return;
+      var opts = cfg.sort + ',' + cfg.format;
+      var setRef = cfg.set === 'ALL' ? 'ALL' : cfg.set;
+      lines.push(ot.card + '(' + opts + ') = ' + setRef);
+    });
+
+    lines.push('');
+    lines.push(NastranCards.comment('---- Output Parameters ----'));
+    if (State.generatePch) lines.push.apply(lines, NastranCards.formatPARAM('POST', -1));
+    if (State.generateOp2) lines.push.apply(lines, NastranCards.formatPARAM('POST', 0));
+
+    el('preview-4').innerHTML = lines.map(Step2._highlightLine).join('\n');
+  },
+};
+
+/* =========================================================
+   Templates — pre-fill wizard from predefined configs
+   ========================================================= */
+const Templates = {
+  list: [
+    {
+      id: 'point-force',
+      name: 'Point Force Excitation',
+      description: 'Unit force at a single grid point, frequency sweep',
+      config: {
+        title: 'Point Force Frequency Response',
+        eigrl: { sid: 1, v1: 0.0, v2: 2000.0, nd: 50, norm: 'MASS' },
+        freqType: 'FREQ1',
+        freq: { sid: 2, frequencies: [], f1: 1.0, df: 1.0, f2: 2000.0, ndf: 2000, nf: 200, fspd: 0.1, nfm: 3 },
+        damping: { g: 0.02, kdamp: 1, useTabdmp1: false, tabdmp1: { sid: 3, type: 'CRIT', pairs: [{ f: 0, g: 0.02 }, { f: 2000, g: 0.02 }] } },
+        spcSetId: 1,
+        subcases: [{ id: 1, label: 'Unit Force Z', dloadSid: null, loads: [{ type: 'simple', gridId: 100, dof: 3, magnitude: 1.0, delay: 0.0, phase: 0.0, tcTable: null, tdTable: null }] }],
+        outputRequests: {
+          displacement:  { enabled: true,  format: 'PUNCH', sort: 'SORT1', set: 'ALL' },
+          velocity:      { enabled: false, format: 'PUNCH', sort: 'SORT1', set: 'ALL' },
+          acceleration:  { enabled: true,  format: 'PUNCH', sort: 'SORT1', set: 'ALL' },
+          spcforces:     { enabled: false, format: 'PRINT', sort: 'SORT1', set: 'ALL' },
+          mpcforces:     { enabled: false, format: 'PRINT', sort: 'SORT1', set: 'ALL' },
+          force:         { enabled: false, format: 'PRINT', sort: 'SORT1', set: 'ALL' },
+          stress:        { enabled: false, format: 'PRINT', sort: 'SORT1', set: 'ALL' },
+          ese:           { enabled: false, format: 'PRINT', sort: 'SORT1', set: 'ALL' },
+        },
+      },
+    },
+    {
+      id: 'base-excitation',
+      name: 'Simple Base Excitation',
+      description: 'Enforced acceleration at base grids',
+      config: {
+        title: 'Base Excitation Frequency Response',
+        eigrl: { sid: 1, v1: 0.0, v2: 3000.0, nd: 100, norm: 'MASS' },
+        freqType: 'FREQ1',
+        freq: { sid: 2, frequencies: [], f1: 5.0, df: 2.5, f2: 3000.0, ndf: 1200, nf: 200, fspd: 0.1, nfm: 3 },
+        damping: { g: 0.03, kdamp: 1, useTabdmp1: false, tabdmp1: { sid: 3, type: 'CRIT', pairs: [{ f: 0, g: 0.03 }, { f: 3000, g: 0.03 }] } },
+        spcSetId: 1,
+        subcases: [
+          { id: 1, label: 'Base Accel X', dloadSid: null, loads: [{ type: 'simple', gridId: 1, dof: 1, magnitude: 1.0, delay: 0.0, phase: 0.0, tcTable: null, tdTable: null }] },
+          { id: 2, label: 'Base Accel Y', dloadSid: null, loads: [{ type: 'simple', gridId: 1, dof: 2, magnitude: 1.0, delay: 0.0, phase: 0.0, tcTable: null, tdTable: null }] },
+          { id: 3, label: 'Base Accel Z', dloadSid: null, loads: [{ type: 'simple', gridId: 1, dof: 3, magnitude: 1.0, delay: 0.0, phase: 0.0, tcTable: null, tdTable: null }] },
+        ],
+        outputRequests: {
+          displacement:  { enabled: true,  format: 'PUNCH', sort: 'SORT1', set: 'ALL' },
+          velocity:      { enabled: false, format: 'PUNCH', sort: 'SORT1', set: 'ALL' },
+          acceleration:  { enabled: true,  format: 'PUNCH', sort: 'SORT1', set: 'ALL' },
+          spcforces:     { enabled: true,  format: 'PUNCH', sort: 'SORT1', set: 'ALL' },
+          mpcforces:     { enabled: false, format: 'PRINT', sort: 'SORT1', set: 'ALL' },
+          force:         { enabled: false, format: 'PRINT', sort: 'SORT1', set: 'ALL' },
+          stress:        { enabled: false, format: 'PRINT', sort: 'SORT1', set: 'ALL' },
+          ese:           { enabled: false, format: 'PRINT', sort: 'SORT1', set: 'ALL' },
+        },
+      },
+    },
+    {
+      id: 'white-noise-random',
+      name: 'White Noise Random Vibration',
+      description: 'Flat PSD input spectrum across frequency range',
+      config: {
+        title: 'White Noise Random Vibration',
+        eigrl: { sid: 1, v1: 0.0, v2: 2000.0, nd: 80, norm: 'MASS' },
+        freqType: 'FREQ4',
+        freq: { sid: 2, frequencies: [], f1: 20.0, df: 5.0, f2: 2000.0, ndf: 400, nf: 200, fspd: 0.1, nfm: 5 },
+        damping: { g: 0.0, kdamp: 1, useTabdmp1: true, tabdmp1: { sid: 3, type: 'CRIT', pairs: [{ f: 0, g: 0.01 }, { f: 500, g: 0.02 }, { f: 2000, g: 0.03 }] } },
+        spcSetId: 1,
+        subcases: [{ id: 1, label: 'Random Z', dloadSid: null, loads: [{ type: 'simple', gridId: 1, dof: 3, magnitude: 1.0, delay: 0.0, phase: 0.0, tcTable: null, tdTable: null }] }],
+        outputRequests: {
+          displacement:  { enabled: true,  format: 'PUNCH', sort: 'SORT1', set: 'ALL' },
+          velocity:      { enabled: true,  format: 'PUNCH', sort: 'SORT1', set: 'ALL' },
+          acceleration:  { enabled: true,  format: 'PUNCH', sort: 'SORT1', set: 'ALL' },
+          spcforces:     { enabled: true,  format: 'PRINT', sort: 'SORT1', set: 'ALL' },
+          mpcforces:     { enabled: false, format: 'PRINT', sort: 'SORT1', set: 'ALL' },
+          force:         { enabled: false, format: 'PRINT', sort: 'SORT1', set: 'ALL' },
+          stress:        { enabled: true,  format: 'PRINT', sort: 'SORT1', set: 'ALL' },
+          ese:           { enabled: false, format: 'PRINT', sort: 'SORT1', set: 'ALL' },
+        },
+      },
+    },
+  ],
+
+  init: function() {
+    var self = this;
+    el('btn-apply-template').addEventListener('click', function() { self.applySelected(); });
+    el('btn-load-config').addEventListener('click', function() { el('config-file-input').click(); });
+    el('config-file-input').addEventListener('change', function() {
+      if (this.files.length > 0) self.loadConfigFile(this.files[0]);
+      this.value = '';
+    });
+  },
+
+  applySelected: function() {
+    var id = el('inp-template').value;
+    if (!id) { setStatus('Select a template first', 'warning'); return; }
+    var tpl = this.list.find(function(t) { return t.id === id; });
+    if (!tpl) return;
+    this._applyConfig(tpl.config);
+    setStatus('Template applied: ' + tpl.name, 'success');
+  },
+
+  _applyConfig: function(cfg) {
+    // Deep-merge config into State
+    var keys = ['title','subtitle','eigrl','freqType','freq','damping','spcSetId','subcases','outputRequests','sets','generatePch','generateOp2'];
+    keys.forEach(function(k) {
+      if (cfg[k] !== undefined) {
+        State[k] = JSON.parse(JSON.stringify(cfg[k]));
+      }
+    });
+    // Re-render all steps
+    Step2._setInitialValues();
+    Step2._showFreqFields(State.freqType);
+    Step2._checkDampingWarning();
+    Step2.renderTabdmp1Table();
+    Step2.updatePreview();
+    // Update radio buttons
+    document.querySelectorAll('input[name="freq-type"]').forEach(function(r) { r.checked = r.value === State.freqType; });
+    // TABDMP1 toggle
+    el('inp-tabdmp1-toggle').checked = State.damping.useTabdmp1;
+    el('tabdmp1-section').style.display = State.damping.useTabdmp1 ? '' : 'none';
+    // Step 1 fields
+    if (cfg.title) el('inp-title').value = State.title;
+    if (cfg.subtitle) el('inp-subtitle').value = State.subtitle || '';
+    // SPC
+    el('inp-spc-id').value = State.spcSetId;
+    // Step 3 & 4
+    Step3.renderSubcases();
+    Step3.updatePreview();
+    Step4.renderOutputGrid();
+    Step4.renderSets();
+    Step4.updatePreview();
+    // Output format toggles
+    el('inp-gen-pch').checked = State.generatePch;
+    el('inp-gen-op2').checked = State.generateOp2;
+  },
+
+  /** Save current wizard state as a JSON file. */
+  saveConfig: function() {
+    var keys = ['jobName','analyst','title','subtitle','nastranVersion','bdfFilePath',
+      'eigrl','freqType','freq','damping','spcSetId','subcases','outputRequests','sets','generatePch','generateOp2'];
+    var data = { version: 1, savedAt: new Date().toISOString(), tool: 'SOL111-DAT-Builder' };
+    keys.forEach(function(k) { data[k] = JSON.parse(JSON.stringify(State[k])); });
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = (State.jobName || 'sol111_config') + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    setStatus('Configuration saved', 'success');
+  },
+
+  loadConfigFile: function(file) {
+    var self = this;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        var data = JSON.parse(e.target.result);
+        if (!data.version) throw new Error('Not a valid config file');
+        self._applyConfig(data);
+        // Also restore Step 1 fields
+        if (data.jobName !== undefined) { State.jobName = data.jobName; el('inp-job-name').value = data.jobName; }
+        if (data.analyst !== undefined) { State.analyst = data.analyst; el('inp-analyst').value = data.analyst; }
+        if (data.nastranVersion !== undefined) { State.nastranVersion = data.nastranVersion; el('inp-nastran-version').value = data.nastranVersion; }
+        if (data.bdfFilePath !== undefined) { State.bdfFilePath = data.bdfFilePath; el('inp-bdf-path').value = data.bdfFilePath; }
+        setStatus('Configuration loaded from ' + file.name, 'success');
+      } catch (err) {
+        setStatus('Error loading config: ' + err.message, 'error');
+      }
+    };
+    reader.readAsText(file);
+  },
+};
+
+/* =========================================================
+   App
+   ========================================================= */
+const App = {
+  init: function() {
+    Wizard.renderProgressBar();
+    Wizard.renderStep();
+    Wizard.updateButtons();
+
+    // Footer navigation
+    el('btn-next').addEventListener('click', function() { Wizard.next(); });
+    el('btn-back').addEventListener('click', function() { Wizard.back(); });
+
+    // Job Queue toggle
+    el('btn-job-queue').addEventListener('click', function() { Wizard.showJobQueue(); });
+    el('btn-back-wizard').addEventListener('click', function() { Wizard.hideJobQueue(); });
+
+    // Initialize step modules
+    Step1.init();
+    Step2.init();
+    Step3.init();
+    Step4.init();
+    Step5.init();
+    Step6.init();
+    Templates.init();
+
+    // Server status
+    App.updateServerIndicator();
+
+    setStatus('Ready', 'info');
+  },
+
+  updateServerIndicator: function() {
+    var dot = el('server-dot');
+    var label = el('server-label');
+    if (State.serverConnected) {
+      dot.classList.add('connected');
+      label.textContent = 'Connected';
+    } else {
+      dot.classList.remove('connected');
+      label.textContent = 'Disconnected';
+    }
+  },
+
+  /** Toggle collapsible section cards. */
+  toggleSection: function(id) {
+    var sec = el(id);
+    sec.classList.toggle('collapsed');
+  },
+};
+
+/* =========================================================
+   Boot
+   ========================================================= */
+document.addEventListener('DOMContentLoaded', function() {
+  App.init();
+});
+</script>
+</body>
+</html>
