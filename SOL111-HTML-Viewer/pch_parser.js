@@ -535,6 +535,10 @@ function resolveElementForceType(block) {
 
 function componentLabelsForBlock(block) {
   if (!block) return [];
+  if (block.sourceKind === "SPREADSHEET" && block.resultFamily !== "ELEMENT_FORCES") {
+    const entries = spreadsheetComponentEntries(block);
+    if (entries.length > 0) return entries.map(entry => entry.label);
+  }
   if (block.resultFamily !== "ELEMENT_FORCES") {
     return componentLabels(block.resultFamily);
   }
@@ -562,6 +566,40 @@ function normalizeComponentLabel(component) {
 
 function normalizeTraceComponentKey(component) {
   return normalizeComponentLabel(component).toUpperCase();
+}
+
+function canonicalComponentDisplayLabel(component) {
+  const raw = normalizeComponentLabel(component);
+  if (!raw) return "";
+  const key = normalizeTraceComponentKey(raw);
+  const map = {
+    T1: "T1", T2: "T2", T3: "T3", R1: "R1", R2: "R2", R3: "R3",
+    FX: "Fx", FY: "Fy", FZ: "Fz", MX: "Mx", MY: "My", MZ: "Mz",
+    F: "F", F1: "F1", F2: "F2", F3: "F3", M1: "M1", M2: "M2", M3: "M3",
+    RM: "RM", IP: "IP",
+  };
+  return map[key] || raw;
+}
+
+function spreadsheetComponentEntries(block) {
+  const keys = Object.keys((block && block.traceStore) || {});
+  const labels = (block && block.componentLabels) || {};
+  const seen = new Set();
+  const entries = [];
+
+  keys.forEach(key => {
+    const parts = String(key).split("::");
+    const compKey = normalizeTraceComponentKey(parts[parts.length - 1]);
+    if (!compKey || seen.has(compKey)) return;
+    seen.add(compKey);
+    entries.push({
+      key: compKey,
+      label: labels[compKey] || canonicalComponentDisplayLabel(parts[parts.length - 1]),
+    });
+  });
+
+  entries.sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" }) || a.key.localeCompare(b.key));
+  return entries;
 }
 
 function makeTraceStoreKey(entityId, component) {
@@ -920,6 +958,7 @@ function createSpreadsheetBlock(blockIndex, runName, subcaseInfo, family, xypunc
     label: "",
     entityIds: [],
     entityLabels: {},
+    componentLabels: {},
     elementType: normalizedElementType,
     xypunchComp: xypunchMeta ? xypunchMeta.comp : null,
     xypunchKind: xypunchMeta ? xypunchMeta.kind : null,
@@ -942,9 +981,11 @@ function createSpreadsheetBlock(blockIndex, runName, subcaseInfo, family, xypunc
 function addSpreadsheetTrace(block, traceData, meta) {
   const entityKey = meta.entityKey !== undefined && meta.entityKey !== null ? meta.entityKey : meta.entityId;
   const key = makeTraceStoreKey(entityKey, meta.component);
+  const componentKey = normalizeTraceComponentKey(meta.component);
   block.traceStore[key] = traceData;
   if (!block.entityIds.includes(entityKey)) block.entityIds.push(entityKey);
   if (meta.entityLabel) block.entityLabels[entityKey] = meta.entityLabel;
+  if (componentKey && meta.componentLabel) block.componentLabels[componentKey] = meta.componentLabel;
   if (meta.subcaseLabel && !block.subcaseLabel) block.subcaseLabel = meta.subcaseLabel;
   if (block.resultFamily === "ELEMENT_FORCES" && meta.elementType) {
     block.elementType = normalizeElementType(meta.elementType);
@@ -957,8 +998,9 @@ function addSpreadsheetTrace(block, traceData, meta) {
     const marker = `$ELEMENT TYPE = ${block.elementType}`;
     if (!block.rawLines.includes(marker)) block.rawLines.push(marker);
   }
+  traceData.componentLabel = meta.componentLabel || canonicalComponentDisplayLabel(meta.component);
   block.rawLines.push(
-    `$TRACE ID = ${entityKey} ${meta.component} (${meta.storageKind === "DERIVED" ? meta.lockedRepr : "RAW"})`
+    `$TRACE ID = ${entityKey} ${traceData.componentLabel} (${meta.storageKind === "DERIVED" ? meta.lockedRepr : "RAW"})`
   );
 }
 
@@ -1156,9 +1198,11 @@ function parseSpreadsheetRows(fileName, rows, sheetName, options) {
       ),
       headerHint ? headerHint.entity : null
     );
-    const component = normalizeComponentLabel(
+    const rawComponent = normalizeSpreadsheetWhitespace(
       csvCell(normalizedRows, directionRowIdx, col) || (headerHint ? headerHint.component : "")
     );
+    const component = normalizeComponentLabel(rawComponent);
+    const componentLabel = canonicalComponentDisplayLabel(rawComponent || component);
     const elementType = family === "ELEMENT_FORCES"
       ? (normalizeElementType(elementTypeRowIdx === undefined ? "" : csvCell(normalizedRows, elementTypeRowIdx, col))
         || inferElementForceTypeFromComponent(component))
@@ -1187,6 +1231,7 @@ function parseSpreadsheetRows(fileName, rows, sheetName, options) {
       entityKey: entityInfo.key || String(entityInfo.id),
       entityLabel: entityInfo.label,
       component,
+      componentLabel,
       elementType,
       reprLabel,
       reprKey,
@@ -1295,6 +1340,7 @@ function parseSpreadsheetRows(fileName, rows, sheetName, options) {
         isComplex: true,
         complexRep: "REAL_IMAG",
         component: col.component,
+        componentLabel: col.componentLabel,
         entityId: col.entityKey,
         domain: "FREQUENCY_RESPONSE",
         storageKind: "COMPLEX",
@@ -1307,7 +1353,7 @@ function parseSpreadsheetRows(fileName, rows, sheetName, options) {
           ...(col.elementType ? [`$ELEMENT TYPE = ${col.elementType}`] : []),
           `$ENTITY ID = ${col.entityKey}`,
           ...(col.entityLabel ? [`$ENTITY LABEL = ${col.entityLabel}`] : []),
-          `$DIRECTION = ${col.component}`,
+          `$DIRECTION = ${col.componentLabel}`,
           "$REPRESENTATION = RAW",
         ],
       };
@@ -1318,6 +1364,7 @@ function parseSpreadsheetRows(fileName, rows, sheetName, options) {
         entityKey: col.entityKey,
         entityLabel: col.entityLabel,
         component: col.component,
+        componentLabel: col.componentLabel,
         elementType: col.elementType,
         subcaseLabel: col.subcaseLabel,
         storageKind: "COMPLEX",
@@ -1338,6 +1385,7 @@ function parseSpreadsheetRows(fileName, rows, sheetName, options) {
       isComplex: false,
       complexRep: "UNKNOWN",
       component: col.component,
+      componentLabel: col.componentLabel,
       entityId: col.entityKey,
       domain: "FREQUENCY_RESPONSE",
       storageKind: "DERIVED",
@@ -1350,7 +1398,7 @@ function parseSpreadsheetRows(fileName, rows, sheetName, options) {
         ...(col.elementType ? [`$ELEMENT TYPE = ${col.elementType}`] : []),
         `$ENTITY ID = ${col.entityKey}`,
         ...(col.entityLabel ? [`$ENTITY LABEL = ${col.entityLabel}`] : []),
-        `$DIRECTION = ${col.component}`,
+        `$DIRECTION = ${col.componentLabel}`,
         `$REPRESENTATION = ${col.reprKey}`,
       ],
     };
@@ -1361,6 +1409,7 @@ function parseSpreadsheetRows(fileName, rows, sheetName, options) {
       entityKey: col.entityKey,
       entityLabel: col.entityLabel,
       component: col.component,
+      componentLabel: col.componentLabel,
       elementType: col.elementType,
       subcaseLabel: col.subcaseLabel,
       storageKind: "DERIVED",

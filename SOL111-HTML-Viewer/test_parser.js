@@ -207,6 +207,42 @@ console.log("\n=== Spreadsheet: legacy element-force import ===");
 }
 
 // ---------------------------------------------------------------------------
+// Spreadsheet import: custom direction labels
+// ---------------------------------------------------------------------------
+console.log("\n=== Spreadsheet: custom direction labels ===");
+{
+  const csv = buildSpreadsheetCsv(
+    [
+      { sourceFile: "test_rig.csv", subcaseId: 1, family: "ACCELERATION", entityId: 9101, component: "Ax", reprLabel: "Magnitude", header: "test_rig.csv|SC1|ID9101|Ax|Magnitude" },
+      { sourceFile: "test_rig.csv", subcaseId: 1, family: "ACCELERATION", entityId: 9101, component: "Ctrl", reprLabel: "Magnitude", header: "test_rig.csv|SC1|ID9101|Ctrl|Magnitude" },
+      { sourceFile: "test_rig.csv", subcaseId: 1, family: "ACCELERATION", entityId: 9101, component: "Ref", reprLabel: "Magnitude", header: "test_rig.csv|SC1|ID9101|Ref|Magnitude" },
+      { sourceFile: "test_rig.csv", subcaseId: 1, family: "ACCELERATION", entityId: 9101, component: "t1", reprLabel: "Magnitude", header: "test_rig.csv|SC1|ID9101|t1|Magnitude" },
+    ],
+    [
+      ["5.0", "1.1", "2.2", "3.3", "4.4"],
+      ["10.0", "1.2", "2.3", "3.4", "4.5"],
+    ]
+  );
+  const runs = PCHParser.parseSpreadsheetText("test_rig.csv", csv);
+  assertEqual(runs.length, 1, "Custom-label spreadsheet import returns one run");
+  const block = runs[0].blocks[0];
+  assertEqual(block.resultFamily, "ACCELERATION", "Custom-label spreadsheet block keeps acceleration family");
+  assertEqual(PCHParser.componentLabelsForBlock(block).join(","), "Ax,Ctrl,Ref,T1", "Custom spreadsheet labels are preserved and sorted alphabetically");
+  assertEqual(block.componentLabels.AX, "Ax", "Custom spreadsheet block stores Ax display label");
+  assertEqual(block.componentLabels.CTRL, "Ctrl", "Custom spreadsheet block stores Ctrl display label");
+  assertEqual(block.componentLabels.REF, "Ref", "Custom spreadsheet block stores Ref display label");
+  assertEqual(block.componentLabels.T1, "T1", "Standard spreadsheet labels are canonicalized to solver casing");
+  const ctrlTrace = PCHParser.extractTraceData(block, 9101, "Ctrl");
+  assert(ctrlTrace !== null, "Custom spreadsheet label extracts by display label");
+  const ctrlTraceLower = PCHParser.extractTraceData(block, 9101, "ctrl");
+  assert(ctrlTraceLower !== null, "Custom spreadsheet label extracts case-insensitively");
+  if (ctrlTrace) {
+    assertEqual(ctrlTrace.componentLabel, "Ctrl", "Custom spreadsheet trace preserves display label");
+    assertEqual(ctrlTrace.x.length, 2, "Custom spreadsheet trace preserves row count");
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Spreadsheet import: bundled example fixture
 // ---------------------------------------------------------------------------
 console.log("\n=== Spreadsheet: bundled export example ===");
@@ -259,6 +295,7 @@ console.log("\n=== Fixture A: run_a_sort2_realimag.pch ===");
   assertGt(spcBlocks.length,  0, "Has SPCF block");
 
   const ab = acceBlocks[0];
+  assertEqual(PCHParser.componentLabelsForBlock(ab).join(","), "T1,T2,T3,R1,R2,R3", "Native PCH acceleration block still exposes standard solver components");
   assertEqual(ab.sort, "SORT2", "ACCELERATION sort is SORT2");
   assertEqual(ab.domain, "FREQUENCY_RESPONSE", "ACCELERATION domain is FREQUENCY_RESPONSE");
   assert(ab.entityIds.includes(101), "ACCELERATION has entity 101");
