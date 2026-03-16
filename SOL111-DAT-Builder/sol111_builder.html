@@ -339,6 +339,178 @@ html, body {
   color: var(--text-secondary);
 }
 
+/* Server status card */
+.jq-server-status {
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  margin-bottom: 16px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+.jq-server-status .sv-label { color: var(--text-light); display: inline-block; width: 100px; }
+.jq-server-status .sv-value { font-weight: 500; color: var(--text); }
+
+/* Job card */
+.job-card {
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  margin-bottom: 10px;
+  transition: border-color 0.15s;
+}
+.job-card:hover { border-color: var(--border); }
+.job-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.job-card-name { font-size: 14px; font-weight: 600; }
+.job-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.job-badge.QUEUED     { background: #dbeafe; color: #1e40af; }
+.job-badge.RUNNING    { background: #fef3c7; color: #92400e; animation: pulse-badge 1.5s ease-in-out infinite; }
+.job-badge.COMPLETED  { background: #d1fae5; color: #065f46; }
+.job-badge.FAILED     { background: #fee2e2; color: #991b1b; }
+.job-badge.CANCELLED  { background: #e5e7eb; color: #6b7280; }
+@keyframes pulse-badge { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+.job-card-meta {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+.job-card-error {
+  font-size: 11px;
+  color: var(--error);
+  padding: 4px 8px;
+  background: #fef2f2;
+  border-radius: 4px;
+  margin-bottom: 6px;
+  font-family: var(--mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.job-card-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.job-card-actions .btn-sm { font-size: 11px; padding: 3px 10px; }
+.jq-bottom-bar {
+  display: flex;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-light);
+  margin-top: 8px;
+}
+
+/* Server URL popover */
+.server-popover {
+  display: none;
+  position: absolute;
+  top: calc(var(--header-h) + 4px);
+  right: 80px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  padding: 12px 14px;
+  z-index: 200;
+  width: 280px;
+}
+.server-popover.visible { display: block; }
+.server-popover label { font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px; display: block; }
+.server-popover input {
+  width: 100%;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: var(--mono);
+  margin-bottom: 8px;
+}
+.server-popover .sp-row { display: flex; gap: 6px; }
+
+/* Log viewer modal */
+.log-modal-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 300;
+  align-items: center;
+  justify-content: center;
+}
+.log-modal-backdrop.visible { display: flex; }
+.log-modal {
+  background: var(--surface);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  width: min(90vw, 900px);
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+.log-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 14px;
+  font-weight: 600;
+}
+.log-modal-header .log-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--text-light);
+  padding: 0 4px;
+  line-height: 1;
+}
+.log-modal-header .log-close:hover { color: var(--text); }
+.log-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+  max-height: 60vh;
+}
+.log-modal-body pre {
+  margin: 0;
+  padding: 12px 16px;
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: var(--text);
+}
+.log-modal-body .log-fatal { color: #dc2626; font-weight: 600; }
+.log-modal-body .log-warning { color: #d97706; }
+.log-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 18px;
+  border-top: 1px solid var(--border-light);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.log-modal-footer label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+
 /* =========================================================
    Footer
    ========================================================= */
@@ -1570,11 +1742,49 @@ html, body {
       <button id="btn-back-wizard">Back to Wizard</button>
     </div>
     <div class="jq-body">
-      <div class="jq-placeholder">
+      <!-- Disconnected placeholder -->
+      <div id="jq-disconnected" class="jq-placeholder">
         <p>Server not connected.</p>
         <p>To enable job management, start the Python server:</p>
         <code>python server.py --nastran-exe /path/to/nastran --work-dir ./runs</code>
-        <p style="margin-top:16px; font-size:13px;">Job queue UI will be fully implemented in Phase 7.</p>
+        <p style="margin-top:16px"><button class="btn-sm" id="btn-retry-connect">Retry Connection</button></p>
+      </div>
+      <!-- Connected content -->
+      <div id="jq-connected" style="display:none">
+        <div class="jq-server-status" id="jq-server-info"></div>
+        <div id="jq-job-list"></div>
+        <div class="jq-bottom-bar">
+          <button class="btn-primary" id="btn-submit-job">Submit Current .dat</button>
+          <button class="btn-sm" id="btn-refresh-jobs">Refresh</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SERVER URL POPOVER ===== -->
+  <div class="server-popover" id="server-popover">
+    <label for="inp-server-url">Server URL</label>
+    <input type="text" id="inp-server-url" value="http://localhost:8111" placeholder="http://localhost:8111">
+    <div class="sp-row">
+      <button class="btn-sm" id="btn-server-connect">Connect</button>
+      <button class="btn-sm" id="btn-server-popover-close">Close</button>
+    </div>
+  </div>
+
+  <!-- ===== LOG VIEWER MODAL ===== -->
+  <div class="log-modal-backdrop" id="log-modal-backdrop">
+    <div class="log-modal">
+      <div class="log-modal-header">
+        <span id="log-modal-title">Log</span>
+        <button class="log-close" id="btn-log-close">&times;</button>
+      </div>
+      <div class="log-modal-body" id="log-modal-body">
+        <pre id="log-modal-content"></pre>
+      </div>
+      <div class="log-modal-footer">
+        <label><input type="checkbox" id="chk-log-autoscroll" checked> Auto-scroll</label>
+        <span id="log-modal-lines">Lines: 0</span>
+        <button class="btn-sm" id="btn-log-download">Download .f06</button>
       </div>
     </div>
   </div>
@@ -1687,7 +1897,12 @@ const State = {
   generatedDatText: '',
   editedDatText: null,
   isEditMode: false,
-  // Step 7: Jobs — added in Phase 7
+  // Step 7: Jobs
+  jobs: [],
+  activeLogJobId: null,
+  logContent: '',
+  logOffset: 0,
+  serverStatus: null,
 
   serverUrl: 'http://localhost:8111',
   serverConnected: false,
@@ -3158,6 +3373,7 @@ const Wizard = {
     el('wizard-area').style.display = 'none';
     el('progress-bar').style.display = 'none';
     el('job-queue-panel').classList.add('active');
+    Step7.connectAndRefresh();
   },
 
   hideJobQueue: function() {
@@ -3165,6 +3381,7 @@ const Wizard = {
     el('job-queue-panel').classList.remove('active');
     el('wizard-area').style.display = '';
     el('progress-bar').style.display = '';
+    JobPoller.stop();
   },
 };
 
@@ -4154,6 +4371,452 @@ const Templates = {
 };
 
 /* =========================================================
+   Server API Client
+   ========================================================= */
+const Server = {
+
+  _headers: function() {
+    var h = { 'Content-Type': 'application/json' };
+    if (State.apiKey) h['X-API-Key'] = State.apiKey;
+    return h;
+  },
+
+  checkConnection: function() {
+    return fetch(State.serverUrl + '/api/status', { headers: this._headers() })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        State.serverConnected = true;
+        State.serverStatus = data;
+        App.updateServerIndicator();
+        return data;
+      })
+      .catch(function() {
+        State.serverConnected = false;
+        State.serverStatus = null;
+        App.updateServerIndicator();
+        return null;
+      });
+  },
+
+  submitJob: function(name, datContent) {
+    return fetch(State.serverUrl + '/api/jobs', {
+      method: 'POST',
+      headers: this._headers(),
+      body: JSON.stringify({ name: name, datContent: datContent }),
+    }).then(function(r) {
+      if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'Submit failed'); });
+      return r.json();
+    });
+  },
+
+  getJobs: function() {
+    return fetch(State.serverUrl + '/api/jobs', { headers: this._headers() })
+      .then(function(r) { return r.json(); })
+      .catch(function() { return null; });
+  },
+
+  getJobLog: function(id, offset) {
+    return fetch(State.serverUrl + '/api/jobs/' + id + '/log?offset=' + (offset || 0), {
+      headers: this._headers(),
+    }).then(function(r) { return r.json(); })
+      .catch(function() { return null; });
+  },
+
+  getJobFiles: function(id) {
+    return fetch(State.serverUrl + '/api/jobs/' + id + '/files', { headers: this._headers() })
+      .then(function(r) { return r.json(); })
+      .catch(function() { return null; });
+  },
+
+  cancelJob: function(id) {
+    return fetch(State.serverUrl + '/api/jobs/' + id, {
+      method: 'DELETE',
+      headers: this._headers(),
+    }).then(function(r) { return r.json(); })
+      .catch(function() { return null; });
+  },
+
+  downloadFileUrl: function(jobId, filename) {
+    return State.serverUrl + '/api/jobs/' + jobId + '/files/' + encodeURIComponent(filename);
+  },
+};
+
+/* =========================================================
+   Job Poller
+   ========================================================= */
+const JobPoller = {
+  _id: null,
+
+  start: function() {
+    if (this._id) return;
+    var self = this;
+    this._id = setInterval(function() { self.poll(); }, 3000);
+  },
+
+  stop: function() {
+    if (this._id) { clearInterval(this._id); this._id = null; }
+  },
+
+  poll: function() {
+    if (!State.serverConnected) return;
+    Server.getJobs().then(function(data) {
+      if (!data || !data.jobs) return;
+      State.jobs = data.jobs;
+      Step7.renderJobList();
+      var hasActive = data.jobs.some(function(j) {
+        return j.status === 'QUEUED' || j.status === 'RUNNING';
+      });
+      if (!hasActive) JobPoller.stop();
+    });
+  },
+};
+
+/* =========================================================
+   Log Poller (for modal)
+   ========================================================= */
+const LogPoller = {
+  _id: null,
+
+  start: function(jobId) {
+    this.stop();
+    State.activeLogJobId = jobId;
+    State.logContent = '';
+    State.logOffset = 0;
+    this._fetch();
+    var self = this;
+    this._id = setInterval(function() { self._fetch(); }, 2000);
+  },
+
+  stop: function() {
+    if (this._id) { clearInterval(this._id); this._id = null; }
+    State.activeLogJobId = null;
+  },
+
+  _fetch: function() {
+    var jobId = State.activeLogJobId;
+    if (!jobId) return;
+    Server.getJobLog(jobId, State.logOffset).then(function(data) {
+      if (!data) return;
+      if (data.content) {
+        State.logContent += data.content;
+        State.logOffset = data.offset;
+        Step7.renderLogContent();
+      }
+      if (data.complete) LogPoller.stop();
+    });
+  },
+};
+
+/* =========================================================
+   Step 7: Job Queue UI
+   ========================================================= */
+const Step7 = {
+
+  init: function() {
+    // Retry connection
+    el('btn-retry-connect').addEventListener('click', function() {
+      Step7.connectAndRefresh();
+    });
+
+    // Submit job
+    el('btn-submit-job').addEventListener('click', function() {
+      Step7.submitCurrentDat();
+    });
+
+    // Refresh
+    el('btn-refresh-jobs').addEventListener('click', function() {
+      Step7.connectAndRefresh();
+    });
+
+    // Server URL popover
+    el('server-dot').parentElement.style.cursor = 'pointer';
+    el('server-dot').parentElement.addEventListener('click', function(e) {
+      e.stopPropagation();
+      el('server-popover').classList.toggle('visible');
+    });
+    el('btn-server-popover-close').addEventListener('click', function() {
+      el('server-popover').classList.remove('visible');
+    });
+    el('btn-server-connect').addEventListener('click', function() {
+      State.serverUrl = el('inp-server-url').value.replace(/\/+$/, '');
+      el('server-popover').classList.remove('visible');
+      Step7.connectAndRefresh();
+    });
+    // Close popover on outside click
+    document.addEventListener('click', function(e) {
+      var pop = el('server-popover');
+      if (pop.classList.contains('visible') && !pop.contains(e.target) &&
+          !el('server-dot').parentElement.contains(e.target)) {
+        pop.classList.remove('visible');
+      }
+    });
+
+    // Log modal close
+    el('btn-log-close').addEventListener('click', function() { Step7.closeLog(); });
+    el('log-modal-backdrop').addEventListener('click', function(e) {
+      if (e.target === el('log-modal-backdrop')) Step7.closeLog();
+    });
+    el('btn-log-download').addEventListener('click', function() {
+      if (State.activeLogJobId) {
+        // Find .f06 from current job
+        var job = State.jobs.find(function(j) { return j.id === State.activeLogJobId; });
+        if (job) {
+          var f06Name = job.name + '.f06';
+          window.open(Server.downloadFileUrl(job.id, f06Name), '_blank');
+        }
+      }
+    });
+
+    // Wire Step 6 submit button
+    el('btn-submit-server').addEventListener('click', function() {
+      if (!State.serverConnected) return;
+      Step7.submitCurrentDat();
+      Wizard.showJobQueue();
+    });
+  },
+
+  /** Check connection and refresh job list. */
+  connectAndRefresh: function() {
+    setStatus('Connecting to server...', 'info');
+    Server.checkConnection().then(function(data) {
+      if (data) {
+        setStatus('Connected to server', 'success');
+        Step7.showConnected(data);
+        Server.getJobs().then(function(jobData) {
+          if (jobData && jobData.jobs) {
+            State.jobs = jobData.jobs;
+            Step7.renderJobList();
+            var hasActive = jobData.jobs.some(function(j) {
+              return j.status === 'QUEUED' || j.status === 'RUNNING';
+            });
+            if (hasActive) JobPoller.start();
+          }
+        });
+      } else {
+        setStatus('Server not reachable', 'warning');
+        Step7.showDisconnected();
+      }
+    });
+  },
+
+  showConnected: function(data) {
+    el('jq-disconnected').style.display = 'none';
+    el('jq-connected').style.display = '';
+    el('btn-submit-server').disabled = false;
+    el('btn-submit-server').title = 'Submit to server';
+
+    // Server info card
+    var info = '';
+    info += '<span class="sv-label">Server:</span> <span class="sv-value">' + escHtml(State.serverUrl) + '</span><br>';
+    info += '<span class="sv-label">Nastran:</span> <span class="sv-value">' + escHtml(data.nastranExe || '?') + '</span><br>';
+    info += '<span class="sv-label">Work Dir:</span> <span class="sv-value">' + escHtml(data.workDir || '?') + '</span><br>';
+    info += '<span class="sv-label">Capacity:</span> <span class="sv-value">Active: ' +
+      (data.activeJobs || 0) + '/' + (data.maxConcurrent || 1) +
+      ' | Queued: ' + (data.queuedJobs || 0) + '</span>';
+    el('jq-server-info').innerHTML = info;
+  },
+
+  showDisconnected: function() {
+    el('jq-disconnected').style.display = '';
+    el('jq-connected').style.display = 'none';
+    el('btn-submit-server').disabled = true;
+    el('btn-submit-server').title = 'Start server.py to enable';
+  },
+
+  /** Render the job list. */
+  renderJobList: function() {
+    var jobs = State.jobs;
+    if (!jobs || jobs.length === 0) {
+      el('jq-job-list').innerHTML = '<div style="text-align:center; padding:30px; color:var(--text-light); font-size:13px;">No jobs yet. Click "Submit Current .dat" to start.</div>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < jobs.length; i++) {
+      html += this._renderJobCard(jobs[i]);
+    }
+    el('jq-job-list').innerHTML = html;
+    this._bindJobActions();
+  },
+
+  _renderJobCard: function(job) {
+    var h = '<div class="job-card" data-job-id="' + job.id + '">';
+    h += '<div class="job-card-header">';
+    h += '<span class="job-card-name">' + escHtml(job.name) + '</span>';
+    h += '<span class="job-badge ' + job.status + '">' + job.status + '</span>';
+    h += '</div>';
+
+    // Meta
+    var meta = 'Submitted: ' + this._formatTime(job.createdAt);
+    if (job.startedAt) {
+      var duration = this._calcDuration(job.startedAt, job.completedAt);
+      meta += '  |  Duration: ' + duration;
+    }
+    h += '<div class="job-card-meta">' + escHtml(meta) + '</div>';
+
+    // Error summary
+    if (job.status === 'FAILED' && job.errorSummary) {
+      h += '<div class="job-card-error">' + escHtml(job.errorSummary) + '</div>';
+    }
+
+    // Actions
+    h += '<div class="job-card-actions">';
+    if (job.status === 'RUNNING' || job.status === 'COMPLETED' || job.status === 'FAILED') {
+      h += '<button class="btn-sm" data-action="log" data-id="' + job.id + '">View Log</button>';
+    }
+    if (job.status === 'COMPLETED') {
+      h += '<button class="btn-sm" data-action="files" data-id="' + job.id + '">Download Files</button>';
+    }
+    if (job.status === 'FAILED') {
+      h += '<button class="btn-sm" data-action="download-f06" data-id="' + job.id + '" data-name="' + escHtml(job.name) + '">Download .f06</button>';
+    }
+    if (job.status === 'QUEUED' || job.status === 'RUNNING') {
+      h += '<button class="btn-sm" data-action="cancel" data-id="' + job.id + '">Cancel</button>';
+    }
+    if (job.status === 'COMPLETED' || job.status === 'FAILED' || job.status === 'CANCELLED') {
+      h += '<button class="btn-sm" data-action="remove" data-id="' + job.id + '">Remove</button>';
+    }
+    h += '</div>';
+    h += '</div>';
+    return h;
+  },
+
+  _bindJobActions: function() {
+    var btns = el('jq-job-list').querySelectorAll('[data-action]');
+    btns.forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var action = btn.getAttribute('data-action');
+        var id = btn.getAttribute('data-id');
+        if (action === 'log') Step7.openLog(id);
+        else if (action === 'cancel') Step7.cancelJob(id);
+        else if (action === 'remove') Step7.removeJob(id);
+        else if (action === 'files') Step7.showFiles(id);
+        else if (action === 'download-f06') {
+          var name = btn.getAttribute('data-name');
+          window.open(Server.downloadFileUrl(id, name + '.f06'), '_blank');
+        }
+      });
+    });
+  },
+
+  /** Submit current wizard .dat to server. */
+  submitCurrentDat: function() {
+    var name = State.jobName || 'sol111_job';
+    // Validate job name for server
+    var safeName = name.replace(/[^a-zA-Z0-9_\-]/g, '_').substring(0, 64);
+    if (!safeName) safeName = 'sol111_job';
+
+    var datText = DatAssembler.generate();
+    setStatus('Submitting job...', 'info');
+
+    Server.submitJob(safeName, datText).then(function(job) {
+      setStatus('Job submitted: ' + job.name, 'success');
+      JobPoller.start();
+      Step7.connectAndRefresh();
+    }).catch(function(err) {
+      setStatus('Submit failed: ' + err.message, 'error');
+    });
+  },
+
+  /** Cancel a job. */
+  cancelJob: function(id) {
+    Server.cancelJob(id).then(function() {
+      setStatus('Job cancelled', 'info');
+      Step7.connectAndRefresh();
+    });
+  },
+
+  /** Remove a completed/failed job. */
+  removeJob: function(id) {
+    Server.cancelJob(id).then(function() {
+      State.jobs = State.jobs.filter(function(j) { return j.id !== id; });
+      Step7.renderJobList();
+    });
+  },
+
+  /** Show download options for completed job files. */
+  showFiles: function(id) {
+    Server.getJobFiles(id).then(function(data) {
+      if (!data || !data.files || data.files.length === 0) {
+        setStatus('No output files found', 'warning');
+        return;
+      }
+      // Download all files by opening them
+      data.files.forEach(function(f) {
+        if (f.name.match(/\.(f06|pch|op2|xdb|h5)$/i)) {
+          var a = document.createElement('a');
+          a.href = Server.downloadFileUrl(id, f.name);
+          a.download = f.name;
+          a.target = '_blank';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }
+      });
+      setStatus('Downloading ' + data.files.length + ' file(s)', 'success');
+    });
+  },
+
+  /** Open log viewer modal. */
+  openLog: function(jobId) {
+    el('log-modal-backdrop').classList.add('visible');
+    var job = State.jobs.find(function(j) { return j.id === jobId; });
+    el('log-modal-title').textContent = 'Log: ' + (job ? job.name : jobId);
+    el('log-modal-content').innerHTML = '';
+    el('log-modal-lines').textContent = 'Lines: 0';
+    LogPoller.start(jobId);
+  },
+
+  /** Close log modal. */
+  closeLog: function() {
+    el('log-modal-backdrop').classList.remove('visible');
+    LogPoller.stop();
+  },
+
+  /** Render log content with highlighting. */
+  renderLogContent: function() {
+    var pre = el('log-modal-content');
+    var lines = State.logContent.split('\n');
+
+    var html = lines.map(function(line) {
+      var safe = escHtml(line);
+      if (line.indexOf('FATAL') >= 0) return '<span class="log-fatal">' + safe + '</span>';
+      if (line.indexOf('WARNING') >= 0) return '<span class="log-warning">' + safe + '</span>';
+      return safe;
+    }).join('\n');
+
+    pre.innerHTML = html;
+    el('log-modal-lines').textContent = 'Lines: ' + lines.length.toLocaleString();
+
+    // Auto-scroll
+    if (el('chk-log-autoscroll').checked) {
+      var body = el('log-modal-body');
+      body.scrollTop = body.scrollHeight;
+    }
+  },
+
+  // ── Helpers ──────────────────────────────────────────
+
+  _formatTime: function(iso) {
+    if (!iso) return '—';
+    try {
+      var d = new Date(iso);
+      return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    } catch (e) { return iso; }
+  },
+
+  _calcDuration: function(startIso, endIso) {
+    try {
+      var start = new Date(startIso).getTime();
+      var end = endIso ? new Date(endIso).getTime() : Date.now();
+      var secs = Math.floor((end - start) / 1000);
+      var m = Math.floor(secs / 60);
+      var s = secs % 60;
+      return m + 'm' + (s < 10 ? '0' : '') + s + 's';
+    } catch (e) { return '—'; }
+  },
+};
+
+/* =========================================================
    App
    ========================================================= */
 const App = {
@@ -4177,10 +4840,15 @@ const App = {
     Step4.init();
     Step5.init();
     Step6.init();
+    Step7.init();
     Templates.init();
 
-    // Server status
-    App.updateServerIndicator();
+    // Auto-connect to server (silent — don't block UI)
+    Server.checkConnection().then(function(data) {
+      if (data) {
+        setStatus('Server connected', 'success');
+      }
+    });
 
     setStatus('Ready', 'info');
   },
@@ -4188,12 +4856,15 @@ const App = {
   updateServerIndicator: function() {
     var dot = el('server-dot');
     var label = el('server-label');
+    var submitBtn = el('btn-submit-server');
     if (State.serverConnected) {
       dot.classList.add('connected');
       label.textContent = 'Connected';
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.title = 'Submit to server'; }
     } else {
       dot.classList.remove('connected');
       label.textContent = 'Disconnected';
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.title = 'Start server.py to enable'; }
     }
   },
 
