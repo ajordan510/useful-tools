@@ -902,6 +902,7 @@ input.tb-invalid { border-color: var(--danger) !important; background: #fff6f5; 
 
         <div class="toolbar-group">
           <button class="tb-btn" onclick="App.openCsvExport()">Export CSV</button>
+          <button class="tb-btn" onclick="App.copyImage()">Copy Image</button>
           <button class="tb-btn primary" onclick="App.exportSVG()">Export SVG</button>
           <button class="tb-btn" onclick="App.exportPNG()">Export PNG</button>
         </div>
@@ -1429,6 +1430,7 @@ const RE_SUBCASE    = /^\$SUBCASE\s+ID\s*=\s*(\d+)/i;
 
 // Explicit complex representation declaration (real MSC Nastran format)
 const RE_REAL_IMAG  = /^\$REAL-IMAGINARY\s+OUTPUT/i;
+const RE_REAL_ONLY  = /^\$REAL\s+OUTPUT/i;
 const RE_MAG_PHASE  = /^\$MAGNITUDE-PHASE\s+OUTPUT/i;
 
 // Result type header — all families we handle
@@ -1717,7 +1719,8 @@ function scanBlocks(text, runName) {
       }
     }
 
-    if (curBlock && curBlock.resultFamily === family && curBlock.subcaseId === lookaheadSubcase
+    if (curBlock && curBlock.resultFamily === family && curBlock.resultType === rawType &&
+        curBlock.subcaseId === lookaheadSubcase
         && family !== "XYPUNCH") {
       // Same block still open — just continue accumulating into it.
       return;
@@ -1729,7 +1732,8 @@ function scanBlocks(text, runName) {
     // Check if the last finalised block matches (SORT1 merge).
     if (family !== "XYPUNCH" && blocks.length > 0) {
       const last = blocks[blocks.length - 1];
-      if (last.resultFamily === family && last.subcaseId === lookaheadSubcase) {
+      if (last.resultFamily === family && last.resultType === rawType &&
+          last.subcaseId === lookaheadSubcase) {
         // Reopen the last block — remove it from the finalised list and make
         // it the current block again so we can keep appending to it.
         blocks.pop();
@@ -1805,6 +1809,10 @@ function scanBlocks(text, runName) {
       if (curBlock) { curBlock.complexRep = "REAL_IMAG"; curBlock.rawLines.push(line); }
       continue;
     }
+    if (RE_REAL_ONLY.test(line)) {
+      if (curBlock) { curBlock.complexRep = "REAL_ONLY"; curBlock.rawLines.push(line); }
+      continue;
+    }
     if (RE_MAG_PHASE.test(line)) {
       if (curBlock) { curBlock.complexRep = "MAG_PHASE"; curBlock.rawLines.push(line); }
       continue;
@@ -1833,8 +1841,9 @@ function scanBlocks(text, runName) {
     // --- Result type header ---
     if ((m = RE_RESULT.exec(line))) {
       const rawKey = m[1].toUpperCase().replace(/\s+/g, " ");
+      const fullType = line.replace(/^\$/, "").trim().replace(/\s+/g, " ");
       const family = RESULT_FAMILIES[rawKey] || rawKey;
-      startBlock(family, rawKey);
+      startBlock(family, fullType);
       curBlock.rawLines.push(line);
       continue;
     }
@@ -1910,6 +1919,9 @@ function scanBlocks(text, runName) {
             if (isPlainInt) {
               const eid = parseInt(t0, 10);
               if (!curBlock.entityIds.includes(eid)) curBlock.entityIds.push(eid);
+              if (curBlock.sort === "UNKNOWN") curBlock.sort = "SORT1";
+            } else if (curBlock.sort === "UNKNOWN") {
+              curBlock.sort = "SORT2";
             }
           }
           continue;
@@ -1920,6 +1932,8 @@ function scanBlocks(text, runName) {
       const gr = classifyGridRow(line);
       if (gr && gr.type !== "CONT") {
         curBlock.dataLines.push(lineIdx);
+        if (gr.type === "FORMAT_B" && curBlock.sort === "UNKNOWN") curBlock.sort = "SORT1";
+        if (gr.type === "FORMAT_A" && curBlock.sort === "UNKNOWN") curBlock.sort = "SORT2";
         // Collect entity IDs from FORMAT_B and FORMAT_C rows
         if ((gr.type === "FORMAT_B" || gr.type === "FORMAT_C") && gr.entityId !== null) {
           if (!curBlock.entityIds.includes(gr.entityId)) {
@@ -2112,6 +2126,7 @@ function extractGridVector(block, entityId, component) {
 
   const lines   = block.rawLines;
   const isSort2 = block.sort === "SORT2";
+  const isRealOnly = block.complexRep === "REAL_ONLY";
 
   if (isSort2) {
     // -----------------------------------------------------------------------
@@ -2174,8 +2189,15 @@ function extractGridVector(block, entityId, component) {
           pendingA[3] = vals[0] || 0;
           pendingA[4] = vals[1] || 0;
           pendingA[5] = vals[2] || 0;
-          state = "GOT_CONT1";
           srcLines.push(line);
+          if (isRealOnly) {
+            xArr.push(pendingX);
+            reArr.push(pendingA[compIdx]);
+            imArr.push(0);
+            state = "IDLE";
+          } else {
+            state = "GOT_CONT1";
+          }
         } else if (state === "GOT_CONT1") {
           // CONT 2: DOFs 1-3 of component B
           pendingB[0] = vals[0] || 0;
@@ -2274,8 +2296,15 @@ function extractGridVector(block, entityId, component) {
           pendingA[3] = vals[0] || 0;
           pendingA[4] = vals[1] || 0;
           pendingA[5] = vals[2] || 0;
-          state = "GOT_CONT1";
           srcLines.push(line);
+          if (isRealOnly) {
+            xArr.push(pendingX);
+            reArr.push(pendingA[compIdx]);
+            imArr.push(0);
+            state = "IDLE";
+          } else {
+            state = "GOT_CONT1";
+          }
         } else if (state === "GOT_CONT1") {
           pendingB[0] = vals[0] || 0;
           pendingB[1] = vals[1] || 0;
@@ -2722,6 +2751,10 @@ const State = {
   activeTraces: [],  // Array of TraceSpec
   nextTraceId: 0,
   inspectorTarget: null,
+  // User-edited Plotly title/subtitle (persist across re-renders).
+  // null means "use auto title/subtitle from active traces".
+  plotTitleText: null,
+  plotSubtitleText: null,
   // Per-traceKey style overrides: { color, dash, width }
   styleOverrides: {},
   // DOF filter: set of active DOF labels (all on by default)
@@ -3257,7 +3290,7 @@ const REPR_YLABELS = {
  * Build Plotly axis layout for a log-scale axis with:
  *   - Major ticks at powers of 10 only (1, 10, 100, …)
  *   - Minor gridlines at 2–9 within each decade
- *   - Tick labels in scientific notation (1E+00, 1E+01, …)
+ *   - Tick labels in plain numeric form (1, 10, 100, 1000, …)
  *
  * @param {string} axisTitle - Axis label text
  * @param {boolean} isLog    - Whether the axis is log scale
@@ -3272,8 +3305,10 @@ function buildLogAxisLayout(axisTitle, isLog) {
       linecolor: "#d0d3d8",
       showgrid: true,
       zeroline: false,
-      exponentformat: "e",
-      showexponent: "all",
+      exponentformat: "none",
+      showexponent: "none",
+      tickformat: "~g",
+      separatethousands: true,
     };
   }
   return {
@@ -3297,18 +3332,18 @@ function buildLogAxisLayout(axisTitle, isLog) {
       gridwidth: 1,
       showgrid: true,
     },
-    // Labels as 1E+00, 1E+01, etc.
-    exponentformat: "E",
-    showexponent: "all",
-    tickformat: "",
+    exponentformat: "none",
+    showexponent: "none",
+    tickformat: "~g",
+    separatethousands: true,
   };
 }
 
 /**
  * buildYAxisLayout
  * ----------------
- * Build Plotly Y-axis layout. For linear scale, use scientific notation
- * in the form 1E+XX. For log scale, use the same log tick format as X.
+ * Build Plotly Y-axis layout.
+ * For log scale, use the same log tick format as X.
  *
  * @param {string} axisTitle - Axis label text
  * @param {boolean} isLog    - Whether the axis is log scale
@@ -3323,9 +3358,10 @@ function buildYAxisLayout(axisTitle, isLog) {
     linecolor: "#d0d3d8",
     showgrid: true,
     zeroline: false,
-    // Scientific notation: 1E+XX format
-    exponentformat: "E",
-    showexponent: "all",
+    exponentformat: "none",
+    showexponent: "none",
+    tickformat: "~g",
+    separatethousands: true,
   };
 }
 
@@ -3474,6 +3510,42 @@ function syncAxisInputsFromRelayout(relayoutData) {
 }
 
 /**
+ * Persist user-edited Plotly title/subtitle across dataset/trace changes.
+ * Plotly emits title edits via relayout events (e.g., "title.text").
+ *
+ * @param {object} relayoutData
+ */
+function syncTitleFromRelayout(relayoutData) {
+  if (!relayoutData || typeof relayoutData !== "object") return;
+
+  if (Object.prototype.hasOwnProperty.call(relayoutData, "title.text")) {
+    State.plotTitleText = String(relayoutData["title.text"] ?? "");
+  } else if (relayoutData.title && typeof relayoutData.title === "object" &&
+             Object.prototype.hasOwnProperty.call(relayoutData.title, "text")) {
+    State.plotTitleText = String(relayoutData.title.text ?? "");
+  }
+
+  if (Object.prototype.hasOwnProperty.call(relayoutData, "title.subtitle.text")) {
+    State.plotSubtitleText = String(relayoutData["title.subtitle.text"] ?? "");
+  } else if (Object.prototype.hasOwnProperty.call(relayoutData, "title.subtitle")) {
+    const subtitle = relayoutData["title.subtitle"];
+    if (subtitle && typeof subtitle === "object" && Object.prototype.hasOwnProperty.call(subtitle, "text")) {
+      State.plotSubtitleText = String(subtitle.text ?? "");
+    } else if (subtitle == null) {
+      State.plotSubtitleText = "";
+    }
+  } else if (relayoutData.title && typeof relayoutData.title === "object" &&
+             Object.prototype.hasOwnProperty.call(relayoutData.title, "subtitle")) {
+    const subtitle = relayoutData.title.subtitle;
+    if (subtitle && typeof subtitle === "object" && Object.prototype.hasOwnProperty.call(subtitle, "text")) {
+      State.plotSubtitleText = String(subtitle.text ?? "");
+    } else if (subtitle == null) {
+      State.plotSubtitleText = "";
+    }
+  }
+}
+
+/**
  * renderPlot
  * ----------
  * Build Plotly traces from State.activeTraces and render/update the plot.
@@ -3522,20 +3594,22 @@ function renderPlot() {
 
   const domainIsTransient = State.activeTraces[0]?.traceData.domain === "TRANSIENT";
   const defaultXLabel = domainIsTransient ? "Time (s)" : "Frequency (Hz)";
+  const titleText = State.plotTitleText !== null ? State.plotTitleText : autoTitle;
+  const subtitleText = State.plotSubtitleText !== null ? State.plotSubtitleText : autoSubtitle;
 
   // Use Plotly's native title (fully editable via double-click when editable:true).
   // subtitle is supported in Plotly ≥ 2.30; falls back gracefully in older builds.
   const titleLayout = {
-    text: autoTitle,
+    text: titleText,
     font: { size: 16, family: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", color: "#1c1e21" },
     x: 0.5,
     xanchor: "center",
     xref: "paper",
     pad: { t: 4 },
   };
-  if (autoSubtitle) {
+  if (subtitleText) {
     titleLayout.subtitle = {
-      text: autoSubtitle,
+      text: subtitleText,
       font: { size: 13, family: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", color: "#5f6368" },
     };
   }
@@ -3722,6 +3796,39 @@ const App = {
       height: 700,
       scale: 2,
     });
+  },
+
+  async copyImage() {
+    const plotEl = el("plotly-div");
+    if (!plotEl) {
+      setStatus("Plot area not found.");
+      return;
+    }
+    if (!navigator.clipboard || typeof navigator.clipboard.write !== "function" ||
+        typeof window.ClipboardItem === "undefined") {
+      setStatus("Image clipboard copy is not supported in this browser/context.");
+      return;
+    }
+
+    try {
+      setStatus("Preparing plot image for clipboard...");
+      const dataUrl = await Plotly.toImage(plotEl, {
+        format: "png",
+        width: 1200,
+        height: 700,
+        scale: 2,
+      });
+      const blob = await (await fetch(dataUrl)).blob();
+      await navigator.clipboard.write([
+        new window.ClipboardItem({
+          [blob.type || "image/png"]: blob,
+        }),
+      ]);
+      setStatus("Plot image copied to clipboard. Paste into PowerPoint with Ctrl/Cmd+V.");
+    } catch (err) {
+      console.error("Clipboard copy failed:", err);
+      setStatus(`Could not copy image to clipboard: ${err.message || err}`);
+    }
   },
 
   // -----------------------------------------------------------------------
@@ -4121,7 +4228,10 @@ function escHtml(s) {
 renderPlot();
 const plotDiv = el("plotly-div");
 if (plotDiv && typeof plotDiv.on === "function") {
-  plotDiv.on("plotly_relayout", syncAxisInputsFromRelayout);
+  plotDiv.on("plotly_relayout", relayoutData => {
+    syncAxisInputsFromRelayout(relayoutData);
+    syncTitleFromRelayout(relayoutData);
+  });
 }
 setStatus("Ready. Import a .pch file to begin.");
 
