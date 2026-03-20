@@ -1005,6 +1005,10 @@ input.tb-invalid { border-color: var(--danger) !important; background: #fff6f5; 
 
         <div class="toolbar-group">
           <button class="tb-btn" onclick="App.openStyleEditor()">Line Styles</button>
+          <label style="display:inline-flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;user-select:none;">
+            <input type="checkbox" id="chk-simple-legend" onchange="App.toggleSimpleLegend(this.checked)">
+            Simple Legend
+          </label>
         </div>
 
         <div class="toolbar-group">
@@ -4457,6 +4461,7 @@ const State = {
   nextTraceId: 0,
   inspectorTarget: null,
   importIssues: [],
+  simpleLegend: false,
   // User-edited Plotly title/subtitle (persist across re-renders).
   // null means "use auto title/subtitle from active traces".
   plotTitleText: null,
@@ -5346,6 +5351,18 @@ function buildTraceName(run, block, entityId, component) {
   return `${runShort} | ${fam} ${entityLabel} ${componentLabel}`;
 }
 
+function buildSimpleTraceName(block, entityId, component) {
+  const entityLabel = getEntityDisplayLabel(block, entityId);
+  const componentLabel = getComponentDisplayLabel(block, component);
+  if (block.resultFamily === "XYPUNCH") {
+    return `${block.xypunchComp} ${entityLabel}`.trim();
+  }
+  if (block.resultFamily === "ELEMENT_FORCES") {
+    return `${entityLabel} ${componentLabel}`.trim();
+  }
+  return `${entityLabel} ${componentLabel}`.trim();
+}
+
 // ---------------------------------------------------------------------------
 // Plot rendering
 // ---------------------------------------------------------------------------
@@ -5651,14 +5668,17 @@ function renderPlot() {
       lockNotes.add(`${spec.name} locked to ${result.effectiveRepr}`);
     }
     const ls = spec.lineStyle;
+    const displayName = State.simpleLegend
+      ? buildSimpleTraceName(State.runs[spec.runIdx].blocks[spec.blockIdx], spec.entityId, spec.component)
+      : spec.name;
     return {
       x: Array.from(x),
       y: Array.from(y),
       type: "scatter",
       mode: "lines",
-      name: spec.name,
+      name: displayName,
       line: { color: ls.color, width: ls.width, dash: ls.dash },
-      hovertemplate: `<b>${spec.name}</b><br>X: %{x:.4g}<br>Y: %{y:.4g}<extra></extra>`,
+      hovertemplate: `<b>${displayName}</b><br>X: %{x:.4g}<br>Y: %{y:.4g}<extra></extra>`,
     };
   });
   const allDerived = State.activeTraces.length > 0 && State.activeTraces.every(spec => spec.traceData.storageKind === "DERIVED");
@@ -5821,6 +5841,7 @@ const App = {
   onTitleChange() { renderPlot(); },
   onAxisLabelChange() { renderPlot(); },
   onAxisLimitChange() { renderPlot(); },
+  toggleSimpleLegend(checked) { State.simpleLegend = checked; renderPlot(); },
 
   // -----------------------------------------------------------------------
   // DOF filter
