@@ -412,6 +412,17 @@ input.tb-text {
   width: 160px;
 }
 input.tb-text:focus { outline: 2px solid var(--accent); border-color: transparent; }
+input.tb-num {
+  font-size: 12px;
+  padding: 3px 7px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  width: 86px;
+}
+input.tb-num:focus { outline: 2px solid var(--accent); border-color: transparent; }
+input.tb-invalid { border-color: var(--danger) !important; background: #fff6f5; }
 
 /* Plot container */
 #plot-container {
@@ -976,6 +987,9 @@ input.tb-text:focus { outline: 2px solid var(--accent); border-color: transparen
             <option value="log" selected>Log</option>
             <option value="linear">Linear</option>
           </select>
+          <input class="tb-text" id="plot-xlabel-input" type="text" placeholder="X label" onchange="App.onAxisLabelChange()" title="X-axis label">
+          <input class="tb-num" id="plot-xmin-input" type="number" step="any" placeholder="X min" onchange="App.onAxisLimitChange()" title="X-axis minimum (enter both min and max)">
+          <input class="tb-num" id="plot-xmax-input" type="number" step="any" placeholder="X max" onchange="App.onAxisLimitChange()" title="X-axis maximum (enter both min and max)">
         </div>
 
         <div class="toolbar-group">
@@ -984,6 +998,9 @@ input.tb-text:focus { outline: 2px solid var(--accent); border-color: transparen
             <option value="linear" selected>Linear</option>
             <option value="log">Log</option>
           </select>
+          <input class="tb-text" id="plot-ylabel-input" type="text" placeholder="Y label" onchange="App.onAxisLabelChange()" title="Y-axis label">
+          <input class="tb-num" id="plot-ymin-input" type="number" step="any" placeholder="Y min" onchange="App.onAxisLimitChange()" title="Y-axis minimum (enter both min and max)">
+          <input class="tb-num" id="plot-ymax-input" type="number" step="any" placeholder="Y max" onchange="App.onAxisLimitChange()" title="Y-axis maximum (enter both min and max)">
         </div>
 
         <div class="toolbar-group">
@@ -992,6 +1009,7 @@ input.tb-text:focus { outline: 2px solid var(--accent); border-color: transparen
 
         <div class="toolbar-group">
           <button class="tb-btn" onclick="App.openCsvExport()">Export CSV</button>
+          <button class="tb-btn" onclick="App.copyImage()">Copy Image</button>
           <button class="tb-btn primary" onclick="App.exportSVG()">Export SVG</button>
           <button class="tb-btn" onclick="App.exportPNG()">Export PNG</button>
         </div>
@@ -1626,6 +1644,7 @@ const RE_SUBCASE    = /^\$SUBCASE\s+ID\s*=\s*(\d+)/i;
 
 // Explicit representation declaration (real MSC Nastran format)
 const RE_REAL_IMAG  = /^\$REAL-IMAGINARY\s+OUTPUT/i;
+const RE_REAL_ONLY  = /^\$REAL\s+OUTPUT/i;
 const RE_MAG_PHASE  = /^\$MAGNITUDE-PHASE\s+OUTPUT/i;
 const RE_REAL_ONLY  = /^\$REAL\s+OUTPUT/i;
 
@@ -3296,7 +3315,8 @@ function scanBlocks(text, runName) {
       }
     }
 
-    if (curBlock && curBlock.resultFamily === family && curBlock.subcaseId === lookaheadSubcase
+    if (curBlock && curBlock.resultFamily === family && curBlock.resultType === rawType &&
+        curBlock.subcaseId === lookaheadSubcase
         && (family !== "ELEMENT_FORCES" || normalizeElementType(curBlock.elementType) === lookaheadElemType)
         && family !== "XYPUNCH") {
       // Same block still open — just continue accumulating into it.
@@ -3309,7 +3329,8 @@ function scanBlocks(text, runName) {
     // Check if the last finalised block matches (SORT1 merge).
     if (family !== "XYPUNCH" && blocks.length > 0) {
       const last = blocks[blocks.length - 1];
-      if (last.resultFamily === family && last.subcaseId === lookaheadSubcase
+      if (last.resultFamily === family && last.resultType === rawType &&
+          last.subcaseId === lookaheadSubcase
           && (family !== "ELEMENT_FORCES" || normalizeElementType(last.elementType) === lookaheadElemType)) {
         // Reopen the last block — remove it from the finalised list and make
         // it the current block again so we can keep appending to it.
@@ -3388,6 +3409,10 @@ function scanBlocks(text, runName) {
       if (curBlock) { curBlock.complexRep = "REAL_IMAG"; curBlock.rawLines.push(line); }
       continue;
     }
+    if (RE_REAL_ONLY.test(line)) {
+      if (curBlock) { curBlock.complexRep = "REAL_ONLY"; curBlock.rawLines.push(line); }
+      continue;
+    }
     if (RE_MAG_PHASE.test(line)) {
       if (curBlock) { curBlock.complexRep = "MAG_PHASE"; curBlock.rawLines.push(line); }
       continue;
@@ -3420,8 +3445,9 @@ function scanBlocks(text, runName) {
     // --- Result type header ---
     if ((m = RE_RESULT.exec(line))) {
       const rawKey = m[1].toUpperCase().replace(/\s+/g, " ");
+      const fullType = line.replace(/^\$/, "").trim().replace(/\s+/g, " ");
       const family = RESULT_FAMILIES[rawKey] || rawKey;
-      startBlock(family, rawKey);
+      startBlock(family, fullType);
       curBlock.rawLines.push(line);
       continue;
     }
@@ -3495,6 +3521,17 @@ function scanBlocks(text, runName) {
               curBlock.elementType = row.elementType;
             }
           }
+          // Sort-order detection (SORT1 vs SORT2) from first token
+          const tokens = trimmed.split(/\s+/);
+          if (tokens.length >= 2) {
+            const t0 = tokens[0];
+            const isPlainInt = /^\d+$/.test(t0);
+            if (isPlainInt) {
+              if (curBlock.sort === "UNKNOWN") curBlock.sort = "SORT1";
+            } else if (curBlock.sort === "UNKNOWN") {
+              curBlock.sort = "SORT2";
+            }
+          }
           continue;
         }
       }
@@ -3503,6 +3540,8 @@ function scanBlocks(text, runName) {
       const gr = classifyGridRow(line);
       if (gr && gr.type !== "CONT") {
         curBlock.dataLines.push(lineIdx);
+        if (gr.type === "FORMAT_B" && curBlock.sort === "UNKNOWN") curBlock.sort = "SORT1";
+        if (gr.type === "FORMAT_A" && curBlock.sort === "UNKNOWN") curBlock.sort = "SORT2";
         // Collect entity IDs from FORMAT_B and FORMAT_C rows
         if ((gr.type === "FORMAT_B" || gr.type === "FORMAT_C") && gr.entityId !== null) {
           if (!curBlock.entityIds.includes(gr.entityId)) {
@@ -3732,8 +3771,8 @@ function extractGridVector(block, entityId, component) {
   const imArr    = [];
   const srcLines = [];
 
-  const lines      = block.rawLines;
-  const isSort2    = block.sort === "SORT2";
+  const lines   = block.rawLines;
+  const isSort2 = block.sort === "SORT2";
   const isRealOnly = block.complexRep === "REAL_ONLY";
 
   if (isSort2) {
@@ -4419,6 +4458,10 @@ const State = {
   nextTraceId: 0,
   inspectorTarget: null,
   importIssues: [],
+  // User-edited Plotly title/subtitle (persist across re-renders).
+  // null means "use auto title/subtitle from active traces".
+  plotTitleText: null,
+  plotSubtitleText: null,
   // Per-traceKey style overrides: { color, dash, width }
   styleOverrides: {},
   // DOF filter: set of active DOF labels (all on by default)
@@ -5321,8 +5364,8 @@ const REPR_YLABELS = {
  * buildLogAxisLayout
  * ------------------
  * Build Plotly axis layout for a log-scale axis with:
- *   - Major ticks at powers of 10 only (1, 10, 100, Ã¢â‚¬Â¦)
- *   - Minor gridlines at 2Ã¢â‚¬â€œ9 within each decade
+ *   - Major ticks at powers of 10 only (1, 10, 100, …)
+ *   - Minor gridlines at 2–9 within each decade
  *   - Optional plain-number labels (for example 1000 instead of 1e3)
  *
  * @param {string} axisTitle - Axis label text
@@ -5342,6 +5385,7 @@ function buildLogAxisLayout(axisTitle, isLog, plainLabels = false) {
       exponentformat: plainLabels ? "none" : "e",
       showexponent: plainLabels ? "none" : "all",
       tickformat: plainLabels ? "~g" : "",
+      separatethousands: true,
     };
   }
   return {
@@ -5368,14 +5412,15 @@ function buildLogAxisLayout(axisTitle, isLog, plainLabels = false) {
     exponentformat: plainLabels ? "none" : "E",
     showexponent: plainLabels ? "none" : "all",
     tickformat: plainLabels ? "~g" : "",
+    separatethousands: true,
   };
 }
 
 /**
  * buildYAxisLayout
  * ----------------
- * Build Plotly Y-axis layout. For linear scale, use scientific notation
- * in the form 1E+XX. For log scale, use the same log tick format as X.
+ * Build Plotly Y-axis layout.
+ * For log scale, use the same log tick format as X.
  *
  * @param {string} axisTitle - Axis label text
  * @param {boolean} isLog    - Whether the axis is log scale
@@ -5390,10 +5435,191 @@ function buildYAxisLayout(axisTitle, isLog) {
     linecolor: "#d0d3d8",
     showgrid: true,
     zeroline: false,
-    // Scientific notation: 1E+XX format
-    exponentformat: "E",
-    showexponent: "all",
+    exponentformat: "none",
+    showexponent: "none",
+    tickformat: "~g",
+    separatethousands: true,
   };
+}
+
+/**
+ * Read a numeric axis bound from an input field.
+ * Blank/non-finite values are treated as null (auto-range).
+ *
+ * @param {string} inputId
+ * @returns {number|null}
+ */
+function readAxisBound(inputId) {
+  const node = el(inputId);
+  if (!node) return null;
+  const raw = node.value.trim();
+  if (raw === "") return null;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : null;
+}
+
+/**
+ * Convert a Plotly axis coordinate to data-space value.
+ * Plotly stores log-axis ranges as log10 coordinates.
+ *
+ * @param {number} value
+ * @param {boolean} isLog
+ * @returns {number}
+ */
+function fromPlotlyAxisValue(value, isLog) {
+  return isLog ? Math.pow(10, value) : value;
+}
+
+/**
+ * Convert a data-space value to Plotly axis coordinate.
+ * Plotly expects log-axis ranges in log10 coordinates.
+ *
+ * @param {number} value
+ * @param {boolean} isLog
+ * @returns {number}
+ */
+function toPlotlyAxisValue(value, isLog) {
+  return isLog ? Math.log10(value) : value;
+}
+
+/**
+ * Apply user-entered axis bounds to a Plotly axis layout.
+ * Bounds are only applied when both min and max are valid.
+ *
+ * @param {object} axisLayout
+ * @param {number|null} minVal
+ * @param {number|null} maxVal
+ * @param {boolean} isLog
+ * @param {string} minInputId
+ * @param {string} maxInputId
+ */
+function applyFixedAxisRange(axisLayout, minVal, maxVal, isLog, minInputId, maxInputId) {
+  const minInput = el(minInputId);
+  const maxInput = el(maxInputId);
+  const hasMin = Number.isFinite(minVal);
+  const hasMax = Number.isFinite(maxVal);
+
+  let invalid = false;
+  if (hasMin !== hasMax) invalid = true;
+  if (hasMin && hasMax) {
+    if (!(minVal < maxVal)) invalid = true;
+    if (isLog && (minVal <= 0 || maxVal <= 0)) invalid = true;
+  }
+
+  if (minInput) minInput.classList.toggle("tb-invalid", invalid);
+  if (maxInput) maxInput.classList.toggle("tb-invalid", invalid);
+  if (!hasMin || !hasMax || invalid) return;
+
+  axisLayout.autorange = false;
+  axisLayout.range = [
+    toPlotlyAxisValue(minVal, isLog),
+    toPlotlyAxisValue(maxVal, isLog),
+  ];
+}
+
+/**
+ * Keep axis-bound inputs synchronized when users zoom/pan/reset in Plotly.
+ * This preserves the viewed range when selecting additional traces.
+ *
+ * @param {object} relayoutData
+ */
+function syncAxisInputsFromRelayout(relayoutData) {
+  if (!relayoutData || typeof relayoutData !== "object") return;
+
+  function parseRange(axisPrefix) {
+    if (Array.isArray(relayoutData[`${axisPrefix}.range`])) {
+      const vals = relayoutData[`${axisPrefix}.range`];
+      if (vals.length >= 2 && Number.isFinite(vals[0]) && Number.isFinite(vals[1])) {
+        return [vals[0], vals[1]];
+      }
+    }
+    const lo = relayoutData[`${axisPrefix}.range[0]`];
+    const hi = relayoutData[`${axisPrefix}.range[1]`];
+    if (Number.isFinite(lo) && Number.isFinite(hi)) return [lo, hi];
+    return null;
+  }
+
+  function setInputPair(minId, maxId, lo, hi, isLog) {
+    const minInput = el(minId);
+    const maxInput = el(maxId);
+    if (!minInput || !maxInput) return;
+    const minData = fromPlotlyAxisValue(lo, isLog);
+    const maxData = fromPlotlyAxisValue(hi, isLog);
+    minInput.value = Number(minData.toPrecision(8));
+    maxInput.value = Number(maxData.toPrecision(8));
+    minInput.classList.remove("tb-invalid");
+    maxInput.classList.remove("tb-invalid");
+  }
+
+  if (relayoutData["xaxis.autorange"] === true) {
+    if (el("plot-xmin-input")) {
+      el("plot-xmin-input").value = "";
+      el("plot-xmin-input").classList.remove("tb-invalid");
+    }
+    if (el("plot-xmax-input")) {
+      el("plot-xmax-input").value = "";
+      el("plot-xmax-input").classList.remove("tb-invalid");
+    }
+  } else {
+    const xRange = parseRange("xaxis");
+    if (xRange) {
+      const xLog = el("sel-xscale")?.value === "log";
+      setInputPair("plot-xmin-input", "plot-xmax-input", xRange[0], xRange[1], xLog);
+    }
+  }
+
+  if (relayoutData["yaxis.autorange"] === true) {
+    if (el("plot-ymin-input")) {
+      el("plot-ymin-input").value = "";
+      el("plot-ymin-input").classList.remove("tb-invalid");
+    }
+    if (el("plot-ymax-input")) {
+      el("plot-ymax-input").value = "";
+      el("plot-ymax-input").classList.remove("tb-invalid");
+    }
+  } else {
+    const yRange = parseRange("yaxis");
+    if (yRange) {
+      const yLog = el("sel-yscale")?.value === "log";
+      setInputPair("plot-ymin-input", "plot-ymax-input", yRange[0], yRange[1], yLog);
+    }
+  }
+}
+
+/**
+ * Persist user-edited Plotly title/subtitle across dataset/trace changes.
+ * Plotly emits title edits via relayout events (e.g., "title.text").
+ *
+ * @param {object} relayoutData
+ */
+function syncTitleFromRelayout(relayoutData) {
+  if (!relayoutData || typeof relayoutData !== "object") return;
+
+  if (Object.prototype.hasOwnProperty.call(relayoutData, "title.text")) {
+    State.plotTitleText = String(relayoutData["title.text"] ?? "");
+  } else if (relayoutData.title && typeof relayoutData.title === "object" &&
+             Object.prototype.hasOwnProperty.call(relayoutData.title, "text")) {
+    State.plotTitleText = String(relayoutData.title.text ?? "");
+  }
+
+  if (Object.prototype.hasOwnProperty.call(relayoutData, "title.subtitle.text")) {
+    State.plotSubtitleText = String(relayoutData["title.subtitle.text"] ?? "");
+  } else if (Object.prototype.hasOwnProperty.call(relayoutData, "title.subtitle")) {
+    const subtitle = relayoutData["title.subtitle"];
+    if (subtitle && typeof subtitle === "object" && Object.prototype.hasOwnProperty.call(subtitle, "text")) {
+      State.plotSubtitleText = String(subtitle.text ?? "");
+    } else if (subtitle == null) {
+      State.plotSubtitleText = "";
+    }
+  } else if (relayoutData.title && typeof relayoutData.title === "object" &&
+             Object.prototype.hasOwnProperty.call(relayoutData.title, "subtitle")) {
+    const subtitle = relayoutData.title.subtitle;
+    if (subtitle && typeof subtitle === "object" && Object.prototype.hasOwnProperty.call(subtitle, "text")) {
+      State.plotSubtitleText = String(subtitle.text ?? "");
+    } else if (subtitle == null) {
+      State.plotSubtitleText = "";
+    }
+  }
 }
 
 /**
@@ -5406,8 +5632,12 @@ function renderPlot() {
   const repr    = el("sel-repr").value;
   const xscale  = el("sel-xscale").value;
   const yscale  = el("sel-yscale").value;
-  const xlabel  = el("plot-xlabel-input") ? el("plot-xlabel-input").value : "";
-  const manualYLabel = el("plot-ylabel-input") ? el("plot-ylabel-input").value : "";
+  const xlabel  = el("plot-xlabel-input") ? el("plot-xlabel-input").value.trim() : "";
+  const manualYLabel = el("plot-ylabel-input") ? el("plot-ylabel-input").value.trim() : "";
+  const xMin = readAxisBound("plot-xmin-input");
+  const xMax = readAxisBound("plot-xmax-input");
+  const yMin = readAxisBound("plot-ymin-input");
+  const yMax = readAxisBound("plot-ymax-input");
 
   const isEmpty = State.activeTraces.length === 0;
   el("empty-state").style.display = isEmpty ? "flex" : "none";
@@ -5465,29 +5695,36 @@ function renderPlot() {
 
   const domainIsTransient = State.activeTraces[0]?.traceData.domain === "TRANSIENT";
   const defaultXLabel = domainIsTransient ? "Time (s)" : "Frequency (Hz)";
+  const titleText = State.plotTitleText !== null ? State.plotTitleText : autoTitle;
+  const subtitleText = State.plotSubtitleText !== null ? State.plotSubtitleText : autoSubtitle;
 
   // Use Plotly's native title (fully editable via double-click when editable:true).
   // subtitle is supported in Plotly Ã¢â€°Â¥ 2.30; falls back gracefully in older builds.
   const titleLayout = {
-    text: autoTitle,
+    text: titleText,
     font: { size: 16, family: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", color: "#1c1e21" },
     x: 0.5,
     xanchor: "center",
     xref: "paper",
     pad: { t: 4 },
   };
-  if (autoSubtitle) {
+  if (subtitleText) {
     titleLayout.subtitle = {
-      text: autoSubtitle,
+      text: subtitleText,
       font: { size: 13, family: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", color: "#5f6368" },
     };
   }
 
+  const xaxisLayout = buildLogAxisLayout(xlabel || defaultXLabel, xscale === "log", true);
+  const yaxisLayout = buildYAxisLayout(ylabel, yscale === "log");
+  applyFixedAxisRange(xaxisLayout, xMin, xMax, xscale === "log", "plot-xmin-input", "plot-xmax-input");
+  applyFixedAxisRange(yaxisLayout, yMin, yMax, yscale === "log", "plot-ymin-input", "plot-ymax-input");
+
   const layout = {
     title: titleLayout,
     annotations: [],
-    xaxis: buildLogAxisLayout(xlabel || defaultXLabel, xscale === "log", true),
-    yaxis: buildYAxisLayout(ylabel, yscale === "log"),
+    xaxis: xaxisLayout,
+    yaxis: yaxisLayout,
     legend: {
       orientation: "v",
       x: 0.01,
@@ -5584,6 +5821,7 @@ const App = {
   onAxisChange()  { renderPlot(); },
   onTitleChange() { renderPlot(); },
   onAxisLabelChange() { renderPlot(); },
+  onAxisLimitChange() { renderPlot(); },
 
   // -----------------------------------------------------------------------
   // DOF filter
@@ -5712,6 +5950,39 @@ const App = {
       height: 700,
       scale: 2,
     });
+  },
+
+  async copyImage() {
+    const plotEl = el("plotly-div");
+    if (!plotEl) {
+      setStatus("Plot area not found.");
+      return;
+    }
+    if (!navigator.clipboard || typeof navigator.clipboard.write !== "function" ||
+        typeof window.ClipboardItem === "undefined") {
+      setStatus("Image clipboard copy is not supported in this browser/context.");
+      return;
+    }
+
+    try {
+      setStatus("Preparing plot image for clipboard...");
+      const dataUrl = await Plotly.toImage(plotEl, {
+        format: "png",
+        width: 1200,
+        height: 700,
+        scale: 2,
+      });
+      const blob = await (await fetch(dataUrl)).blob();
+      await navigator.clipboard.write([
+        new window.ClipboardItem({
+          [blob.type || "image/png"]: blob,
+        }),
+      ]);
+      setStatus("Plot image copied to clipboard. Paste into PowerPoint with Ctrl/Cmd+V.");
+    } catch (err) {
+      console.error("Clipboard copy failed:", err);
+      setStatus(`Could not copy image to clipboard: ${err.message || err}`);
+    }
   },
 
   // -----------------------------------------------------------------------
@@ -6250,6 +6521,13 @@ function escHtml(s) {
 // ---------------------------------------------------------------------------
 rebuildDofChips();
 renderPlot();
+const plotDiv = el("plotly-div");
+if (plotDiv && typeof plotDiv.on === "function") {
+  plotDiv.on("plotly_relayout", relayoutData => {
+    syncAxisInputsFromRelayout(relayoutData);
+    syncTitleFromRelayout(relayoutData);
+  });
+}
 setStatus("Ready. Import a .pch file to begin.");
 
 </script>
