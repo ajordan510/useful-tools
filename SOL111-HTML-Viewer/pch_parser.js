@@ -2857,6 +2857,205 @@ function extractElementForces(block, entityId, component) {
 }
 
 // ---------------------------------------------------------------------------
+// Octave band conversion (IEC 61260-1:2014 base-10)
+// ---------------------------------------------------------------------------
+
+/** Octave frequency ratio per IEC 61260-1:2014. */
+const OCTAVE_G = Math.pow(10, 3 / 10); // ≈ 1.99526
+
+/**
+ * generateOctaveBands
+ * -------------------
+ * Generate fractional-octave-band center frequencies and band edges using the
+ * IEC 61260-1:2014 base-10 system.
+ *
+ * @param {number} fMin - Lower bound of frequency range (Hz)
+ * @param {number} fMax - Upper bound of frequency range (Hz)
+ * @param {number} fraction - Bandwidth designator: 1, 3, 6, 12, or 36
+ * @returns {{ center: number, lower: number, upper: number }[]}
+ */
+function generateOctaveBands(fMin, fMax, fraction) {
+  const b = fraction;
+  // Guard: fMin must be positive for log computation; clamp to 1e-3 Hz minimum
+  const safeFMin = Math.max(fMin, 1e-3);
+  if (safeFMin >= fMax) return [];
+  // Determine range of band indices k such that the band overlaps [safeFMin, fMax].
+  // f_center(k) = 1000 * G^(k/b)
+  // f_lower(k)  = f_center(k) * G^(-1/(2b))
+  // f_upper(k)  = f_center(k) * G^(1/(2b))
+  // We need f_upper(k) >= safeFMin AND f_lower(k) <= fMax.
+  const kMin = Math.ceil(b * Math.log(safeFMin / 1000 * Math.pow(OCTAVE_G, 1 / (2 * b))) / Math.log(OCTAVE_G));
+  const kMax = Math.floor(b * Math.log(fMax / 1000 * Math.pow(OCTAVE_G, -1 / (2 * b))) / Math.log(OCTAVE_G));
+
+  const bands = [];
+  for (let k = kMin; k <= kMax; k++) {
+    const center = 1000 * Math.pow(OCTAVE_G, k / b);
+    const lower = center * Math.pow(OCTAVE_G, -1 / (2 * b));
+    const upper = center * Math.pow(OCTAVE_G, 1 / (2 * b));
+    bands.push({ center, lower, upper });
+  }
+  return bands;
+}
+
+/**
+ * interpolatePSD
+ * --------------
+ * Linearly interpolate a PSD spectrum onto a fine, uniform frequency grid.
+ *
+ * @param {Float64Array|number[]} x - Original frequency values (Hz), ascending
+ * @param {Float64Array|number[]} y - Original PSD values (power units, e.g. g²/Hz)
+ * @param {number} [deltaF=0.01] - Target frequency spacing (Hz)
+ * @returns {{ xInterp: Float64Array, yInterp: Float64Array }}
+ */
+function interpolatePSD(x, y, deltaF) {
+  const n = x.length;
+  if (n < 2) return { xInterp: new Float64Array(x), yInterp: new Float64Array(y) };
+
+  // Clamp deltaF: don't create more than 10 million points, and don't
+  // interpolate finer than 1/4 of the original spacing.
+  const origSpacing = (x[n - 1] - x[0]) / (n - 1);
+  const minDelta = origSpacing / 4;
+  const maxPoints = 10000000;
+  let df = deltaF || 0.01;
+  df = Math.max(df, minDelta);
+  const span = x[n - 1] - x[0];
+  if (span / df > maxPoints) df = span / maxPoints;
+
+  const nInterp = Math.floor(span / df) + 1;
+  const xInterp = new Float64Array(nInterp);
+  const yInterp = new Float64Array(nInterp);
+
+  let j = 0; // pointer into original arrays
+  for (let i = 0; i < nInterp; i++) {
+    const f = x[0] + i * df;
+    xInterp[i] = f;
+    // Advance j so that x[j] <= f < x[j+1]
+    while (j < n - 2 && x[j + 1] <= f) j++;
+    // Linear interpolation
+    if (f <= x[0]) {
+      yInterp[i] = y[0];
+    } else if (f >= x[n - 1]) {
+      yInterp[i] = y[n - 1];
+    } else {
+      const t = (f - x[j]) / (x[j + 1] - x[j]);
+      yInterp[i] = y[j] + t * (y[j + 1] - y[j]);
+    }
+  }
+  return { xInterp, yInterp };
+}
+
+/**
+ * computeOctaveBands
+ * ------------------
+ * Convert a narrowband PSD trace to fractional-octave-band-averaged PSD.
+ *
+ * Algorithm:
+ *   1. Compute PSD = magnitude² from stored (re, im) data
+ *   2. Interpolate PSD onto a fine uniform frequency grid
+ *   3. For each octave band, integrate PSD across [f_lower, f_upper] using
+ *      the rectangle method with fractional bin weighting at edges
+ *   4. Normalize by bandwidth: band_avg_psd = band_power / (f_upper - f_lower)
+ *   5. Store sqrt(band_avg_psd) so that computeRepresentation("DB") yields
+ *      20·log₁₀(√PSD) = 10·log₁₀(PSD), the correct PSD dB.
+ *
+ * @param {TraceData} td - Source trace with narrowband data
+ * @param {number} octaveFraction - 1, 3, 6, 12, or 36
+ * @returns {TraceData-like} Octave-banded result
+ */
+function computeOctaveBands(td, octaveFraction) {
+  const n = td.x.length;
+  if (n < 2) {
+    return {
+      x: new Float64Array(0), re: new Float64Array(0), im: new Float64Array(0),
+      complexRep: "MAG_PHASE", isComplex: false, storageKind: "OCTAVE",
+      octaveFraction, component: td.component, entityId: td.entityId,
+      domain: td.domain, sourceLines: [],
+    };
+  }
+
+  // Step 1: Compute PSD from magnitude² of stored complex data
+  const isMAP = td.complexRep === "MAG_PHASE";
+  const psd = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    if (isMAP) {
+      psd[i] = td.re[i] * td.re[i]; // re stores magnitude for MAG_PHASE
+    } else {
+      psd[i] = td.re[i] * td.re[i] + td.im[i] * td.im[i];
+    }
+  }
+
+  // Step 2: Interpolate to fine uniform grid
+  const { xInterp, yInterp } = interpolatePSD(td.x, psd, 0.01);
+  const df = xInterp.length > 1 ? xInterp[1] - xInterp[0] : 1;
+
+  // Step 3: Generate octave bands
+  const bands = generateOctaveBands(td.x[0], td.x[n - 1], octaveFraction);
+  if (bands.length === 0) {
+    return {
+      x: new Float64Array(0), re: new Float64Array(0), im: new Float64Array(0),
+      complexRep: "MAG_PHASE", isComplex: false, storageKind: "OCTAVE",
+      octaveFraction, component: td.component, entityId: td.entityId,
+      domain: td.domain, sourceLines: [],
+    };
+  }
+
+  const centers = new Float64Array(bands.length);
+  const bandAvgPsd = new Float64Array(bands.length);
+
+  // Step 4: Integrate PSD within each band (sliding-pointer O(nInterp + nBands))
+  const nInterp = xInterp.length;
+  const halfDf = df / 2;
+  let si = 0; // sliding start index — advances across bands since both are sorted
+  for (let b = 0; b < bands.length; b++) {
+    const { center, lower, upper } = bands[b];
+    centers[b] = center;
+    const bw = upper - lower;
+    if (bw <= 0) continue;
+
+    // Advance start past bins fully below this band
+    while (si < nInterp && xInterp[si] + halfDf <= lower) si++;
+
+    let power = 0;
+    for (let i = si; i < nInterp; i++) {
+      const fLo = xInterp[i] - halfDf; // bin lower edge
+      if (fLo >= upper) break;          // past this band, done
+      const fHi = xInterp[i] + halfDf;  // bin upper edge
+      // Compute overlap of [fLo, fHi] with [lower, upper]
+      const overlapLo = Math.max(fLo, lower);
+      const overlapHi = Math.min(fHi, upper);
+      if (overlapHi > overlapLo) {
+        const fraction = (overlapHi - overlapLo) / df;
+        power += yInterp[i] * df * fraction;
+      }
+    }
+
+    // Step 5: Normalize by bandwidth
+    bandAvgPsd[b] = power / bw;
+  }
+
+  // Step 6: Store sqrt(band_avg_psd) as magnitude
+  const re = new Float64Array(bands.length);
+  const im = new Float64Array(bands.length); // zeros
+  for (let i = 0; i < bands.length; i++) {
+    re[i] = Math.sqrt(Math.max(0, bandAvgPsd[i]));
+  }
+
+  return {
+    x: centers,
+    re,
+    im,
+    complexRep: "MAG_PHASE",
+    isComplex: false,
+    storageKind: "OCTAVE",
+    octaveFraction,
+    component: td.component,
+    entityId: td.entityId,
+    domain: td.domain,
+    sourceLines: [],
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Derived representation transforms
 // ---------------------------------------------------------------------------
 
@@ -2965,6 +3164,9 @@ const PCHParser = {
   computeRepresentation,
   componentLabels,
   componentLabelsForBlock,
+  generateOctaveBands,
+  interpolatePSD,
+  computeOctaveBands,
 };
 
 if (typeof module !== "undefined" && module.exports) {

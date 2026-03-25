@@ -982,6 +982,19 @@ input.tb-invalid { border-color: var(--danger) !important; background: #fff6f5; 
         </div>
 
         <div class="toolbar-group">
+          <span class="toolbar-label">Bandwidth</span>
+          <select class="tb-select" id="sel-bandwidth" onchange="App.onBandwidthChange()">
+            <option value="narrowband" selected>Narrowband</option>
+            <option value="1">1/1 Octave</option>
+            <option value="3">1/3 Octave</option>
+            <option value="6">1/6 Octave</option>
+            <option value="12">1/12 Octave</option>
+            <option value="36">1/36 Octave</option>
+          </select>
+          <span id="psd-note" style="display:none;font-size:10px;color:#8a5a00;">Assumes PSD input (g&#178;/Hz)</span>
+        </div>
+
+        <div class="toolbar-group">
           <span class="toolbar-label">X axis</span>
           <select class="tb-select" id="sel-xscale" onchange="App.onAxisChange()">
             <option value="log" selected>Log</option>
@@ -1001,6 +1014,33 @@ input.tb-invalid { border-color: var(--danger) !important; background: #fff6f5; 
           <input class="tb-text" id="plot-ylabel-input" type="text" placeholder="Y label" onchange="App.onAxisLabelChange()" title="Y-axis label">
           <input class="tb-num" id="plot-ymin-input" type="number" step="any" placeholder="Y min" onchange="App.onAxisLimitChange()" title="Y-axis minimum (enter both min and max)">
           <input class="tb-num" id="plot-ymax-input" type="number" step="any" placeholder="Y max" onchange="App.onAxisLimitChange()" title="Y-axis maximum (enter both min and max)">
+        </div>
+
+        <div class="toolbar-group" id="delta-db-group" style="display:none;">
+          <span class="toolbar-label">Delta dB</span>
+          <select class="tb-select" id="sel-delta-trace1" onchange="App.onDeltaChange()" title="Numerator curve">
+            <option value="">Curve 1</option>
+          </select>
+          <span style="font-size:11px;color:#5f6368;">&#247;</span>
+          <select class="tb-select" id="sel-delta-trace2" onchange="App.onDeltaChange()" title="Denominator curve">
+            <option value="">Curve 2</option>
+          </select>
+          <select class="tb-select" id="sel-delta-factor" onchange="App.onDeltaSettingChange()" title="dB scaling factor: 10 for power (PSD), 20 for amplitude">
+            <option value="10">10·log₁₀</option>
+            <option value="20">20·log₁₀</option>
+          </select>
+          <select class="tb-select" id="sel-delta-chart" onchange="App.onDeltaSettingChange()" title="Delta trace chart type">
+            <option value="line">Line</option>
+            <option value="bar">Bar</option>
+          </select>
+          <button class="tb-btn" onclick="App.clearDelta()">Clear</button>
+        </div>
+
+        <div class="toolbar-group" id="y2-axis-group" style="display:none;">
+          <span class="toolbar-label">Right Y axis</span>
+          <input class="tb-text" id="plot-y2label-input" type="text" placeholder="Delta dB label" onchange="App.onAxisLabelChange()" title="Right Y-axis label">
+          <input class="tb-num" id="plot-y2min-input" type="number" step="any" placeholder="Y2 min" onchange="App.onAxisLimitChange()" title="Right Y-axis minimum (enter both min and max)">
+          <input class="tb-num" id="plot-y2max-input" type="number" step="any" placeholder="Y2 max" onchange="App.onAxisLimitChange()" title="Right Y-axis maximum (enter both min and max)">
         </div>
 
         <div class="toolbar-group">
@@ -1123,8 +1163,8 @@ input.tb-invalid { border-color: var(--danger) !important; background: #fff6f5; 
     </div>
     <div id="style-body">
       <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">
-        Adjust colour, dash pattern, and line width for each active trace.
-        Changes apply immediately to the plot.
+        Adjust colour, dash pattern, line width, and markers for each active trace.
+        Changes apply immediately to the plot. Markers default to Auto (on for octave, off for narrowband).
       </p>
       <table id="style-table">
         <thead>
@@ -1133,6 +1173,7 @@ input.tb-invalid { border-color: var(--danger) !important; background: #fff6f5; 
             <th>Color</th>
             <th>Dash</th>
             <th>Width</th>
+            <th>Markers</th>
           </tr>
         </thead>
         <tbody id="style-table-body"></tbody>
@@ -4468,6 +4509,15 @@ const State = {
   plotSubtitleText: null,
   // Per-traceKey style overrides: { color, dash, width }
   styleOverrides: {},
+  // Octave bandwidth mode: "narrowband" | "1" | "3" | "6" | "12" | "36"
+  bandwidthMode: "narrowband",
+  // Cache: traceKey|bandwidth -> octave TraceData
+  octaveCache: new Map(),
+  // Delta dB trace selection and settings
+  deltaTrace1Key: null,
+  deltaTrace2Key: null,
+  deltaFactor: 10,         // 10 for power (PSD), 20 for amplitude
+  deltaChartType: "line",  // "line" or "bar"
   // DOF filter: set of active DOF labels (all on by default)
   activeDofs: new Set(["T1","T2","T3","R1","R2","R3","Fx","Fy","Fz","Mx","My","Mz","F","F1","F2","F3","M1","M2","M3"]),
   // Subcase filter: set of active subcase IDs (strings)
@@ -4712,7 +4762,7 @@ function assignLineStyle(traceKey, baseColor) {
     t => t.traceKey !== traceKey && t.lineStyle.color === baseColor
   ).length;
   const dash = DASH_CYCLE[sameColorCount % DASH_CYCLE.length];
-  return { color: baseColor, dash, width: 1.5 };
+  return { color: baseColor, dash, width: 1.5, markers: "auto" };
 }
 
 // ---------------------------------------------------------------------------
@@ -5322,6 +5372,7 @@ function addTrace(runIdx, blockIdx, entityId, component, traceKey, baseColor) {
     name: buildTraceName(run, block, lookupEntityId, component),
   };
   State.activeTraces.push(traceSpec);
+  State.octaveCache.clear();
   renderPlot();
 }
 
@@ -5334,6 +5385,7 @@ function addTrace(runIdx, blockIdx, entityId, component, traceKey, baseColor) {
  */
 function removeTrace(traceKey) {
   State.activeTraces = State.activeTraces.filter(t => t.traceKey !== traceKey);
+  State.octaveCache.clear();
   renderPlot();
 }
 
@@ -5600,6 +5652,17 @@ function syncAxisInputsFromRelayout(relayoutData) {
       setInputPair("plot-ymin-input", "plot-ymax-input", yRange[0], yRange[1], yLog);
     }
   }
+
+  // Right Y-axis (delta dB) sync
+  if (relayoutData["yaxis2.autorange"] === true) {
+    if (el("plot-y2min-input")) { el("plot-y2min-input").value = ""; el("plot-y2min-input").classList.remove("tb-invalid"); }
+    if (el("plot-y2max-input")) { el("plot-y2max-input").value = ""; el("plot-y2max-input").classList.remove("tb-invalid"); }
+  } else {
+    const y2Range = parseRange("yaxis2");
+    if (y2Range) {
+      setInputPair("plot-y2min-input", "plot-y2max-input", y2Range[0], y2Range[1], false);
+    }
+  }
 }
 
 /**
@@ -5638,6 +5701,180 @@ function syncTitleFromRelayout(relayoutData) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Bandwidth / Octave helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Restrict the representation dropdown when octave bandwidth is active.
+ * Only Magnitude and dB are meaningful for band-averaged PSD.
+ */
+function applyBandwidthReprRestrictions() {
+  const bwActive = el("sel-bandwidth").value !== "narrowband";
+  const reprSel = el("sel-repr");
+  const disabledReprs = ["REAL", "IMAG", "PHASE", "PHASE_UNWRAPPED"];
+  for (const opt of reprSel.options) {
+    opt.disabled = bwActive && disabledReprs.includes(opt.value);
+  }
+  if (bwActive && disabledReprs.includes(reprSel.value)) {
+    reprSel.value = "MAGNITUDE";
+  }
+  el("psd-note").style.display = bwActive ? "inline" : "none";
+}
+
+// ---------------------------------------------------------------------------
+// Delta dB helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Populate the delta dB trace-selection dropdowns with current active traces.
+ * Shows/hides the delta group based on trace count.
+ */
+function updateDeltaDropdowns() {
+  const n = State.activeTraces.length;
+  const group = el("delta-db-group");
+  if (n < 2) {
+    group.style.display = "none";
+    State.deltaTrace1Key = null;
+    State.deltaTrace2Key = null;
+    el("y2-axis-group").style.display = "none";
+    return;
+  }
+  group.style.display = "flex";
+
+  ["sel-delta-trace1", "sel-delta-trace2"].forEach((selId, idx) => {
+    const sel = el(selId);
+    const currentKey = idx === 0 ? State.deltaTrace1Key : State.deltaTrace2Key;
+    sel.innerHTML = '<option value="">-- Select --</option>';
+    State.activeTraces.forEach(spec => {
+      const opt = document.createElement("option");
+      opt.value = spec.traceKey;
+      opt.textContent = State.simpleLegend
+        ? buildSimpleTraceName(State.runs[spec.runIdx].blocks[spec.blockIdx], spec.entityId, spec.component)
+        : spec.name;
+      sel.appendChild(opt);
+    });
+    const stillValid = State.activeTraces.some(t => t.traceKey === currentKey);
+    sel.value = stillValid ? currentKey : "";
+    if (!stillValid) {
+      if (idx === 0) State.deltaTrace1Key = null;
+      else State.deltaTrace2Key = null;
+    }
+  });
+  const show = !!(State.deltaTrace1Key && State.deltaTrace2Key);
+  el("y2-axis-group").style.display = show ? "flex" : "none";
+}
+
+/**
+ * Align two frequency vectors for delta computation.
+ * Fast path: if same length and all values match, use directly.
+ * Fallback: linearly interpolate onto the denser grid within overlapping range.
+ *
+ * @returns {{ x: number[], y1: number[], y2: number[] }}
+ */
+function alignFrequencyVectors(x1, y1, x2, y2) {
+  // Fast path: exact match
+  if (x1.length === x2.length) {
+    let match = true;
+    for (let i = 0; i < x1.length; i++) {
+      const tol = Math.abs(x1[i]) * 1e-6 + 1e-12;
+      if (Math.abs(x1[i] - x2[i]) > tol) { match = false; break; }
+    }
+    if (match) return { x: x1, y1, y2 };
+  }
+
+  // Fallback: interpolate onto the denser grid within overlapping range
+  const overlapLo = Math.max(x1[0], x2[0]);
+  const overlapHi = Math.min(x1[x1.length - 1], x2[x2.length - 1]);
+  if (overlapLo >= overlapHi) return { x: [], y1: [], y2: [] };
+
+  // Use whichever grid is denser
+  const usePrimary = x1.length >= x2.length;
+  const xRef = usePrimary ? x1 : x2;
+  const yRef = usePrimary ? y1 : y2;
+  const xOther = usePrimary ? x2 : x1;
+  const yOther = usePrimary ? y2 : y1;
+
+  const xOut = [], y1Out = [], y2Out = [];
+  let j = 0;
+  for (let i = 0; i < xRef.length; i++) {
+    const f = xRef[i];
+    if (f < overlapLo || f > overlapHi) continue;
+    // Interpolate yOther at f
+    while (j < xOther.length - 2 && xOther[j + 1] <= f) j++;
+    let interpVal;
+    if (f <= xOther[0]) interpVal = yOther[0];
+    else if (f >= xOther[xOther.length - 1]) interpVal = yOther[yOther.length - 1];
+    else {
+      const t = (f - xOther[j]) / (xOther[j + 1] - xOther[j]);
+      interpVal = yOther[j] + t * (yOther[j + 1] - yOther[j]);
+    }
+    xOut.push(f);
+    if (usePrimary) {
+      y1Out.push(yRef[i]);
+      y2Out.push(interpVal);
+    } else {
+      y1Out.push(interpVal);
+      y2Out.push(yRef[i]);
+    }
+  }
+  return { x: xOut, y1: y1Out, y2: y2Out };
+}
+
+/**
+ * Compute delta dB = 10·log₁₀(PSD1 / PSD2) between two traces.
+ * Operates on whatever bandwidth mode is currently active.
+ *
+ * @param {TraceSpec} spec1 - Numerator trace
+ * @param {TraceSpec} spec2 - Denominator trace
+ * @param {string} bandwidth - Current bandwidth mode
+ * @returns {{ x: number[], y: number[] }}
+ */
+function computeDeltaDB(spec1, spec2, bandwidth, factor) {
+  // Get effective trace data (apply octave if active)
+  let td1 = spec1.traceData;
+  let td2 = spec2.traceData;
+  if (bandwidth !== "narrowband") {
+    const b = parseInt(bandwidth);
+    const ck1 = spec1.traceKey + "|" + bandwidth;
+    const ck2 = spec2.traceKey + "|" + bandwidth;
+    if (!State.octaveCache.has(ck1)) State.octaveCache.set(ck1, PCHParser.computeOctaveBands(td1, b));
+    if (!State.octaveCache.has(ck2)) State.octaveCache.set(ck2, PCHParser.computeOctaveBands(td2, b));
+    td1 = State.octaveCache.get(ck1);
+    td2 = State.octaveCache.get(ck2);
+  }
+
+  // Compute magnitude (NOT squared) for both traces
+  const isMAP1 = td1.complexRep === "MAG_PHASE";
+  const isMAP2 = td2.complexRep === "MAG_PHASE";
+  const mag1 = new Array(td1.x.length);
+  const mag2 = new Array(td2.x.length);
+  for (let i = 0; i < td1.x.length; i++) {
+    mag1[i] = isMAP1 ? Math.abs(td1.re[i]) : Math.sqrt(td1.re[i] * td1.re[i] + td1.im[i] * td1.im[i]);
+  }
+  for (let i = 0; i < td2.x.length; i++) {
+    mag2[i] = isMAP2 ? Math.abs(td2.re[i]) : Math.sqrt(td2.re[i] * td2.re[i] + td2.im[i] * td2.im[i]);
+  }
+
+  // Align frequency vectors
+  const aligned = alignFrequencyVectors(
+    Array.from(td1.x), mag1,
+    Array.from(td2.x), mag2
+  );
+
+  // Delta = factor * log10(mag1 / mag2)
+  // factor=10 for power quantities (PSD), factor=20 for amplitude quantities
+  const f = factor || 10;
+  const deltaY = aligned.x.map((_, i) => {
+    const m1 = aligned.y1[i];
+    const m2 = aligned.y2[i];
+    if (m1 == null || m2 == null || m1 <= 0 || m2 <= 0) return null;
+    return f * Math.log10(m1 / m2);
+  });
+
+  return { x: aligned.x, y: deltaY };
+}
+
 /**
  * renderPlot
  * ----------
@@ -5645,6 +5882,10 @@ function syncTitleFromRelayout(relayoutData) {
  * Applies log-axis tick formatting, title/subtitle styling, and line styles.
  */
 function renderPlot() {
+  const bandwidth = el("sel-bandwidth").value;
+  applyBandwidthReprRestrictions();
+  updateDeltaDropdowns();
+
   const repr    = el("sel-repr").value;
   const xscale  = el("sel-xscale").value;
   const yscale  = el("sel-yscale").value;
@@ -5661,13 +5902,23 @@ function renderPlot() {
   const lockNotes = new Set();
   const effectiveReprs = new Set();
   const plotlyTraces = State.activeTraces.map(spec => {
-    const result = PCHParser.computeRepresentation(spec.traceData, repr);
+    // Apply octave conversion if bandwidth is not narrowband
+    let effectiveTd = spec.traceData;
+    if (bandwidth !== "narrowband") {
+      const cacheKey = spec.traceKey + "|" + bandwidth;
+      if (!State.octaveCache.has(cacheKey)) {
+        State.octaveCache.set(cacheKey, PCHParser.computeOctaveBands(spec.traceData, parseInt(bandwidth)));
+      }
+      effectiveTd = State.octaveCache.get(cacheKey);
+    }
+    const result = PCHParser.computeRepresentation(effectiveTd, repr);
     const { x, y } = result;
     if (result.effectiveRepr) effectiveReprs.add(result.effectiveRepr);
     if (result.isLocked && result.effectiveRepr) {
       lockNotes.add(`${spec.name} locked to ${result.effectiveRepr}`);
     }
     const ls = spec.lineStyle;
+    const showMarkers = (ls.markers === "auto" || ls.markers === undefined) ? (bandwidth !== "narrowband") : !!ls.markers;
     const displayName = State.simpleLegend
       ? buildSimpleTraceName(State.runs[spec.runIdx].blocks[spec.blockIdx], spec.entityId, spec.component)
       : spec.name;
@@ -5675,9 +5926,10 @@ function renderPlot() {
       x: Array.from(x),
       y: Array.from(y),
       type: "scatter",
-      mode: "lines",
+      mode: showMarkers ? "lines+markers" : "lines",
       name: displayName,
       line: { color: ls.color, width: ls.width, dash: ls.dash },
+      marker: showMarkers ? { size: 5, color: ls.color } : undefined,
       hovertemplate: `<b>${displayName}</b><br>X: %{x:.4g}<br>Y: %{y:.4g}<extra></extra>`,
     };
   });
@@ -5713,6 +5965,11 @@ function renderPlot() {
   }
 
   const domainIsTransient = State.activeTraces[0]?.traceData.domain === "TRANSIENT";
+  const allTransient = State.activeTraces.length > 0 && State.activeTraces.every(s => s.traceData.domain === "TRANSIENT");
+  el("sel-bandwidth").disabled = allTransient;
+  if (allTransient && bandwidth !== "narrowband") {
+    el("sel-bandwidth").value = "narrowband";
+  }
   const defaultXLabel = domainIsTransient ? "Time (s)" : "Frequency (Hz)";
   const titleText = State.plotTitleText !== null ? State.plotTitleText : autoTitle;
   const subtitleText = State.plotSubtitleText !== null ? State.plotSubtitleText : autoSubtitle;
@@ -5765,6 +6022,59 @@ function renderPlot() {
     font: { family: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", size: 12 },
     hovermode: "x unified",
   };
+
+  // --- Delta dB trace and secondary Y-axis ---
+  let hasDelta = false;
+  const deltaFactor = State.deltaFactor || 10;
+  const deltaChartType = State.deltaChartType || "line";
+  if (State.deltaTrace1Key && State.deltaTrace2Key) {
+    const spec1 = State.activeTraces.find(t => t.traceKey === State.deltaTrace1Key);
+    const spec2 = State.activeTraces.find(t => t.traceKey === State.deltaTrace2Key);
+    if (spec1 && spec2) {
+      const delta = computeDeltaDB(spec1, spec2, bandwidth, deltaFactor);
+      if (delta.x.length > 0) {
+        const deltaTrace = {
+          x: Array.from(delta.x),
+          y: Array.from(delta.y),
+          name: "\u0394 dB",
+          yaxis: "y2",
+          hovertemplate: "<b>\u0394 dB</b><br>Freq: %{x:.4g} Hz<br>\u0394: %{y:.2f} dB<extra></extra>",
+        };
+        if (deltaChartType === "bar") {
+          deltaTrace.type = "bar";
+          deltaTrace.marker = { color: "rgba(230,126,34,0.6)", line: { color: "#e67e22", width: 1 } };
+        } else {
+          deltaTrace.type = "scatter";
+          deltaTrace.mode = "lines";
+          deltaTrace.line = { color: "#e67e22", width: 2, dash: "dot" };
+        }
+        plotlyTraces.push(deltaTrace);
+        hasDelta = true;
+      }
+    }
+  }
+
+  if (hasDelta) {
+    layout.margin.r = 70;
+    const y2Label = el("plot-y2label-input") ? el("plot-y2label-input").value.trim() : "";
+    const y2Min = readAxisBound("plot-y2min-input");
+    const y2Max = readAxisBound("plot-y2max-input");
+    layout.yaxis2 = {
+      title: { text: y2Label || "\u0394 dB", font: { color: "#e67e22" } },
+      overlaying: "y",
+      side: "right",
+      showgrid: false,
+      zeroline: true,
+      zerolinecolor: "#e67e22",
+      zerolinewidth: 1,
+      linecolor: "#e67e22",
+      tickfont: { color: "#e67e22" },
+      type: "linear",
+      exponentformat: "none",
+      tickformat: "~g",
+    };
+    applyFixedAxisRange(layout.yaxis2, y2Min, y2Max, false, "plot-y2min-input", "plot-y2max-input");
+  }
 
   const config = {
     responsive: true,
@@ -5842,6 +6152,33 @@ const App = {
   onAxisLabelChange() { renderPlot(); },
   onAxisLimitChange() { renderPlot(); },
   toggleSimpleLegend(checked) { State.simpleLegend = checked; renderPlot(); },
+
+  onBandwidthChange() {
+    State.bandwidthMode = el("sel-bandwidth").value;
+    applyBandwidthReprRestrictions();
+    renderPlot();
+  },
+
+  onDeltaChange() {
+    State.deltaTrace1Key = el("sel-delta-trace1").value || null;
+    State.deltaTrace2Key = el("sel-delta-trace2").value || null;
+    const show = !!(State.deltaTrace1Key && State.deltaTrace2Key);
+    el("y2-axis-group").style.display = show ? "flex" : "none";
+    renderPlot();
+  },
+  onDeltaSettingChange() {
+    State.deltaFactor = parseInt(el("sel-delta-factor").value) || 10;
+    State.deltaChartType = el("sel-delta-chart").value || "line";
+    renderPlot();
+  },
+  clearDelta() {
+    el("sel-delta-trace1").value = "";
+    el("sel-delta-trace2").value = "";
+    State.deltaTrace1Key = null;
+    State.deltaTrace2Key = null;
+    el("y2-axis-group").style.display = "none";
+    renderPlot();
+  },
 
   // -----------------------------------------------------------------------
   // DOF filter
@@ -5938,6 +6275,9 @@ const App = {
 
   clearAllTraces() {
     State.activeTraces = [];
+    State.octaveCache.clear();
+    State.deltaTrace1Key = null;
+    State.deltaTrace2Key = null;
     buildTraceTree();
     renderPlot();
     setStatus("All traces cleared.");
@@ -5945,6 +6285,7 @@ const App = {
 
   removeRun(ri) {
     State.activeTraces = State.activeTraces.filter(t => t.runIdx !== ri);
+    State.octaveCache.clear();
     State.runs.splice(ri, 1);
     State.activeTraces.forEach(t => { if (t.runIdx > ri) t.runIdx--; });
     buildRunList();
@@ -6066,10 +6407,20 @@ const App = {
 
   _csvGetTraces() {
     const scope = document.querySelector("input[name='csv-scope']:checked")?.value || "displayed";
+    const bandwidth = el("sel-bandwidth").value;
     if (scope === "displayed") {
       return State.activeTraces.map(spec => {
         const run = State.runs[spec.runIdx];
         const blk = run.blocks[spec.blockIdx];
+        // Apply octave conversion if bandwidth is active
+        let td = spec.traceData;
+        if (bandwidth !== "narrowband") {
+          const cacheKey = spec.traceKey + "|" + bandwidth;
+          if (!State.octaveCache.has(cacheKey)) {
+            State.octaveCache.set(cacheKey, PCHParser.computeOctaveBands(td, parseInt(bandwidth)));
+          }
+          td = State.octaveCache.get(cacheKey);
+        }
         return {
           runName: run.sourceRunName || run.runName,
           scId: getBlockSubcaseKey(blk),
@@ -6083,7 +6434,7 @@ const App = {
           entityLabel: getEntityDisplayLabel(blk, spec.entityId),
           component: spec.component,
           componentLabel: getComponentDisplayLabel(blk, spec.component),
-          traceData: spec.traceData,
+          traceData: td,
         };
       });
     } else {
@@ -6400,7 +6751,7 @@ const App = {
     tbody.innerHTML = "";
 
     if (State.activeTraces.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:12px">No active traces. Add traces to the plot first.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:12px">No active traces. Add traces to the plot first.</td></tr>`;
     } else {
       // Preset colour palette for swatches
       const PRESET_COLORS = [
@@ -6431,6 +6782,13 @@ const App = {
             </select>
           </td>
           <td><input type="number" class="style-width-input" value="${ls.width}" min="0.5" max="6" step="0.5" data-idx="${idx}"></td>
+          <td style="text-align:center;">
+            <select class="style-markers-select" data-idx="${idx}" style="font-size:11px;padding:2px 4px;">
+              <option value="auto" ${ls.markers==="auto"?"selected":""}>Auto</option>
+              <option value="on" ${ls.markers===true?"selected":""}>On</option>
+              <option value="off" ${ls.markers===false?"selected":""}>Off</option>
+            </select>
+          </td>
         `;
         tbody.appendChild(tr);
       });
@@ -6479,6 +6837,15 @@ const App = {
             State.styleOverrides[State.activeTraces[i].traceKey] = { ...State.activeTraces[i].lineStyle };
             renderPlot();
           }
+        });
+      });
+      tbody.querySelectorAll(".style-markers-select").forEach(sel => {
+        sel.addEventListener("change", () => {
+          const i = parseInt(sel.dataset.idx, 10);
+          const v = sel.value;
+          State.activeTraces[i].lineStyle.markers = v === "auto" ? "auto" : v === "on";
+          State.styleOverrides[State.activeTraces[i].traceKey] = { ...State.activeTraces[i].lineStyle };
+          renderPlot();
         });
       });
     }
