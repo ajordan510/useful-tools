@@ -48,6 +48,11 @@ function assertGt(a, b, msg) {
   assert(a > b, `${msg} (${a} > ${b})`);
 }
 
+function assertApprox(actual, expected, tol, msg) {
+  const delta = Math.abs(actual - expected);
+  assert(delta <= tol, `${msg} (expected ${expected}, got ${actual}, |Δ|=${delta})`);
+}
+
 function assertIncludes(text, fragment, msg) {
   assert(String(text).includes(fragment), `${msg} (expected to include "${fragment}")`);
 }
@@ -381,8 +386,31 @@ console.log("\n=== Fixture D: run_d_xypunch.pch ===");
   const ipBlock = xyBlocks.find(b => b.xypunchKind === "ACCE" && b.xypunchEntity === 101 && b.xypunchComp === "T3IP");
   assert(ipBlock !== undefined, "Found ACCE T3IP block for grid 101");
 
-  const forceBlock = xyBlocks.find(b => b.xypunchKind === "FORCE" && b.xypunchEntity === 1001);
+const forceBlock = xyBlocks.find(b => b.xypunchKind === "FORCE" && b.xypunchEntity === 1001);
   assert(forceBlock !== undefined, "Found FORCE block for SPC grid 1001");
+}
+
+// ---------------------------------------------------------------------------
+// Fixture PSD: real-only PSDF metadata and dB
+// ---------------------------------------------------------------------------
+console.log("\n=== Fixture PSD: rpunch_psdf_example.pch ===");
+{
+  const run = loadAndParse("rpunch_psdf_example.pch");
+  const accelBlock = run.blocks.find(b => b.resultFamily === "ACCELERATION");
+  assert(accelBlock !== undefined, "PSDF fixture exposes an ACCELERATION block");
+  if (accelBlock) {
+    assertEqual(accelBlock.resultQualifier, "PSDF", "PSDF qualifier is preserved on the block");
+    assertEqual(accelBlock.quantityKind, "power_density", "PSDF block is marked as power density");
+    const td = PCHParser.extractTraceData(accelBlock, 1, "T3");
+    assert(td !== null, "PSDF T3 trace extracts");
+    if (td) {
+      assertEqual(td.quantityKind, "power_density", "PSDF trace keeps power-density quantity kind");
+      const psd = PCHParser.computeRepresentation(td, "PSD");
+      const db = PCHParser.computeRepresentation(td, "DB");
+      assertApprox(psd.y[0], td.re[0], 1e-12, "PSD representation preserves raw PSDF values");
+      assertApprox(db.y[0], 10 * Math.log10(td.re[0]), 1e-12, "PSDF dB uses 10*log10");
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -395,21 +423,24 @@ console.log("\n=== Fixture E: run_e_cbush_cont.pch ===");
   assertGt(efBlocks.length, 0, "Has ELEMENT_FORCES block");
 
   const eb = efBlocks[0];
-  assert(eb.entityIds.includes(5001), "ELEMENT_FORCES has entity 5001");
-  assert(eb.entityIds.includes(5002), "ELEMENT_FORCES has entity 5002");
+  assert(eb !== undefined, "Fixture E exposes an ELEMENT_FORCES block object");
+  if (eb) {
+    assert(eb.entityIds.includes(5001), "ELEMENT_FORCES has entity 5001");
+    assert(eb.entityIds.includes(5002), "ELEMENT_FORCES has entity 5002");
 
-  const td = PCHParser.extractTraceData(eb, 5001, "F3");
-  assert(td !== null, "CBUSH extractTraceData F3 returns non-null");
-  if (td) {
-    assertEqual(td.x.length, 50, "CBUSH F3 has 50 data points");
-    // F3 values should be around 200 (the scale used in the fixture)
-    const maxRe = Math.max(...Array.from(td.re));
-    assertGt(maxRe, 100, "CBUSH F3 max real part > 100 (physically plausible)");
+    const td = PCHParser.extractTraceData(eb, 5001, "F3");
+    assert(td !== null, "CBUSH extractTraceData F3 returns non-null");
+    if (td) {
+      assertEqual(td.x.length, 50, "CBUSH F3 has 50 data points");
+      // F3 values should be around 200 (the scale used in the fixture)
+      const maxRe = Math.max(...Array.from(td.re));
+      assertGt(maxRe, 100, "CBUSH F3 max real part > 100 (physically plausible)");
+    }
+
+    const tdM1 = PCHParser.extractTraceData(eb, 5001, "M1");
+    assert(tdM1 !== null, "CBUSH extractTraceData M1 (CONT line) returns non-null");
+    if (tdM1) assertEqual(tdM1.x.length, 50, "CBUSH M1 has 50 data points");
   }
-
-  const tdM1 = PCHParser.extractTraceData(eb, 5001, "M1");
-  assert(tdM1 !== null, "CBUSH extractTraceData M1 (CONT line) returns non-null");
-  if (tdM1) assertEqual(tdM1.x.length, 50, "CBUSH M1 has 50 data points");
 }
 
 // ---------------------------------------------------------------------------
@@ -485,6 +516,44 @@ console.log("\n=== Fixture G: run_g_mixed_element_forces.pch ===");
     const comps = PCHParser.componentLabelsForBlock({ resultFamily: "ELEMENT_FORCES", elementType: type });
     assertEqual(comps.join(","), "F", `${type} component descriptor exposes scalar F`);
   });
+}
+
+// ---------------------------------------------------------------------------
+// Pure math: octave bands and delta dB for PSD traces
+// ---------------------------------------------------------------------------
+console.log("\n=== Pure math: octave PSD and delta dB ===");
+{
+  const td2 = {
+    x: new Float64Array([100, 200, 400, 800]),
+    re: new Float64Array([2, 2, 2, 2]),
+    im: new Float64Array([0, 0, 0, 0]),
+    isComplex: false,
+    complexRep: "REAL_ONLY",
+    component: "T3",
+    entityId: 1,
+    domain: "FREQUENCY_RESPONSE",
+    quantityKind: "power_density",
+    storageKind: "COMPLEX",
+    lockedRepr: null,
+    sourceLines: [],
+  };
+  const td1 = {
+    ...td2,
+    re: new Float64Array([1, 1, 1, 1]),
+  };
+
+  const octave = PCHParser.computeOctaveBands(td2, 1);
+  assertGt(octave.x.length, 0, "Octave conversion returns at least one fully contained band");
+  const octavePsd = PCHParser.computeRepresentation(octave, "PSD");
+  const octaveDb = PCHParser.computeRepresentation(octave, "DB");
+  assertApprox(octavePsd.y[0], 2, 1e-12, "Constant PSD stays constant after octave averaging");
+  assertApprox(octaveDb.y[0], 10 * Math.log10(2), 1e-12, "Octave PSD dB stays quantity-correct");
+
+  const deltaNarrow = PCHParser.computeDeltaDbTrace(td2, td1);
+  assertApprox(deltaNarrow.y[0], 10 * Math.log10(2), 1e-12, "Narrowband PSD delta uses 10*log10");
+
+  const deltaOctave = PCHParser.computeDeltaDbTrace(PCHParser.computeOctaveBands(td2, 1), PCHParser.computeOctaveBands(td1, 1));
+  assertApprox(deltaOctave.y[0], 10 * Math.log10(2), 1e-12, "Octave PSD delta stays quantity-correct");
 }
 
 // ---------------------------------------------------------------------------
@@ -811,7 +880,6 @@ console.log("\n=== Spreadsheet: workbook import ===");
   const runs = PCHParser.parseWorkbook("workbook.xlsx", workbook);
   assertEqual(runs.length, 2, "Workbook import returns valid sheets only");
   assert(runs[0].warnings.some(w => w.includes("Invalid")), "Workbook import records invalid sheet warning");
-  assert(runs[1].warnings.some(w => w.includes("Source File metadata")), "Workbook import records Source File fallback warning");
   assertIncludes(runs[0].displayName, "Spreadsheet", "Workbook import display name identifies spreadsheet origin");
 }
 

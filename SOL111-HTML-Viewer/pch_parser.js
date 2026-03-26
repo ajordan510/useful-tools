@@ -223,6 +223,11 @@ const SPREADSHEET_REQUIRED_LABELS = [
 
 const CSV_DELIMITER_CANDIDATES = [",", ";", "\t", "|"];
 
+const QUANTITY_KIND = {
+  AMPLITUDE: "amplitude",
+  POWER_DENSITY: "power_density",
+};
+
 // ---------------------------------------------------------------------------
 // Regex patterns
 // ---------------------------------------------------------------------------
@@ -239,7 +244,7 @@ const RE_MAG_PHASE  = /^\$MAGNITUDE-PHASE\s+OUTPUT/i;
 const RE_REAL_ONLY  = /^\$REAL\s+OUTPUT/i;
 
 // Result type header — all families we handle
-const RE_RESULT     = /^\$(ACCELERATION|DISPLACEMENTS?|VELOCITY|SPCFORCES?|SPCF|MPCF|ELEMENT\s+FORCES?)/i;
+const RE_RESULT     = /^\$(ACCELERATION|DISPLACEMENTS?|VELOCITY|SPCFORCES?|SPCF|MPCF|ELEMENT\s+FORCES?)(?:\s*-\s*([A-Z0-9_]+))?/i;
 
 // SORT2 entity markers — both real format ($POINT ID with space) and synthetic ($POINT-ID with hyphen)
 const RE_POINTID    = /^\$POINT[\s-]ID\s*=\s*(\d+)/i;
@@ -260,6 +265,32 @@ const RE_CONT       = /^(?:-CONT-|\s+CONT)\s+([\d.Ee+\-\s]+)/i;
 
 // XYPUNCH two-column row (x, y only)
 const RE_XY_ROW     = /^\s*([\d.Ee+\-]+)\s+([\d.Ee+\-]+)\s*$/;
+
+function normalizeResultFamilyKey(value) {
+  return String(value || "").toUpperCase().replace(/[^A-Z0-9]+/g, "");
+}
+
+function normalizeNativeResultHeader(rawFamily, rawQualifier) {
+  const familyLabel = String(rawFamily || "").trim().toUpperCase().replace(/\s+/g, " ");
+  const familyKey = normalizeResultFamilyKey(familyLabel);
+  const qualifier = rawQualifier ? String(rawQualifier).trim().toUpperCase() : null;
+  return {
+    family: RESULT_FAMILIES[familyKey] || familyLabel,
+    resultType: qualifier ? `${familyLabel} - ${qualifier}` : familyLabel,
+    resultQualifier: qualifier,
+  };
+}
+
+function quantityKindFromResultQualifier(resultQualifier) {
+  return String(resultQualifier || "").toUpperCase() === "PSDF"
+    ? QUANTITY_KIND.POWER_DENSITY
+    : QUANTITY_KIND.AMPLITUDE;
+}
+
+function quantityKindForBlock(block) {
+  if (block && block.quantityKind) return block.quantityKind;
+  return quantityKindFromResultQualifier(block && block.resultQualifier);
+}
 
 // ---------------------------------------------------------------------------
 // Row classification helpers
@@ -947,6 +978,8 @@ function createSpreadsheetBlock(blockIndex, runName, subcaseInfo, family, xypunc
     blockIndex,
     resultFamily: family,
     resultType: family,
+    resultQualifier: null,
+    quantityKind: QUANTITY_KIND.AMPLITUDE,
     domain: "FREQUENCY_RESPONSE",
     sort: "SPREADSHEET",
     complexRep: "UNKNOWN",
@@ -1343,6 +1376,7 @@ function parseSpreadsheetRows(fileName, rows, sheetName, options) {
         componentLabel: col.componentLabel,
         entityId: col.entityKey,
         domain: "FREQUENCY_RESPONSE",
+        quantityKind: QUANTITY_KIND.AMPLITUDE,
         storageKind: "COMPLEX",
         lockedRepr: null,
         sourceLines: [
@@ -1388,6 +1422,7 @@ function parseSpreadsheetRows(fileName, rows, sheetName, options) {
       componentLabel: col.componentLabel,
       entityId: col.entityKey,
       domain: "FREQUENCY_RESPONSE",
+      quantityKind: QUANTITY_KIND.AMPLITUDE,
       storageKind: "DERIVED",
       lockedRepr: col.reprKey,
       sourceLines: [
@@ -1872,7 +1907,7 @@ function scanBlocks(text, runName) {
     curBlock = null;
   }
 
-  function startBlock(family, rawType) {
+  function startBlock(family, rawType, resultQualifier) {
     // In SORT1 files the full header block is repeated for every frequency
     // step in the pattern:
     //   $TITLE / $SUBTITLE / $LABEL
@@ -1906,6 +1941,7 @@ function scanBlocks(text, runName) {
     }
 
     if (curBlock && curBlock.resultFamily === family && curBlock.subcaseId === lookaheadSubcase
+        && curBlock.resultQualifier === (resultQualifier || null)
         && (family !== "ELEMENT_FORCES" || normalizeElementType(curBlock.elementType) === lookaheadElemType)
         && family !== "XYPUNCH") {
       // Same block still open — just continue accumulating into it.
@@ -1919,6 +1955,7 @@ function scanBlocks(text, runName) {
     if (family !== "XYPUNCH" && blocks.length > 0) {
       const last = blocks[blocks.length - 1];
       if (last.resultFamily === family && last.subcaseId === lookaheadSubcase
+          && last.resultQualifier === (resultQualifier || null)
           && (family !== "ELEMENT_FORCES" || normalizeElementType(last.elementType) === lookaheadElemType)) {
         // Reopen the last block — remove it from the finalised list and make
         // it the current block again so we can keep appending to it.
@@ -1929,6 +1966,9 @@ function scanBlocks(text, runName) {
         curBlock.subtitle = curSubtitle || curBlock.subtitle;
         curBlock.label    = curLabel    || curBlock.label;
         if (lookaheadElemType) curBlock.elementType = lookaheadElemType;
+        curBlock.resultType = rawType;
+        curBlock.resultQualifier = resultQualifier || null;
+        curBlock.quantityKind = quantityKindFromResultQualifier(resultQualifier);
         return;
       }
     }
@@ -1940,6 +1980,8 @@ function scanBlocks(text, runName) {
       blockIndex:    blocks.length,
       resultFamily:  family,
       resultType:    rawType,
+      resultQualifier: resultQualifier || null,
+      quantityKind:  quantityKindFromResultQualifier(resultQualifier),
       domain:        "UNKNOWN",
       sort:          "UNKNOWN",
       complexRep:    "UNKNOWN",
@@ -2015,22 +2057,22 @@ function scanBlocks(text, runName) {
 
     // --- XYPUNCH block header ---
     if ((m = RE_XYPUNCH.exec(line))) {
-      startBlock("XYPUNCH", "XYPUNCH");
+      startBlock("XYPUNCH", "XYPUNCH", null);
       curBlock.xypunchKind   = m[1].toUpperCase();
       curBlock.xypunchEntity = parseInt(m[2], 10);
       curBlock.xypunchComp   = m[3].toUpperCase();
       curBlock.domain        = "FREQUENCY_RESPONSE";
       curBlock.sort          = "SORT2";
       curBlock.complexRep    = curBlock.xypunchComp.endsWith("RM") ? "MAG_PHASE" : "REAL_IMAG";
+      curBlock.quantityKind  = QUANTITY_KIND.AMPLITUDE;
       curBlock.rawLines.push(line);
       continue;
     }
 
     // --- Result type header ---
     if ((m = RE_RESULT.exec(line))) {
-      const rawKey = m[1].toUpperCase().replace(/\s+/g, " ");
-      const family = RESULT_FAMILIES[rawKey] || rawKey;
-      startBlock(family, rawKey);
+      const resultHeader = normalizeNativeResultHeader(m[1], m[2]);
+      startBlock(resultHeader.family, resultHeader.resultType, resultHeader.resultQualifier);
       curBlock.rawLines.push(line);
       continue;
     }
@@ -2637,6 +2679,7 @@ function extractGridVector(block, entityId, component) {
     component,
     entityId,
     domain:     block.domain,
+    quantityKind: quantityKindForBlock(block),
     storageKind: "COMPLEX",
     lockedRepr: null,
     sourceLines: srcLines,
@@ -2684,6 +2727,7 @@ function extractXYPunch(block, entityId, component) {
     component:  blkComp,
     entityId,
     domain:     "FREQUENCY_RESPONSE",
+    quantityKind: quantityKindForBlock(block),
     storageKind: "COMPLEX",
     lockedRepr: null,
     sourceLines: srcLines,
@@ -2850,10 +2894,324 @@ function extractElementForces(block, entityId, component) {
     component,
     entityId,
     domain:     block.domain,
+    quantityKind: quantityKindForBlock(block),
     storageKind: "COMPLEX",
     lockedRepr: null,
     sourceLines: srcLines,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Octave band conversion (IEC 61260-1:2014 base-10)
+// ---------------------------------------------------------------------------
+
+/** Octave frequency ratio per IEC 61260-1:2014. */
+const OCTAVE_G = Math.pow(10, 3 / 10); // ≈ 1.99526
+
+/**
+ * generateOctaveBands
+ * -------------------
+ * Generate fractional-octave-band center frequencies and band edges using the
+ * IEC 61260-1:2014 base-10 system.
+ *
+ * @param {number} fMin - Lower bound of frequency range (Hz)
+ * @param {number} fMax - Upper bound of frequency range (Hz)
+ * @param {number} fraction - Bandwidth designator: 1, 3, 6, 12, or 36
+ * @returns {{ center: number, lower: number, upper: number }[]}
+ */
+function generateOctaveBands(fMin, fMax, fraction) {
+  const b = fraction;
+  // Guard: fMin must be positive for log computation; clamp to 1e-3 Hz minimum
+  const safeFMin = Math.max(fMin, 1e-3);
+  if (safeFMin >= fMax) return [];
+  // Determine range of band indices k such that the band overlaps [safeFMin, fMax].
+  // f_center(k) = 1000 * G^(k/b)
+  // f_lower(k)  = f_center(k) * G^(-1/(2b))
+  // f_upper(k)  = f_center(k) * G^(1/(2b))
+  // We need f_upper(k) >= safeFMin AND f_lower(k) <= fMax.
+  const kMin = Math.ceil(b * Math.log(safeFMin / 1000 * Math.pow(OCTAVE_G, 1 / (2 * b))) / Math.log(OCTAVE_G));
+  const kMax = Math.floor(b * Math.log(fMax / 1000 * Math.pow(OCTAVE_G, -1 / (2 * b))) / Math.log(OCTAVE_G));
+
+  const bands = [];
+  for (let k = kMin; k <= kMax; k++) {
+    const center = 1000 * Math.pow(OCTAVE_G, k / b);
+    const lower = center * Math.pow(OCTAVE_G, -1 / (2 * b));
+    const upper = center * Math.pow(OCTAVE_G, 1 / (2 * b));
+    bands.push({ center, lower, upper });
+  }
+  return bands;
+}
+
+/**
+ * interpolatePSD
+ * --------------
+ * Linearly interpolate a PSD spectrum onto a fine, uniform frequency grid.
+ *
+ * @param {Float64Array|number[]} x - Original frequency values (Hz), ascending
+ * @param {Float64Array|number[]} y - Original PSD values (power units, e.g. g²/Hz)
+ * @param {number} [deltaF=0.01] - Target frequency spacing (Hz)
+ * @returns {{ xInterp: Float64Array, yInterp: Float64Array }}
+ */
+function interpolatePSD(x, y, deltaF) {
+  const n = x.length;
+  if (n < 2) return { xInterp: new Float64Array(x), yInterp: new Float64Array(y) };
+
+  // Clamp deltaF: don't create more than 10 million points, and don't
+  // interpolate finer than 1/4 of the original spacing.
+  const origSpacing = (x[n - 1] - x[0]) / (n - 1);
+  const minDelta = origSpacing / 4;
+  const maxPoints = 10000000;
+  let df = deltaF || 0.01;
+  df = Math.max(df, minDelta);
+  const span = x[n - 1] - x[0];
+  if (span / df > maxPoints) df = span / maxPoints;
+
+  const nInterp = Math.floor(span / df) + 1;
+  const xInterp = new Float64Array(nInterp);
+  const yInterp = new Float64Array(nInterp);
+
+  let j = 0; // pointer into original arrays
+  for (let i = 0; i < nInterp; i++) {
+    const f = x[0] + i * df;
+    xInterp[i] = f;
+    // Advance j so that x[j] <= f < x[j+1]
+    while (j < n - 2 && x[j + 1] <= f) j++;
+    // Linear interpolation
+    if (f <= x[0]) {
+      yInterp[i] = y[0];
+    } else if (f >= x[n - 1]) {
+      yInterp[i] = y[n - 1];
+    } else {
+      const t = (f - x[j]) / (x[j + 1] - x[j]);
+      yInterp[i] = y[j] + t * (y[j + 1] - y[j]);
+    }
+  }
+  return { xInterp, yInterp };
+}
+
+function emptyOctaveTrace(td, octaveFraction) {
+  return {
+    x: new Float64Array(0),
+    re: new Float64Array(0),
+    im: new Float64Array(0),
+    complexRep: "REAL_ONLY",
+    isComplex: false,
+    storageKind: "OCTAVE",
+    octaveFraction,
+    component: td.component,
+    entityId: td.entityId,
+    domain: td.domain,
+    quantityKind: QUANTITY_KIND.POWER_DENSITY,
+    sourceLines: [],
+  };
+}
+
+function interpolateLinearValue(x, y, f) {
+  const n = x.length;
+  if (n === 0) return NaN;
+  if (n === 1) return y[0];
+  if (f <= x[0]) return y[0];
+  if (f >= x[n - 1]) return y[n - 1];
+
+  let lo = 0;
+  let hi = n - 1;
+  while (hi - lo > 1) {
+    const mid = Math.floor((lo + hi) / 2);
+    if (x[mid] <= f) lo = mid;
+    else hi = mid;
+  }
+
+  const span = x[lo + 1] - x[lo];
+  if (span <= 0) return y[lo];
+  const t = (f - x[lo]) / span;
+  return y[lo] + t * (y[lo + 1] - y[lo]);
+}
+
+function integrateLinearSpectrumOverBand(x, y, lower, upper) {
+  const bandLo = Math.max(lower, x[0]);
+  const bandHi = Math.min(upper, x[x.length - 1]);
+  if (!(bandHi > bandLo)) return 0;
+
+  const xs = [bandLo];
+  const ys = [interpolateLinearValue(x, y, bandLo)];
+
+  for (let i = 0; i < x.length; i++) {
+    if (x[i] > bandLo && x[i] < bandHi) {
+      xs.push(x[i]);
+      ys.push(y[i]);
+    }
+  }
+
+  xs.push(bandHi);
+  ys.push(interpolateLinearValue(x, y, bandHi));
+
+  let area = 0;
+  for (let i = 0; i < xs.length - 1; i++) {
+    area += 0.5 * (ys[i] + ys[i + 1]) * (xs[i + 1] - xs[i]);
+  }
+  return area;
+}
+
+function traceMagnitudeAt(td, i) {
+  if (td.complexRep === "MAG_PHASE") return Math.abs(td.re[i]);
+  return Math.sqrt(td.re[i] * td.re[i] + td.im[i] * td.im[i]);
+}
+
+function traceLinearQuantityAt(td, i) {
+  if ((td.quantityKind || QUANTITY_KIND.AMPLITUDE) === QUANTITY_KIND.POWER_DENSITY) {
+    return Math.abs(td.re[i]);
+  }
+  return traceMagnitudeAt(td, i);
+}
+
+function traceLinearQuantityValues(td) {
+  const values = new Array(td.x.length);
+  for (let i = 0; i < td.x.length; i++) values[i] = traceLinearQuantityAt(td, i);
+  return values;
+}
+
+/**
+ * computeOctaveBands
+ * ------------------
+ * Convert a narrowband PSD trace to fractional-octave-band-averaged PSD.
+ *
+ * Algorithm:
+ *   1. Compute PSD = magnitude² from stored (re, im) data
+ *   2. Interpolate PSD onto a fine uniform frequency grid
+ *   3. For each octave band, integrate PSD across [f_lower, f_upper] using
+ *      the rectangle method with fractional bin weighting at edges
+ *   4. Normalize by bandwidth: band_avg_psd = band_power / (f_upper - f_lower)
+ *   5. Store sqrt(band_avg_psd) so that computeRepresentation("DB") yields
+ *      20·log₁₀(√PSD) = 10·log₁₀(PSD), the correct PSD dB.
+ *
+ * @param {TraceData} td - Source trace with narrowband data
+ * @param {number} octaveFraction - 1, 3, 6, 12, or 36
+ * @returns {TraceData-like} Octave-banded result
+ */
+function computeOctaveBands(td, octaveFraction) {
+  const n = td.x.length;
+  if (n < 2) return emptyOctaveTrace(td, octaveFraction);
+
+  // Step 1: Compute PSD from magnitude² of stored complex data
+  if ((td.quantityKind || QUANTITY_KIND.AMPLITUDE) !== QUANTITY_KIND.POWER_DENSITY) {
+    return emptyOctaveTrace(td, octaveFraction);
+  }
+  if (td.domain !== "FREQUENCY_RESPONSE") return emptyOctaveTrace(td, octaveFraction);
+  const psd = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    psd[i] = Math.max(0, traceLinearQuantityAt(td, i));
+  }
+  const bands = generateOctaveBands(td.x[0], td.x[n - 1], octaveFraction);
+  if (bands.length === 0) {
+    return emptyOctaveTrace(td, octaveFraction);
+  }
+
+  const centers = new Float64Array(bands.length);
+  const bandAvgPsd = new Float64Array(bands.length);
+
+  // Step 4: Integrate PSD within each band (sliding-pointer O(nInterp + nBands))
+  let si = 0; // sliding start index — advances across bands since both are sorted
+  for (let b = 0; b < bands.length; b++) {
+    const { center, lower, upper } = bands[b];
+    centers[b] = center;
+    const bw = upper - lower;
+    if (bw <= 0) continue;
+
+    const bandPower = integrateLinearSpectrumOverBand(td.x, psd, lower, upper);
+    bandAvgPsd[b] = bandPower / bw;
+  }
+
+  return {
+    x: centers,
+    re: bandAvgPsd,
+    im: new Float64Array(bands.length),
+    complexRep: "REAL_ONLY",
+    isComplex: false,
+    storageKind: "OCTAVE",
+    octaveFraction,
+    component: td.component,
+    entityId: td.entityId,
+    domain: td.domain,
+    quantityKind: QUANTITY_KIND.POWER_DENSITY,
+    sourceLines: [],
+  };
+}
+
+function alignFrequencyVectors(x1, y1, x2, y2) {
+  if (x1.length === x2.length) {
+    let match = true;
+    for (let i = 0; i < x1.length; i++) {
+      const tol = Math.abs(x1[i]) * 1e-6 + 1e-12;
+      if (Math.abs(x1[i] - x2[i]) > tol) {
+        match = false;
+        break;
+      }
+    }
+    if (match) return { x: x1, y1, y2 };
+  }
+
+  const overlapLo = Math.max(x1[0], x2[0]);
+  const overlapHi = Math.min(x1[x1.length - 1], x2[x2.length - 1]);
+  if (overlapLo >= overlapHi) return { x: [], y1: [], y2: [] };
+
+  const usePrimary = x1.length >= x2.length;
+  const xRef = usePrimary ? x1 : x2;
+  const yRef = usePrimary ? y1 : y2;
+  const xOther = usePrimary ? x2 : x1;
+  const yOther = usePrimary ? y2 : y1;
+
+  const xOut = [];
+  const y1Out = [];
+  const y2Out = [];
+  let j = 0;
+  for (let i = 0; i < xRef.length; i++) {
+    const f = xRef[i];
+    if (f < overlapLo || f > overlapHi) continue;
+    while (j < xOther.length - 2 && xOther[j + 1] <= f) j++;
+    let interpVal;
+    if (f <= xOther[0]) interpVal = yOther[0];
+    else if (f >= xOther[xOther.length - 1]) interpVal = yOther[yOther.length - 1];
+    else {
+      const span = xOther[j + 1] - xOther[j];
+      const t = span > 0 ? (f - xOther[j]) / span : 0;
+      interpVal = yOther[j] + t * (yOther[j + 1] - yOther[j]);
+    }
+    xOut.push(f);
+    if (usePrimary) {
+      y1Out.push(yRef[i]);
+      y2Out.push(interpVal);
+    } else {
+      y1Out.push(interpVal);
+      y2Out.push(yRef[i]);
+    }
+  }
+
+  return { x: xOut, y1: y1Out, y2: y2Out };
+}
+
+function computeDeltaDbTrace(td1, td2) {
+  const q1 = td1 ? (td1.quantityKind || QUANTITY_KIND.AMPLITUDE) : null;
+  const q2 = td2 ? (td2.quantityKind || QUANTITY_KIND.AMPLITUDE) : null;
+  if (!td1 || !td2 || q1 !== q2) {
+    return { x: [], y: [], quantityKind: null, factor: null };
+  }
+
+  const aligned = alignFrequencyVectors(
+    Array.from(td1.x),
+    traceLinearQuantityValues(td1),
+    Array.from(td2.x),
+    traceLinearQuantityValues(td2)
+  );
+
+  const factor = q1 === QUANTITY_KIND.POWER_DENSITY ? 10 : 20;
+  const y = aligned.x.map((_, i) => {
+    const v1 = aligned.y1[i];
+    const v2 = aligned.y2[i];
+    if (v1 == null || v2 == null || v1 <= 0 || v2 <= 0) return null;
+    return factor * Math.log10(v1 / v2);
+  });
+
+  return { x: aligned.x, y, quantityKind: q1, factor };
 }
 
 // ---------------------------------------------------------------------------
@@ -2886,10 +3244,12 @@ function computeRepresentation(td, repr) {
   }
 
   const isMAP = td.complexRep === "MAG_PHASE";
+  const quantityKind = td.quantityKind || QUANTITY_KIND.AMPLITUDE;
 
   function getRe(i)  { return isMAP ? td.re[i] * Math.cos(td.im[i] * Math.PI / 180) : td.re[i]; }
   function getIm(i)  { return isMAP ? td.re[i] * Math.sin(td.im[i] * Math.PI / 180) : td.im[i]; }
-  function getMag(i) { return isMAP ? Math.abs(td.re[i]) : Math.sqrt(td.re[i]*td.re[i] + td.im[i]*td.im[i]); }
+  function getMag(i) { return traceMagnitudeAt(td, i); }
+  function getLinear(i) { return traceLinearQuantityAt(td, i); }
   function getPhase(i) {
     if (isMAP) {
       let p = td.im[i] % 360;
@@ -2901,11 +3261,18 @@ function computeRepresentation(td, repr) {
   }
 
   switch (repr) {
+    case "PSD":
+      for (let i = 0; i < n; i++) y[i] = getLinear(i);
+      break;
     case "MAGNITUDE":
-      for (let i = 0; i < n; i++) y[i] = getMag(i);
+      for (let i = 0; i < n; i++) y[i] = quantityKind === QUANTITY_KIND.POWER_DENSITY ? getLinear(i) : getMag(i);
       break;
     case "DB":
-      for (let i = 0; i < n; i++) { const m = getMag(i); y[i] = m > 0 ? 20*Math.log10(m) : null; }
+      for (let i = 0; i < n; i++) {
+        const value = getLinear(i);
+        const factor = quantityKind === QUANTITY_KIND.POWER_DENSITY ? 10 : 20;
+        y[i] = value > 0 ? factor * Math.log10(value) : null;
+      }
       break;
     case "REAL":
       for (let i = 0; i < n; i++) y[i] = getRe(i);
@@ -2930,7 +3297,7 @@ function computeRepresentation(td, repr) {
       break;
     }
     default:
-      for (let i = 0; i < n; i++) y[i] = getMag(i);
+      for (let i = 0; i < n; i++) y[i] = quantityKind === QUANTITY_KIND.POWER_DENSITY ? getLinear(i) : getMag(i);
   }
 
   return { x, y, effectiveRepr: repr, requestedRepr: repr, isLocked: false };
@@ -2965,6 +3332,11 @@ const PCHParser = {
   computeRepresentation,
   componentLabels,
   componentLabelsForBlock,
+  generateOctaveBands,
+  interpolatePSD,
+  computeOctaveBands,
+  alignFrequencyVectors,
+  computeDeltaDbTrace,
 };
 
 if (typeof module !== "undefined" && module.exports) {
