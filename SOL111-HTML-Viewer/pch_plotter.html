@@ -56,7 +56,7 @@ html, body { height: 100%; overflow: hidden; font-family: var(--font); font-size
 #header h1 { font-size: 15px; font-weight: 600; letter-spacing: 0.3px; flex: 1; }
 #header .subtitle { font-size: 11px; opacity: 0.75; }
 
-#body { display: flex; flex: 1; overflow: hidden; }
+#body { display: flex; flex: 1; overflow: hidden; min-width: 0; min-height: 0; }
 
 /* =========================================================
    Sidebar
@@ -249,6 +249,26 @@ html, body { height: 100%; overflow: hidden; font-family: var(--font); font-size
   border-bottom: 1px solid var(--border-light);
   background: var(--surface);
 }
+#tree-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 10px 8px;
+  border-bottom: 1px solid var(--border-light);
+  background: var(--surface);
+}
+.tree-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  user-select: none;
+}
+.tree-toggle-label input {
+  margin: 0;
+}
 #entity-search {
   width: 100%;
   font-size: 12px;
@@ -343,6 +363,8 @@ html, body { height: 100%; overflow: hidden; font-family: var(--font); font-size
   flex-direction: column;
   overflow: hidden;
   background: var(--bg);
+  min-width: 0;
+  min-height: 0;
 }
 
 /* Toolbar */
@@ -351,16 +373,30 @@ html, body { height: 100%; overflow: hidden; font-family: var(--font); font-size
   border-bottom: 1px solid var(--border);
   padding: 6px 12px;
   display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  flex-shrink: 0;
+}
+
+.toolbar-row {
+  display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  flex-shrink: 0;
+  min-width: 0;
+  padding: 4px 0;
+}
+.toolbar-row + .toolbar-row {
+  border-top: 1px solid var(--border-light);
 }
 
 .toolbar-group {
   display: flex;
   align-items: center;
   gap: 4px;
+  flex-wrap: wrap;
+  min-width: 0;
   border-right: 1px solid var(--border-light);
   padding-right: 8px;
 }
@@ -424,15 +460,48 @@ input.tb-num {
 input.tb-num:focus { outline: 2px solid var(--accent); border-color: transparent; }
 input.tb-invalid { border-color: var(--danger) !important; background: #fff6f5; }
 
+.toolbar-axis-group .toolbar-label,
+.toolbar-delta-group .toolbar-label,
+.toolbar-y2-group .toolbar-label {
+  min-width: 42px;
+}
+
+.toolbar-axis-group input.tb-text,
+.toolbar-y2-group input.tb-text {
+  width: 150px;
+}
+
+.toolbar-delta-group #sel-delta-trace1,
+.toolbar-delta-group #sel-delta-trace2 {
+  width: 250px;
+  max-width: 100%;
+}
+
+.toolbar-delta-group #sel-delta-factor {
+  width: 92px;
+}
+
+.toolbar-delta-group #sel-delta-chart {
+  width: 74px;
+}
+
+.toolbar-actions-group {
+  border-right: none;
+  padding-right: 0;
+}
+
 /* Plot container */
 #plot-container {
   flex: 1;
   overflow: hidden;
   position: relative;
+  min-width: 0;
+  min-height: 260px;
 }
 #plotly-div {
   width: 100%;
   height: 100%;
+  min-height: 260px;
 }
 
 /* Empty state */
@@ -958,6 +1027,13 @@ input.tb-invalid { border-color: var(--danger) !important; background: #fff6f5; 
         <div id="entity-search-wrap">
           <input id="entity-search" type="text" placeholder="Search ID (e.g. 101, 9001)…" oninput="App.onEntitySearch(this.value)">
         </div>
+        <div id="tree-controls">
+          <label class="tree-toggle-label" title="Keep the full trace tree expanded after imports and filter changes">
+            <input id="tree-keep-expanded" type="checkbox" onchange="App.toggleKeepTreeExpanded(this.checked)">
+            <span>Keep Expanded</span>
+          </label>
+          <button class="tb-btn" style="font-size:10px;padding:2px 6px;" onclick="App.collapseTree()">Collapse Tree</button>
+        </div>
         <div id="trace-tree-container"></div>
       </div>
 
@@ -968,10 +1044,12 @@ input.tb-invalid { border-color: var(--danger) !important; background: #fff6f5; 
 
       <!-- Toolbar -->
       <div id="plot-toolbar">
+        <div class="toolbar-row">
 
         <div class="toolbar-group">
           <span class="toolbar-label">Representation</span>
           <select class="tb-select" id="sel-repr" onchange="App.onReprChange()">
+            <option value="PSD" style="display:none;">PSD (linear)</option>
             <option value="MAGNITUDE">Magnitude</option>
             <option value="DB">Magnitude (dB)</option>
             <option value="REAL">Real</option>
@@ -991,12 +1069,15 @@ input.tb-invalid { border-color: var(--danger) !important; background: #fff6f5; 
             <option value="12">1/12 Octave</option>
             <option value="36">1/36 Octave</option>
           </select>
-          <span id="psd-note" style="display:none;font-size:10px;color:#8a5a00;">Assumes PSD input (g&#178;/Hz)</span>
+          <span id="psd-note" style="display:none;font-size:10px;color:#8a5a00;">Available for PSDF traces only</span>
         </div>
 
-        <div class="toolbar-group">
+        </div>
+
+        <div class="toolbar-row">
+        <div class="toolbar-group toolbar-axis-group">
           <span class="toolbar-label">X axis</span>
-          <select class="tb-select" id="sel-xscale" onchange="App.onAxisChange()">
+            <select class="tb-select" id="sel-xscale" onchange="App.onAxisScaleChange('x')">
             <option value="log" selected>Log</option>
             <option value="linear">Linear</option>
           </select>
@@ -1005,9 +1086,9 @@ input.tb-invalid { border-color: var(--danger) !important; background: #fff6f5; 
           <input class="tb-num" id="plot-xmax-input" type="number" step="any" placeholder="X max" onchange="App.onAxisLimitChange()" title="X-axis maximum (enter both min and max)">
         </div>
 
-        <div class="toolbar-group">
+        <div class="toolbar-group toolbar-axis-group">
           <span class="toolbar-label">Y axis</span>
-          <select class="tb-select" id="sel-yscale" onchange="App.onAxisChange()">
+            <select class="tb-select" id="sel-yscale" onchange="App.onAxisScaleChange('y')">
             <option value="linear" selected>Linear</option>
             <option value="log">Log</option>
           </select>
@@ -1016,8 +1097,11 @@ input.tb-invalid { border-color: var(--danger) !important; background: #fff6f5; 
           <input class="tb-num" id="plot-ymax-input" type="number" step="any" placeholder="Y max" onchange="App.onAxisLimitChange()" title="Y-axis maximum (enter both min and max)">
         </div>
 
-        <div class="toolbar-group" id="delta-db-group" style="display:none;">
-          <span class="toolbar-label">Delta dB</span>
+        </div>
+
+        <div class="toolbar-row">
+        <div class="toolbar-group toolbar-delta-group" id="delta-db-group" style="display:none;">
+          <span class="toolbar-label">delta dB</span>
           <select class="tb-select" id="sel-delta-trace1" onchange="App.onDeltaChange()" title="Numerator curve">
             <option value="">Curve 1</option>
           </select>
@@ -1025,7 +1109,7 @@ input.tb-invalid { border-color: var(--danger) !important; background: #fff6f5; 
           <select class="tb-select" id="sel-delta-trace2" onchange="App.onDeltaChange()" title="Denominator curve">
             <option value="">Curve 2</option>
           </select>
-          <select class="tb-select" id="sel-delta-factor" onchange="App.onDeltaSettingChange()" title="dB scaling factor: 10 for power (PSD), 20 for amplitude">
+          <select class="tb-select" id="sel-delta-factor" onchange="App.onDeltaSettingChange()" title="Auto-selected from the compared trace type" disabled>
             <option value="10">10·log₁₀</option>
             <option value="20">20·log₁₀</option>
           </select>
@@ -1036,13 +1120,16 @@ input.tb-invalid { border-color: var(--danger) !important; background: #fff6f5; 
           <button class="tb-btn" onclick="App.clearDelta()">Clear</button>
         </div>
 
-        <div class="toolbar-group" id="y2-axis-group" style="display:none;">
+        <div class="toolbar-group toolbar-y2-group" id="y2-axis-group" style="display:none;">
           <span class="toolbar-label">Right Y axis</span>
-          <input class="tb-text" id="plot-y2label-input" type="text" placeholder="Delta dB label" onchange="App.onAxisLabelChange()" title="Right Y-axis label">
+          <input class="tb-text" id="plot-y2label-input" type="text" placeholder="delta dB label" onchange="App.onAxisLabelChange()" title="Right Y-axis label">
           <input class="tb-num" id="plot-y2min-input" type="number" step="any" placeholder="Y2 min" onchange="App.onAxisLimitChange()" title="Right Y-axis minimum (enter both min and max)">
           <input class="tb-num" id="plot-y2max-input" type="number" step="any" placeholder="Y2 max" onchange="App.onAxisLimitChange()" title="Right Y-axis maximum (enter both min and max)">
         </div>
 
+        </div>
+
+        <div class="toolbar-row">
         <div class="toolbar-group">
           <button class="tb-btn" onclick="App.openStyleEditor()">Line Styles</button>
           <label style="display:inline-flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;user-select:none;">
@@ -1051,11 +1138,13 @@ input.tb-invalid { border-color: var(--danger) !important; background: #fff6f5; 
           </label>
         </div>
 
-        <div class="toolbar-group">
+        <div class="toolbar-group toolbar-actions-group">
           <button class="tb-btn" onclick="App.openCsvExport()">Export CSV</button>
           <button class="tb-btn" onclick="App.copyImage()">Copy Image</button>
           <button class="tb-btn primary" onclick="App.exportSVG()">Export SVG</button>
           <button class="tb-btn" onclick="App.exportPNG()">Export PNG</button>
+        </div>
+
         </div>
 
       </div><!-- /toolbar -->
@@ -1677,6 +1766,11 @@ const SPREADSHEET_REQUIRED_LABELS = [
 
 const CSV_DELIMITER_CANDIDATES = [",", ";", "\t", "|"];
 
+const QUANTITY_KIND = {
+  AMPLITUDE: "amplitude",
+  POWER_DENSITY: "power_density",
+};
+
 // ---------------------------------------------------------------------------
 // Regex patterns
 // ---------------------------------------------------------------------------
@@ -1689,11 +1783,11 @@ const RE_SUBCASE    = /^\$SUBCASE\s+ID\s*=\s*(\d+)/i;
 
 // Explicit representation declaration (real MSC Nastran format)
 const RE_REAL_IMAG  = /^\$REAL-IMAGINARY\s+OUTPUT/i;
-const RE_REAL_ONLY  = /^\$REAL\s+OUTPUT/i;
 const RE_MAG_PHASE  = /^\$MAGNITUDE-PHASE\s+OUTPUT/i;
+const RE_REAL_ONLY  = /^\$REAL\s+OUTPUT/i;
 
 // Result type header — all families we handle
-const RE_RESULT     = /^\$(ACCELERATION|DISPLACEMENTS?|VELOCITY|SPCFORCES?|SPCF|MPCF|ELEMENT\s+FORCES?)/i;
+const RE_RESULT     = /^\$(ACCELERATION|DISPLACEMENTS?|VELOCITY|SPCFORCES?|SPCF|MPCF|ELEMENT\s+FORCES?)(?:\s*-\s*([A-Z0-9_]+))?/i;
 
 // SORT2 entity markers — both real format ($POINT ID with space) and synthetic ($POINT-ID with hyphen)
 const RE_POINTID    = /^\$POINT[\s-]ID\s*=\s*(\d+)/i;
@@ -1714,6 +1808,32 @@ const RE_CONT       = /^(?:-CONT-|\s+CONT)\s+([\d.Ee+\-\s]+)/i;
 
 // XYPUNCH two-column row (x, y only)
 const RE_XY_ROW     = /^\s*([\d.Ee+\-]+)\s+([\d.Ee+\-]+)\s*$/;
+
+function normalizeResultFamilyKey(value) {
+  return String(value || "").toUpperCase().replace(/[^A-Z0-9]+/g, "");
+}
+
+function normalizeNativeResultHeader(rawFamily, rawQualifier) {
+  const familyLabel = String(rawFamily || "").trim().toUpperCase().replace(/\s+/g, " ");
+  const familyKey = normalizeResultFamilyKey(familyLabel);
+  const qualifier = rawQualifier ? String(rawQualifier).trim().toUpperCase() : null;
+  return {
+    family: RESULT_FAMILIES[familyKey] || familyLabel,
+    resultType: qualifier ? `${familyLabel} - ${qualifier}` : familyLabel,
+    resultQualifier: qualifier,
+  };
+}
+
+function quantityKindFromResultQualifier(resultQualifier) {
+  return String(resultQualifier || "").toUpperCase() === "PSDF"
+    ? QUANTITY_KIND.POWER_DENSITY
+    : QUANTITY_KIND.AMPLITUDE;
+}
+
+function quantityKindForBlock(block) {
+  if (block && block.quantityKind) return block.quantityKind;
+  return quantityKindFromResultQualifier(block && block.resultQualifier);
+}
 
 // ---------------------------------------------------------------------------
 // Row classification helpers
@@ -2401,6 +2521,8 @@ function createSpreadsheetBlock(blockIndex, runName, subcaseInfo, family, xypunc
     blockIndex,
     resultFamily: family,
     resultType: family,
+    resultQualifier: null,
+    quantityKind: QUANTITY_KIND.AMPLITUDE,
     domain: "FREQUENCY_RESPONSE",
     sort: "SPREADSHEET",
     complexRep: "UNKNOWN",
@@ -2797,6 +2919,7 @@ function parseSpreadsheetRows(fileName, rows, sheetName, options) {
         componentLabel: col.componentLabel,
         entityId: col.entityKey,
         domain: "FREQUENCY_RESPONSE",
+        quantityKind: QUANTITY_KIND.AMPLITUDE,
         storageKind: "COMPLEX",
         lockedRepr: null,
         sourceLines: [
@@ -2842,6 +2965,7 @@ function parseSpreadsheetRows(fileName, rows, sheetName, options) {
       componentLabel: col.componentLabel,
       entityId: col.entityKey,
       domain: "FREQUENCY_RESPONSE",
+      quantityKind: QUANTITY_KIND.AMPLITUDE,
       storageKind: "DERIVED",
       lockedRepr: col.reprKey,
       sourceLines: [
@@ -3326,7 +3450,7 @@ function scanBlocks(text, runName) {
     curBlock = null;
   }
 
-  function startBlock(family, rawType) {
+  function startBlock(family, rawType, resultQualifier) {
     // In SORT1 files the full header block is repeated for every frequency
     // step in the pattern:
     //   $TITLE / $SUBTITLE / $LABEL
@@ -3359,8 +3483,8 @@ function scanBlocks(text, runName) {
       }
     }
 
-    if (curBlock && curBlock.resultFamily === family && curBlock.resultType === rawType &&
-        curBlock.subcaseId === lookaheadSubcase
+    if (curBlock && curBlock.resultFamily === family && curBlock.subcaseId === lookaheadSubcase
+        && curBlock.resultQualifier === (resultQualifier || null)
         && (family !== "ELEMENT_FORCES" || normalizeElementType(curBlock.elementType) === lookaheadElemType)
         && family !== "XYPUNCH") {
       // Same block still open — just continue accumulating into it.
@@ -3373,8 +3497,8 @@ function scanBlocks(text, runName) {
     // Check if the last finalised block matches (SORT1 merge).
     if (family !== "XYPUNCH" && blocks.length > 0) {
       const last = blocks[blocks.length - 1];
-      if (last.resultFamily === family && last.resultType === rawType &&
-          last.subcaseId === lookaheadSubcase
+      if (last.resultFamily === family && last.subcaseId === lookaheadSubcase
+          && last.resultQualifier === (resultQualifier || null)
           && (family !== "ELEMENT_FORCES" || normalizeElementType(last.elementType) === lookaheadElemType)) {
         // Reopen the last block — remove it from the finalised list and make
         // it the current block again so we can keep appending to it.
@@ -3385,6 +3509,9 @@ function scanBlocks(text, runName) {
         curBlock.subtitle = curSubtitle || curBlock.subtitle;
         curBlock.label    = curLabel    || curBlock.label;
         if (lookaheadElemType) curBlock.elementType = lookaheadElemType;
+        curBlock.resultType = rawType;
+        curBlock.resultQualifier = resultQualifier || null;
+        curBlock.quantityKind = quantityKindFromResultQualifier(resultQualifier);
         return;
       }
     }
@@ -3396,6 +3523,8 @@ function scanBlocks(text, runName) {
       blockIndex:    blocks.length,
       resultFamily:  family,
       resultType:    rawType,
+      resultQualifier: resultQualifier || null,
+      quantityKind:  quantityKindFromResultQualifier(resultQualifier),
       domain:        "UNKNOWN",
       sort:          "UNKNOWN",
       complexRep:    "UNKNOWN",
@@ -3453,10 +3582,6 @@ function scanBlocks(text, runName) {
       if (curBlock) { curBlock.complexRep = "REAL_IMAG"; curBlock.rawLines.push(line); }
       continue;
     }
-    if (RE_REAL_ONLY.test(line)) {
-      if (curBlock) { curBlock.complexRep = "REAL_ONLY"; curBlock.rawLines.push(line); }
-      continue;
-    }
     if (RE_MAG_PHASE.test(line)) {
       if (curBlock) { curBlock.complexRep = "MAG_PHASE"; curBlock.rawLines.push(line); }
       continue;
@@ -3475,23 +3600,22 @@ function scanBlocks(text, runName) {
 
     // --- XYPUNCH block header ---
     if ((m = RE_XYPUNCH.exec(line))) {
-      startBlock("XYPUNCH", "XYPUNCH");
+      startBlock("XYPUNCH", "XYPUNCH", null);
       curBlock.xypunchKind   = m[1].toUpperCase();
       curBlock.xypunchEntity = parseInt(m[2], 10);
       curBlock.xypunchComp   = m[3].toUpperCase();
       curBlock.domain        = "FREQUENCY_RESPONSE";
       curBlock.sort          = "SORT2";
       curBlock.complexRep    = curBlock.xypunchComp.endsWith("RM") ? "MAG_PHASE" : "REAL_IMAG";
+      curBlock.quantityKind  = QUANTITY_KIND.AMPLITUDE;
       curBlock.rawLines.push(line);
       continue;
     }
 
     // --- Result type header ---
     if ((m = RE_RESULT.exec(line))) {
-      const rawKey = m[1].toUpperCase().replace(/\s+/g, " ");
-      const fullType = line.replace(/^\$/, "").trim().replace(/\s+/g, " ");
-      const family = RESULT_FAMILIES[rawKey] || rawKey;
-      startBlock(family, fullType);
+      const resultHeader = normalizeNativeResultHeader(m[1], m[2]);
+      startBlock(resultHeader.family, resultHeader.resultType, resultHeader.resultQualifier);
       curBlock.rawLines.push(line);
       continue;
     }
@@ -3565,17 +3689,6 @@ function scanBlocks(text, runName) {
               curBlock.elementType = row.elementType;
             }
           }
-          // Sort-order detection (SORT1 vs SORT2) from first token
-          const tokens = trimmed.split(/\s+/);
-          if (tokens.length >= 2) {
-            const t0 = tokens[0];
-            const isPlainInt = /^\d+$/.test(t0);
-            if (isPlainInt) {
-              if (curBlock.sort === "UNKNOWN") curBlock.sort = "SORT1";
-            } else if (curBlock.sort === "UNKNOWN") {
-              curBlock.sort = "SORT2";
-            }
-          }
           continue;
         }
       }
@@ -3584,8 +3697,6 @@ function scanBlocks(text, runName) {
       const gr = classifyGridRow(line);
       if (gr && gr.type !== "CONT") {
         curBlock.dataLines.push(lineIdx);
-        if (gr.type === "FORMAT_B" && curBlock.sort === "UNKNOWN") curBlock.sort = "SORT1";
-        if (gr.type === "FORMAT_A" && curBlock.sort === "UNKNOWN") curBlock.sort = "SORT2";
         // Collect entity IDs from FORMAT_B and FORMAT_C rows
         if ((gr.type === "FORMAT_B" || gr.type === "FORMAT_C") && gr.entityId !== null) {
           if (!curBlock.entityIds.includes(gr.entityId)) {
@@ -3815,8 +3926,8 @@ function extractGridVector(block, entityId, component) {
   const imArr    = [];
   const srcLines = [];
 
-  const lines   = block.rawLines;
-  const isSort2 = block.sort === "SORT2";
+  const lines      = block.rawLines;
+  const isSort2    = block.sort === "SORT2";
   const isRealOnly = block.complexRep === "REAL_ONLY";
 
   if (isSort2) {
@@ -4111,6 +4222,7 @@ function extractGridVector(block, entityId, component) {
     component,
     entityId,
     domain:     block.domain,
+    quantityKind: quantityKindForBlock(block),
     storageKind: "COMPLEX",
     lockedRepr: null,
     sourceLines: srcLines,
@@ -4158,6 +4270,7 @@ function extractXYPunch(block, entityId, component) {
     component:  blkComp,
     entityId,
     domain:     "FREQUENCY_RESPONSE",
+    quantityKind: quantityKindForBlock(block),
     storageKind: "COMPLEX",
     lockedRepr: null,
     sourceLines: srcLines,
@@ -4324,10 +4437,324 @@ function extractElementForces(block, entityId, component) {
     component,
     entityId,
     domain:     block.domain,
+    quantityKind: quantityKindForBlock(block),
     storageKind: "COMPLEX",
     lockedRepr: null,
     sourceLines: srcLines,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Octave band conversion (IEC 61260-1:2014 base-10)
+// ---------------------------------------------------------------------------
+
+/** Octave frequency ratio per IEC 61260-1:2014. */
+const OCTAVE_G = Math.pow(10, 3 / 10); // ≈ 1.99526
+
+/**
+ * generateOctaveBands
+ * -------------------
+ * Generate fractional-octave-band center frequencies and band edges using the
+ * IEC 61260-1:2014 base-10 system.
+ *
+ * @param {number} fMin - Lower bound of frequency range (Hz)
+ * @param {number} fMax - Upper bound of frequency range (Hz)
+ * @param {number} fraction - Bandwidth designator: 1, 3, 6, 12, or 36
+ * @returns {{ center: number, lower: number, upper: number }[]}
+ */
+function generateOctaveBands(fMin, fMax, fraction) {
+  const b = fraction;
+  // Guard: fMin must be positive for log computation; clamp to 1e-3 Hz minimum
+  const safeFMin = Math.max(fMin, 1e-3);
+  if (safeFMin >= fMax) return [];
+  // Determine range of band indices k such that the band overlaps [safeFMin, fMax].
+  // f_center(k) = 1000 * G^(k/b)
+  // f_lower(k)  = f_center(k) * G^(-1/(2b))
+  // f_upper(k)  = f_center(k) * G^(1/(2b))
+  // We need f_upper(k) >= safeFMin AND f_lower(k) <= fMax.
+  const kMin = Math.ceil(b * Math.log(safeFMin / 1000 * Math.pow(OCTAVE_G, 1 / (2 * b))) / Math.log(OCTAVE_G));
+  const kMax = Math.floor(b * Math.log(fMax / 1000 * Math.pow(OCTAVE_G, -1 / (2 * b))) / Math.log(OCTAVE_G));
+
+  const bands = [];
+  for (let k = kMin; k <= kMax; k++) {
+    const center = 1000 * Math.pow(OCTAVE_G, k / b);
+    const lower = center * Math.pow(OCTAVE_G, -1 / (2 * b));
+    const upper = center * Math.pow(OCTAVE_G, 1 / (2 * b));
+    bands.push({ center, lower, upper });
+  }
+  return bands;
+}
+
+/**
+ * interpolatePSD
+ * --------------
+ * Linearly interpolate a PSD spectrum onto a fine, uniform frequency grid.
+ *
+ * @param {Float64Array|number[]} x - Original frequency values (Hz), ascending
+ * @param {Float64Array|number[]} y - Original PSD values (power units, e.g. g²/Hz)
+ * @param {number} [deltaF=0.01] - Target frequency spacing (Hz)
+ * @returns {{ xInterp: Float64Array, yInterp: Float64Array }}
+ */
+function interpolatePSD(x, y, deltaF) {
+  const n = x.length;
+  if (n < 2) return { xInterp: new Float64Array(x), yInterp: new Float64Array(y) };
+
+  // Clamp deltaF: don't create more than 10 million points, and don't
+  // interpolate finer than 1/4 of the original spacing.
+  const origSpacing = (x[n - 1] - x[0]) / (n - 1);
+  const minDelta = origSpacing / 4;
+  const maxPoints = 10000000;
+  let df = deltaF || 0.01;
+  df = Math.max(df, minDelta);
+  const span = x[n - 1] - x[0];
+  if (span / df > maxPoints) df = span / maxPoints;
+
+  const nInterp = Math.floor(span / df) + 1;
+  const xInterp = new Float64Array(nInterp);
+  const yInterp = new Float64Array(nInterp);
+
+  let j = 0; // pointer into original arrays
+  for (let i = 0; i < nInterp; i++) {
+    const f = x[0] + i * df;
+    xInterp[i] = f;
+    // Advance j so that x[j] <= f < x[j+1]
+    while (j < n - 2 && x[j + 1] <= f) j++;
+    // Linear interpolation
+    if (f <= x[0]) {
+      yInterp[i] = y[0];
+    } else if (f >= x[n - 1]) {
+      yInterp[i] = y[n - 1];
+    } else {
+      const t = (f - x[j]) / (x[j + 1] - x[j]);
+      yInterp[i] = y[j] + t * (y[j + 1] - y[j]);
+    }
+  }
+  return { xInterp, yInterp };
+}
+
+function emptyOctaveTrace(td, octaveFraction) {
+  return {
+    x: new Float64Array(0),
+    re: new Float64Array(0),
+    im: new Float64Array(0),
+    complexRep: "REAL_ONLY",
+    isComplex: false,
+    storageKind: "OCTAVE",
+    octaveFraction,
+    component: td.component,
+    entityId: td.entityId,
+    domain: td.domain,
+    quantityKind: QUANTITY_KIND.POWER_DENSITY,
+    sourceLines: [],
+  };
+}
+
+function interpolateLinearValue(x, y, f) {
+  const n = x.length;
+  if (n === 0) return NaN;
+  if (n === 1) return y[0];
+  if (f <= x[0]) return y[0];
+  if (f >= x[n - 1]) return y[n - 1];
+
+  let lo = 0;
+  let hi = n - 1;
+  while (hi - lo > 1) {
+    const mid = Math.floor((lo + hi) / 2);
+    if (x[mid] <= f) lo = mid;
+    else hi = mid;
+  }
+
+  const span = x[lo + 1] - x[lo];
+  if (span <= 0) return y[lo];
+  const t = (f - x[lo]) / span;
+  return y[lo] + t * (y[lo + 1] - y[lo]);
+}
+
+function integrateLinearSpectrumOverBand(x, y, lower, upper) {
+  const bandLo = Math.max(lower, x[0]);
+  const bandHi = Math.min(upper, x[x.length - 1]);
+  if (!(bandHi > bandLo)) return 0;
+
+  const xs = [bandLo];
+  const ys = [interpolateLinearValue(x, y, bandLo)];
+
+  for (let i = 0; i < x.length; i++) {
+    if (x[i] > bandLo && x[i] < bandHi) {
+      xs.push(x[i]);
+      ys.push(y[i]);
+    }
+  }
+
+  xs.push(bandHi);
+  ys.push(interpolateLinearValue(x, y, bandHi));
+
+  let area = 0;
+  for (let i = 0; i < xs.length - 1; i++) {
+    area += 0.5 * (ys[i] + ys[i + 1]) * (xs[i + 1] - xs[i]);
+  }
+  return area;
+}
+
+function traceMagnitudeAt(td, i) {
+  if (td.complexRep === "MAG_PHASE") return Math.abs(td.re[i]);
+  return Math.sqrt(td.re[i] * td.re[i] + td.im[i] * td.im[i]);
+}
+
+function traceLinearQuantityAt(td, i) {
+  if ((td.quantityKind || QUANTITY_KIND.AMPLITUDE) === QUANTITY_KIND.POWER_DENSITY) {
+    return Math.abs(td.re[i]);
+  }
+  return traceMagnitudeAt(td, i);
+}
+
+function traceLinearQuantityValues(td) {
+  const values = new Array(td.x.length);
+  for (let i = 0; i < td.x.length; i++) values[i] = traceLinearQuantityAt(td, i);
+  return values;
+}
+
+/**
+ * computeOctaveBands
+ * ------------------
+ * Convert a narrowband PSD trace to fractional-octave-band-averaged PSD.
+ *
+ * Algorithm:
+ *   1. Compute PSD = magnitude² from stored (re, im) data
+ *   2. Interpolate PSD onto a fine uniform frequency grid
+ *   3. For each octave band, integrate PSD across [f_lower, f_upper] using
+ *      the rectangle method with fractional bin weighting at edges
+ *   4. Normalize by bandwidth: band_avg_psd = band_power / (f_upper - f_lower)
+ *   5. Store sqrt(band_avg_psd) so that computeRepresentation("DB") yields
+ *      20·log₁₀(√PSD) = 10·log₁₀(PSD), the correct PSD dB.
+ *
+ * @param {TraceData} td - Source trace with narrowband data
+ * @param {number} octaveFraction - 1, 3, 6, 12, or 36
+ * @returns {TraceData-like} Octave-banded result
+ */
+function computeOctaveBands(td, octaveFraction) {
+  const n = td.x.length;
+  if (n < 2) return emptyOctaveTrace(td, octaveFraction);
+
+  // Step 1: Compute PSD from magnitude² of stored complex data
+  if ((td.quantityKind || QUANTITY_KIND.AMPLITUDE) !== QUANTITY_KIND.POWER_DENSITY) {
+    return emptyOctaveTrace(td, octaveFraction);
+  }
+  if (td.domain !== "FREQUENCY_RESPONSE") return emptyOctaveTrace(td, octaveFraction);
+  const psd = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    psd[i] = Math.max(0, traceLinearQuantityAt(td, i));
+  }
+  const bands = generateOctaveBands(td.x[0], td.x[n - 1], octaveFraction);
+  if (bands.length === 0) {
+    return emptyOctaveTrace(td, octaveFraction);
+  }
+
+  const centers = new Float64Array(bands.length);
+  const bandAvgPsd = new Float64Array(bands.length);
+
+  // Step 4: Integrate PSD within each band (sliding-pointer O(nInterp + nBands))
+  let si = 0; // sliding start index — advances across bands since both are sorted
+  for (let b = 0; b < bands.length; b++) {
+    const { center, lower, upper } = bands[b];
+    centers[b] = center;
+    const bw = upper - lower;
+    if (bw <= 0) continue;
+
+    const bandPower = integrateLinearSpectrumOverBand(td.x, psd, lower, upper);
+    bandAvgPsd[b] = bandPower / bw;
+  }
+
+  return {
+    x: centers,
+    re: bandAvgPsd,
+    im: new Float64Array(bands.length),
+    complexRep: "REAL_ONLY",
+    isComplex: false,
+    storageKind: "OCTAVE",
+    octaveFraction,
+    component: td.component,
+    entityId: td.entityId,
+    domain: td.domain,
+    quantityKind: QUANTITY_KIND.POWER_DENSITY,
+    sourceLines: [],
+  };
+}
+
+function alignFrequencyVectors(x1, y1, x2, y2) {
+  if (x1.length === x2.length) {
+    let match = true;
+    for (let i = 0; i < x1.length; i++) {
+      const tol = Math.abs(x1[i]) * 1e-6 + 1e-12;
+      if (Math.abs(x1[i] - x2[i]) > tol) {
+        match = false;
+        break;
+      }
+    }
+    if (match) return { x: x1, y1, y2 };
+  }
+
+  const overlapLo = Math.max(x1[0], x2[0]);
+  const overlapHi = Math.min(x1[x1.length - 1], x2[x2.length - 1]);
+  if (overlapLo >= overlapHi) return { x: [], y1: [], y2: [] };
+
+  const usePrimary = x1.length >= x2.length;
+  const xRef = usePrimary ? x1 : x2;
+  const yRef = usePrimary ? y1 : y2;
+  const xOther = usePrimary ? x2 : x1;
+  const yOther = usePrimary ? y2 : y1;
+
+  const xOut = [];
+  const y1Out = [];
+  const y2Out = [];
+  let j = 0;
+  for (let i = 0; i < xRef.length; i++) {
+    const f = xRef[i];
+    if (f < overlapLo || f > overlapHi) continue;
+    while (j < xOther.length - 2 && xOther[j + 1] <= f) j++;
+    let interpVal;
+    if (f <= xOther[0]) interpVal = yOther[0];
+    else if (f >= xOther[xOther.length - 1]) interpVal = yOther[yOther.length - 1];
+    else {
+      const span = xOther[j + 1] - xOther[j];
+      const t = span > 0 ? (f - xOther[j]) / span : 0;
+      interpVal = yOther[j] + t * (yOther[j + 1] - yOther[j]);
+    }
+    xOut.push(f);
+    if (usePrimary) {
+      y1Out.push(yRef[i]);
+      y2Out.push(interpVal);
+    } else {
+      y1Out.push(interpVal);
+      y2Out.push(yRef[i]);
+    }
+  }
+
+  return { x: xOut, y1: y1Out, y2: y2Out };
+}
+
+function computeDeltaDbTrace(td1, td2) {
+  const q1 = td1 ? (td1.quantityKind || QUANTITY_KIND.AMPLITUDE) : null;
+  const q2 = td2 ? (td2.quantityKind || QUANTITY_KIND.AMPLITUDE) : null;
+  if (!td1 || !td2 || q1 !== q2) {
+    return { x: [], y: [], quantityKind: null, factor: null };
+  }
+
+  const aligned = alignFrequencyVectors(
+    Array.from(td1.x),
+    traceLinearQuantityValues(td1),
+    Array.from(td2.x),
+    traceLinearQuantityValues(td2)
+  );
+
+  const factor = q1 === QUANTITY_KIND.POWER_DENSITY ? 10 : 20;
+  const y = aligned.x.map((_, i) => {
+    const v1 = aligned.y1[i];
+    const v2 = aligned.y2[i];
+    if (v1 == null || v2 == null || v1 <= 0 || v2 <= 0) return null;
+    return factor * Math.log10(v1 / v2);
+  });
+
+  return { x: aligned.x, y, quantityKind: q1, factor };
 }
 
 // ---------------------------------------------------------------------------
@@ -4360,10 +4787,12 @@ function computeRepresentation(td, repr) {
   }
 
   const isMAP = td.complexRep === "MAG_PHASE";
+  const quantityKind = td.quantityKind || QUANTITY_KIND.AMPLITUDE;
 
   function getRe(i)  { return isMAP ? td.re[i] * Math.cos(td.im[i] * Math.PI / 180) : td.re[i]; }
   function getIm(i)  { return isMAP ? td.re[i] * Math.sin(td.im[i] * Math.PI / 180) : td.im[i]; }
-  function getMag(i) { return isMAP ? Math.abs(td.re[i]) : Math.sqrt(td.re[i]*td.re[i] + td.im[i]*td.im[i]); }
+  function getMag(i) { return traceMagnitudeAt(td, i); }
+  function getLinear(i) { return traceLinearQuantityAt(td, i); }
   function getPhase(i) {
     if (isMAP) {
       let p = td.im[i] % 360;
@@ -4375,11 +4804,18 @@ function computeRepresentation(td, repr) {
   }
 
   switch (repr) {
+    case "PSD":
+      for (let i = 0; i < n; i++) y[i] = getLinear(i);
+      break;
     case "MAGNITUDE":
-      for (let i = 0; i < n; i++) y[i] = getMag(i);
+      for (let i = 0; i < n; i++) y[i] = quantityKind === QUANTITY_KIND.POWER_DENSITY ? getLinear(i) : getMag(i);
       break;
     case "DB":
-      for (let i = 0; i < n; i++) { const m = getMag(i); y[i] = m > 0 ? 20*Math.log10(m) : null; }
+      for (let i = 0; i < n; i++) {
+        const value = getLinear(i);
+        const factor = quantityKind === QUANTITY_KIND.POWER_DENSITY ? 10 : 20;
+        y[i] = value > 0 ? factor * Math.log10(value) : null;
+      }
       break;
     case "REAL":
       for (let i = 0; i < n; i++) y[i] = getRe(i);
@@ -4404,7 +4840,7 @@ function computeRepresentation(td, repr) {
       break;
     }
     default:
-      for (let i = 0; i < n; i++) y[i] = getMag(i);
+      for (let i = 0; i < n; i++) y[i] = quantityKind === QUANTITY_KIND.POWER_DENSITY ? getLinear(i) : getMag(i);
   }
 
   return { x, y, effectiveRepr: repr, requestedRepr: repr, isLocked: false };
@@ -4439,6 +4875,11 @@ const PCHParser = {
   computeRepresentation,
   componentLabels,
   componentLabelsForBlock,
+  generateOctaveBands,
+  interpolatePSD,
+  computeOctaveBands,
+  alignFrequencyVectors,
+  computeDeltaDbTrace,
 };
 
 if (typeof module !== "undefined" && module.exports) {
@@ -4446,8 +4887,8 @@ if (typeof module !== "undefined" && module.exports) {
 } else if (typeof window !== "undefined") {
   window.PCHParser = PCHParser;
 }
-</script>
 
+</script>
 <!-- ================================================================
      Application Logic
      ================================================================ -->
@@ -4502,6 +4943,7 @@ const State = {
   nextTraceId: 0,
   inspectorTarget: null,
   importIssues: [],
+  runtimeIssueKeys: new Set(),
   simpleLegend: false,
   // User-edited Plotly title/subtitle (persist across re-renders).
   // null means "use auto title/subtitle from active traces".
@@ -4509,6 +4951,8 @@ const State = {
   plotSubtitleText: null,
   // Per-traceKey style overrides: { color, dash, width }
   styleOverrides: {},
+  xScaleTouched: false,
+  yScaleTouched: false,
   // Octave bandwidth mode: "narrowband" | "1" | "3" | "6" | "12" | "36"
   bandwidthMode: "narrowband",
   // Cache: traceKey|bandwidth -> octave TraceData
@@ -4516,7 +4960,7 @@ const State = {
   // Delta dB trace selection and settings
   deltaTrace1Key: null,
   deltaTrace2Key: null,
-  deltaFactor: 10,         // 10 for power (PSD), 20 for amplitude
+  deltaFactor: 10,         // read-only UI indicator: 10 for PSD, 20 for amplitude
   deltaChartType: "line",  // "line" or "bar"
   // DOF filter: set of active DOF labels (all on by default)
   activeDofs: new Set(["T1","T2","T3","R1","R2","R3","Fx","Fy","Fz","Mx","My","Mz","F","F1","F2","F3","M1","M2","M3"]),
@@ -4524,6 +4968,7 @@ const State = {
   activeScs: new Set(),
   // Quantities filter: set of active result family keys
   activeQtys: new Set(),
+  keepTreeExpanded: false,
 };
 
 // ---------------------------------------------------------------------------
@@ -4552,6 +4997,55 @@ function setImportIssuesButtonVisible(visible) {
   const btn = el("import-issues-btn");
   if (!btn) return;
   btn.classList.toggle("visible", !!visible);
+}
+
+function shouldSuppressRuntimeIssue(context, rawMessage) {
+  const message = String(rawMessage || "");
+  if (context === "Runtime" && message.includes("Cannot set property target of #<Event> which has only a getter")) {
+    // Benign browser/Plotly interop warning observed during otherwise successful imports.
+    return true;
+  }
+  return false;
+}
+
+function reportCriticalError(context, error) {
+  const rawMessage = error && error.message ? error.message : String(error || "Unknown error");
+  if (shouldSuppressRuntimeIssue(context, rawMessage)) {
+    console.warn(`[PCH Plotter] Suppressed runtime issue: ${rawMessage}`);
+    return;
+  }
+  const message = `${context}: ${rawMessage}`.trim();
+  console.error(`[PCH Plotter] ${message}`, error);
+  pushImportIssue(State.importIssues, State.runtimeIssueKeys, "error", "Viewer", message);
+  setImportIssuesButtonVisible(State.importIssues.length > 0);
+  setStatus(`Critical error: ${message}. See Import Issues for details.`);
+}
+
+function sanitizePlotlyValue(value) {
+  if (value === undefined) return undefined;
+  if (Array.isArray(value)) {
+    return value.map(item => sanitizePlotlyValue(item));
+  }
+  if (value && typeof value === "object") {
+    const out = {};
+    for (const [key, child] of Object.entries(value)) {
+      const cleaned = sanitizePlotlyValue(child);
+      if (cleaned !== undefined) out[key] = cleaned;
+    }
+    return out;
+  }
+  return value;
+}
+
+function validatePlotContainer() {
+  const plotDiv = el("plotly-div");
+  if (!plotDiv || typeof plotDiv.getBoundingClientRect !== "function") return true;
+  const rect = plotDiv.getBoundingClientRect();
+  if (rect.width <= 2 || rect.height <= 2) {
+    reportCriticalError("Plot layout", new Error(`Plot area is ${Math.round(rect.width)}x${Math.round(rect.height)} px`));
+    return false;
+  }
+  return true;
 }
 
 function getComponentDisplayLabel(block, component) {
@@ -4799,6 +5293,7 @@ function handleFiles(files) {
   const importIssues = [];
   const seenImportIssues = new Set();
   State.importIssues = [];
+  State.runtimeIssueKeys = new Set();
   function ingestRuns(runList, mode, fileName) {
     runList.forEach(runData => {
       upsertRun(runData, mode);
@@ -4812,6 +5307,11 @@ function handleFiles(files) {
       hideProgress();
       buildRunList();
       buildTraceTree();
+      if (State.activeTraces.length === 0) {
+        State.xScaleTouched = false;
+        State.yScaleTouched = false;
+      }
+      clearAxisOverrides();
       renderPlot();
       const warningMsg = totalWarnings > 0 ? ` ${totalWarnings} warning(s).` : "";
       State.importIssues = importIssues.slice();
@@ -4963,10 +5463,12 @@ function rebuildScChips() {
 function buildTraceTree() {
   const container = el("trace-tree-container");
   container.innerHTML = "";
+  syncTreeControls();
 
   if (State.runs.length === 0) return;
 
   State.runs.forEach((run, ri) => {
+    const expandAll = !!State.keepTreeExpanded;
     const runColor = RUN_COLORS[ri % RUN_COLORS.length];
     const displayName = getRunDisplayName(run);
     const runNode = makeTreeNode(
@@ -4988,7 +5490,7 @@ function buildTraceTree() {
       const blkList = subcaseMap[scId];
       if (State.activeScs.size > 0 && !State.activeScs.has(String(scId))) return;
       const scLabel = getBlockSubcaseLabel(blkList[0].blk);
-      const scNode = makeTreeNode(scLabel, blkList.length, false);
+      const scNode = makeTreeNode(scLabel, blkList.length, expandAll);
       runNode.children.appendChild(scNode.el);
 
       // Group by result family
@@ -5002,7 +5504,7 @@ function buildTraceTree() {
       Object.entries(familyMap).forEach(([fam, famBlks]) => {
         // Apply quantities filter
         if (State.activeQtys.size > 0 && !State.activeQtys.has(fam)) return;
-        const famNode = makeTreeNode(familyLabel(fam), famBlks.length, false);
+        const famNode = makeTreeNode(familyLabel(fam), famBlks.length, expandAll);
         scNode.children.appendChild(famNode.el);
 
         if (fam === "XYPUNCH") {
@@ -5024,7 +5526,7 @@ function buildTraceTree() {
             const visibleComps = components.filter(c => State.activeDofs.has(c));
             if (visibleComps.length === 0) return;
 
-            const typeNode = makeTreeNode(typeKey, typeBlks.length, false);
+            const typeNode = makeTreeNode(typeKey, typeBlks.length, expandAll);
             famNode.children.appendChild(typeNode.el);
 
             const entityMap = {};
@@ -5038,7 +5540,7 @@ function buildTraceTree() {
 
             Object.keys(entityMap).sort(compareIdentityKeys).forEach(entityKey => {
               const eidBlks = entityMap[entityKey];
-              const eidNode = makeTreeNode(getEntityDisplayLabel(eidBlks[0].blk, entityKey), visibleComps.length, false);
+              const eidNode = makeTreeNode(getEntityDisplayLabel(eidBlks[0].blk, entityKey), visibleComps.length, expandAll);
               eidNode.el.dataset.eid = getEntitySearchValue(eidBlks[0].blk, entityKey);
               typeNode.children.appendChild(eidNode.el);
 
@@ -5064,7 +5566,7 @@ function buildTraceTree() {
           if (visibleComps.length === 0) return;
           Object.keys(entityMap).sort(compareIdentityKeys).forEach(entityKey => {
             const eidBlks = entityMap[entityKey];
-            const eidNode = makeTreeNode(getEntityDisplayLabel(eidBlks[0].blk, entityKey), visibleComps.length, false);
+            const eidNode = makeTreeNode(getEntityDisplayLabel(eidBlks[0].blk, entityKey), visibleComps.length, expandAll);
             eidNode.el.dataset.eid = getEntitySearchValue(eidBlks[0].blk, entityKey);
             famNode.children.appendChild(eidNode.el);
 
@@ -5083,6 +5585,26 @@ function buildTraceTree() {
   // Re-apply any active search filter
   const searchVal = el("entity-search").value.trim();
   if (searchVal) applyEntitySearch(searchVal);
+}
+
+function setTreeNodeExpanded(node, expanded) {
+  if (!node) return;
+  const children = node.querySelector(":scope > .tree-children");
+  const caret = node.querySelector(":scope > .tree-node-header .tree-caret");
+  if (!children || !caret) return;
+  children.classList.toggle("hidden", !expanded);
+  caret.classList.toggle("open", !!expanded);
+}
+
+function setAllTreeNodesExpanded(expanded) {
+  const container = el("trace-tree-container");
+  if (!container) return;
+  container.querySelectorAll(".tree-node").forEach(node => setTreeNodeExpanded(node, expanded));
+}
+
+function syncTreeControls() {
+  const keepExpanded = el("tree-keep-expanded");
+  if (keepExpanded) keepExpanded.checked = !!State.keepTreeExpanded;
 }
 
 function familyLabel(fam) {
@@ -5177,6 +5699,23 @@ function subcaseHeaderToken(trace) {
 function entityHeaderToken(trace) {
   if (trace.entityNumericId !== null && trace.entityNumericId !== undefined) return `ID${trace.entityNumericId}`;
   return trace.entityLabel || String(trace.entityId || "");
+}
+
+function getCsvTraceReprLabel(trace, requestedRepr) {
+  if (trace.exportReprLabel) return trace.exportReprLabel;
+  const result = PCHParser.computeRepresentation(trace.traceData, requestedRepr);
+  return getQuantityAwareLabel(result.effectiveRepr || requestedRepr, getTraceQuantityKind(trace.traceData));
+}
+
+function getCsvColumnHeader(trace, requestedRepr, reprMode) {
+  if (reprMode === "raw") {
+    return {
+      re: `${trace.runName}|${subcaseHeaderToken(trace)}|${entityHeaderToken(trace)}|${trace.componentLabel || trace.component}|Re`,
+      im: `${trace.runName}|${subcaseHeaderToken(trace)}|${entityHeaderToken(trace)}|${trace.componentLabel || trace.component}|Im`,
+    };
+  }
+  if (trace.csvHeaderLabel) return trace.csvHeaderLabel;
+  return `${trace.runName}|${subcaseHeaderToken(trace)}|${entityHeaderToken(trace)}|${trace.componentLabel || trace.component}|${getCsvTraceReprLabel(trace, requestedRepr)}`;
 }
 
 function getComponentsForBlock(block) {
@@ -5415,11 +5954,24 @@ function buildSimpleTraceName(block, entityId, component) {
   return `${entityLabel} ${componentLabel}`.trim();
 }
 
+function buildDeltaLabelText() {
+  return "delta dB";
+}
+
+function buildDeltaTraceReference(spec) {
+  if (!spec) return "";
+  const run = State.runs[spec.runIdx];
+  const block = run?.blocks?.[spec.blockIdx];
+  if (!block) return spec.name || "";
+  return buildSimpleTraceName(block, spec.entityId, spec.component);
+}
+
 // ---------------------------------------------------------------------------
 // Plot rendering
 // ---------------------------------------------------------------------------
 
 const REPR_YLABELS = {
+  PSD:              "PSD",
   MAGNITUDE:        "Magnitude",
   DB:               "Magnitude (dB)",
   REAL:             "Real",
@@ -5427,6 +5979,38 @@ const REPR_YLABELS = {
   PHASE:            "Phase (deg)",
   PHASE_UNWRAPPED:  "Phase Unwrapped (deg)",
 };
+
+function getTraceQuantityKind(td) {
+  return (td && td.quantityKind) || "amplitude";
+}
+
+function getQuantityAwareLabel(repr, quantityKind) {
+  if (quantityKind === "power_density") {
+    if (repr === "PSD" || repr === "MAGNITUDE") return "PSD";
+    if (repr === "DB") return "PSD (dB)";
+  }
+  return REPR_YLABELS[repr] || repr;
+}
+
+function applyAxisScaleDefaults() {
+  const xSel = el("sel-xscale");
+  const ySel = el("sel-yscale");
+  if (!xSel || !ySel) return;
+
+  const allPowerDensity = State.activeTraces.length > 0 && State.activeTraces.every(spec =>
+    getTraceQuantityKind(spec.traceData) === "power_density"
+  );
+  if (!State.xScaleTouched) xSel.value = "log";
+  if (!State.yScaleTouched) ySel.value = allPowerDensity ? "log" : "linear";
+}
+
+function canUseBandwidthMode(specs) {
+  return specs.length > 0 && specs.every(spec =>
+    spec.traceData &&
+    spec.traceData.domain === "FREQUENCY_RESPONSE" &&
+    getTraceQuantityKind(spec.traceData) === "power_density"
+  );
+}
 
 /**
  * buildLogAxisLayout
@@ -5524,6 +6108,22 @@ function readAxisBound(inputId) {
   if (raw === "") return null;
   const value = Number(raw);
   return Number.isFinite(value) ? value : null;
+}
+
+function clearAxisOverrides() {
+  [
+    "plot-xmin-input",
+    "plot-xmax-input",
+    "plot-ymin-input",
+    "plot-ymax-input",
+    "plot-y2min-input",
+    "plot-y2max-input",
+  ].forEach(id => {
+    const node = el(id);
+    if (!node) return;
+    node.value = "";
+    node.classList.remove("tb-invalid");
+  });
 }
 
 /**
@@ -5705,21 +6305,56 @@ function syncTitleFromRelayout(relayoutData) {
 // Bandwidth / Octave helpers
 // ---------------------------------------------------------------------------
 
+function getEffectiveTraceData(spec, bandwidth) {
+  let effectiveTd = spec.traceData;
+  if (bandwidth !== "narrowband") {
+    const cacheKey = spec.traceKey + "|" + bandwidth;
+    if (!State.octaveCache.has(cacheKey)) {
+      State.octaveCache.set(cacheKey, PCHParser.computeOctaveBands(spec.traceData, parseInt(bandwidth, 10)));
+    }
+    effectiveTd = State.octaveCache.get(cacheKey);
+  }
+  return effectiveTd;
+}
+
 /**
- * Restrict the representation dropdown when octave bandwidth is active.
- * Only Magnitude and dB are meaningful for band-averaged PSD.
+ * Restrict the representation dropdown based on quantity kind and bandwidth.
+ * PSD traces expose PSD/PSD(dB); octave mode also disables phase/real/imaginary views.
  */
-function applyBandwidthReprRestrictions() {
-  const bwActive = el("sel-bandwidth").value !== "narrowband";
+function applyBandwidthReprRestrictions(bandwidth, bandwidthEligible) {
+  const bwActive = bandwidth !== "narrowband" && bandwidthEligible;
   const reprSel = el("sel-repr");
+  const psdOpt = reprSel.querySelector('option[value="PSD"]');
+  const magOpt = reprSel.querySelector('option[value="MAGNITUDE"]');
+  const dbOpt = reprSel.querySelector('option[value="DB"]');
   const disabledReprs = ["REAL", "IMAG", "PHASE", "PHASE_UNWRAPPED"];
+  const showPsd = State.activeTraces.length > 0 && State.activeTraces.every(spec =>
+    getTraceQuantityKind(getEffectiveTraceData(spec, bwActive ? bandwidth : "narrowband")) === "power_density"
+  );
+
+  if (psdOpt) {
+    psdOpt.disabled = !showPsd;
+    psdOpt.style.display = showPsd ? "" : "none";
+    psdOpt.textContent = "PSD (linear)";
+  }
+  if (magOpt) {
+    magOpt.disabled = showPsd;
+    magOpt.style.display = showPsd ? "none" : "";
+  }
+  if (dbOpt) dbOpt.textContent = showPsd ? "PSD (dB)" : "Magnitude (dB)";
+
   for (const opt of reprSel.options) {
     opt.disabled = bwActive && disabledReprs.includes(opt.value);
   }
-  if (bwActive && disabledReprs.includes(reprSel.value)) {
+  if (showPsd && reprSel.value === "MAGNITUDE") {
+    reprSel.value = "PSD";
+  } else if (!showPsd && reprSel.value === "PSD") {
     reprSel.value = "MAGNITUDE";
   }
-  el("psd-note").style.display = bwActive ? "inline" : "none";
+  if (bwActive && disabledReprs.includes(reprSel.value)) {
+    reprSel.value = showPsd ? "PSD" : "MAGNITUDE";
+  }
+  el("psd-note").style.display = bandwidthEligible ? "inline" : "none";
 }
 
 // ---------------------------------------------------------------------------
@@ -5761,8 +6396,29 @@ function updateDeltaDropdowns() {
       else State.deltaTrace2Key = null;
     }
   });
-  const show = !!(State.deltaTrace1Key && State.deltaTrace2Key);
-  el("y2-axis-group").style.display = show ? "flex" : "none";
+}
+
+function syncDeltaFactorDisplay(bandwidth) {
+  const factorSel = el("sel-delta-factor");
+  if (!factorSel) return { quantityKind: null, compatible: false };
+
+  const spec1 = State.activeTraces.find(t => t.traceKey === State.deltaTrace1Key);
+  const spec2 = State.activeTraces.find(t => t.traceKey === State.deltaTrace2Key);
+  if (!spec1 || !spec2) {
+    factorSel.value = "10";
+    el("y2-axis-group").style.display = "none";
+    return { quantityKind: null, compatible: false };
+  }
+
+  const td1 = getEffectiveTraceData(spec1, bandwidth);
+  const td2 = getEffectiveTraceData(spec2, bandwidth);
+  const q1 = getTraceQuantityKind(td1);
+  const q2 = getTraceQuantityKind(td2);
+  const compatible = q1 === q2;
+  State.deltaFactor = compatible && q1 === "amplitude" ? 20 : 10;
+  factorSel.value = String(State.deltaFactor);
+  el("y2-axis-group").style.display = compatible ? "flex" : "none";
+  return { quantityKind: compatible ? q1 : null, compatible };
 }
 
 /**
@@ -5821,6 +6477,38 @@ function alignFrequencyVectors(x1, y1, x2, y2) {
   return { x: xOut, y1: y1Out, y2: y2Out };
 }
 
+function computeBarWidths(xValues, useLogSpacing) {
+  const x = Array.from(xValues || []).filter(v => Number.isFinite(v));
+  if (x.length === 0) return [];
+  if (x.length === 1) return [useLogSpacing ? x[0] * 0.25 : 1];
+
+  const edges = new Array(x.length + 1);
+  if (useLogSpacing) {
+    const safeRatio = (a, b) => {
+      if (!(a > 0) || !(b > 0)) return null;
+      const ratio = b / a;
+      return Number.isFinite(ratio) && ratio > 1 ? ratio : null;
+    };
+    const firstRatio = safeRatio(x[0], x[1]) || 2;
+    const lastRatio = safeRatio(x[x.length - 2], x[x.length - 1]) || firstRatio;
+    edges[0] = x[0] / Math.sqrt(firstRatio);
+    for (let i = 1; i < x.length; i++) edges[i] = Math.sqrt(x[i - 1] * x[i]);
+    edges[x.length] = x[x.length - 1] * Math.sqrt(lastRatio);
+  } else {
+    const firstStep = x[1] - x[0];
+    const lastStep = x[x.length - 1] - x[x.length - 2];
+    edges[0] = x[0] - firstStep / 2;
+    for (let i = 1; i < x.length; i++) edges[i] = (x[i - 1] + x[i]) / 2;
+    edges[x.length] = x[x.length - 1] + lastStep / 2;
+  }
+
+  const fillFraction = 0.72;
+  return x.map((_, i) => {
+    const width = (edges[i + 1] - edges[i]) * fillFraction;
+    return Number.isFinite(width) && width > 0 ? width : undefined;
+  });
+}
+
 /**
  * Compute delta dB = 10·log₁₀(PSD1 / PSD2) between two traces.
  * Operates on whatever bandwidth mode is currently active.
@@ -5830,49 +6518,65 @@ function alignFrequencyVectors(x1, y1, x2, y2) {
  * @param {string} bandwidth - Current bandwidth mode
  * @returns {{ x: number[], y: number[] }}
  */
-function computeDeltaDB(spec1, spec2, bandwidth, factor) {
-  // Get effective trace data (apply octave if active)
+function computeDeltaDB(spec1, spec2, bandwidth) {
   let td1 = spec1.traceData;
   let td2 = spec2.traceData;
   if (bandwidth !== "narrowband") {
-    const b = parseInt(bandwidth);
-    const ck1 = spec1.traceKey + "|" + bandwidth;
-    const ck2 = spec2.traceKey + "|" + bandwidth;
-    if (!State.octaveCache.has(ck1)) State.octaveCache.set(ck1, PCHParser.computeOctaveBands(td1, b));
-    if (!State.octaveCache.has(ck2)) State.octaveCache.set(ck2, PCHParser.computeOctaveBands(td2, b));
-    td1 = State.octaveCache.get(ck1);
-    td2 = State.octaveCache.get(ck2);
+    td1 = getEffectiveTraceData(spec1, bandwidth);
+    td2 = getEffectiveTraceData(spec2, bandwidth);
   }
+  return PCHParser.computeDeltaDbTrace(td1, td2);
+}
 
-  // Compute magnitude (NOT squared) for both traces
-  const isMAP1 = td1.complexRep === "MAG_PHASE";
-  const isMAP2 = td2.complexRep === "MAG_PHASE";
-  const mag1 = new Array(td1.x.length);
-  const mag2 = new Array(td2.x.length);
-  for (let i = 0; i < td1.x.length; i++) {
-    mag1[i] = isMAP1 ? Math.abs(td1.re[i]) : Math.sqrt(td1.re[i] * td1.re[i] + td1.im[i] * td1.im[i]);
-  }
-  for (let i = 0; i < td2.x.length; i++) {
-    mag2[i] = isMAP2 ? Math.abs(td2.re[i]) : Math.sqrt(td2.re[i] * td2.re[i] + td2.im[i] * td2.im[i]);
-  }
+function buildDisplayedDeltaExportTrace(bandwidth) {
+  if (!State.deltaTrace1Key || !State.deltaTrace2Key) return null;
+  const spec1 = State.activeTraces.find(t => t.traceKey === State.deltaTrace1Key);
+  const spec2 = State.activeTraces.find(t => t.traceKey === State.deltaTrace2Key);
+  if (!spec1 || !spec2) return null;
+  const td1 = getEffectiveTraceData(spec1, bandwidth);
+  const td2 = getEffectiveTraceData(spec2, bandwidth);
+  if (getTraceQuantityKind(td1) !== getTraceQuantityKind(td2)) return null;
 
-  // Align frequency vectors
-  const aligned = alignFrequencyVectors(
-    Array.from(td1.x), mag1,
-    Array.from(td2.x), mag2
-  );
+  const delta = PCHParser.computeDeltaDbTrace(td1, td2);
+  if (!delta || delta.x.length === 0) return null;
 
-  // Delta = factor * log10(mag1 / mag2)
-  // factor=10 for power quantities (PSD), factor=20 for amplitude quantities
-  const f = factor || 10;
-  const deltaY = aligned.x.map((_, i) => {
-    const m1 = aligned.y1[i];
-    const m2 = aligned.y2[i];
-    if (m1 == null || m2 == null || m1 <= 0 || m2 <= 0) return null;
-    return f * Math.log10(m1 / m2);
-  });
+  const run1 = State.runs[spec1.runIdx];
+  const run2 = State.runs[spec2.runIdx];
+  const blk1 = run1?.blocks?.[spec1.blockIdx];
+  const blk2 = run2?.blocks?.[spec2.blockIdx];
+  const sameSubcase = blk1 && blk2 && getBlockSubcaseKey(blk1) === getBlockSubcaseKey(blk2);
+  const sameSubcaseId = sameSubcase && blk1 && blk2 && blk1.subcaseId === blk2.subcaseId;
+  const sameSubcaseLabel = sameSubcase && blk1 && blk2 && (blk1.subcaseLabel || "") === (blk2.subcaseLabel || "");
+  const deltaLabel = buildDeltaLabelText();
+  const ref1 = buildDeltaTraceReference(spec1);
+  const ref2 = buildDeltaTraceReference(spec2);
 
-  return { x: aligned.x, y: deltaY };
+  return {
+    runName: deltaLabel,
+    scId: sameSubcase ? getBlockSubcaseKey(blk1) : "DELTA_DB",
+    subcaseId: sameSubcaseId ? blk1.subcaseId : null,
+    subcaseKey: sameSubcase ? getBlockSubcaseKey(blk1) : "DELTA_DB",
+    subcaseLabel: sameSubcaseLabel ? (blk1.subcaseLabel || null) : "Displayed traces",
+    family: "DELTA_DB",
+    elementType: "",
+    entityId: "delta",
+    entityNumericId: null,
+    entityLabel: `${ref1} over ${ref2}`,
+    component: "DELTA_DB",
+    componentLabel: deltaLabel,
+    exportReprLabel: deltaLabel,
+    csvHeaderLabel: `${deltaLabel}|${sameSubcase ? getBlockSubcaseKey(blk1) : "displayed"}|${ref1} over ${ref2}`,
+    traceData: {
+      x: Array.from(delta.x),
+      re: Array.from(delta.y),
+      im: new Array(delta.y.length).fill(0),
+      domain: "FREQUENCY_RESPONSE",
+      complexRep: "REAL_IMAG",
+      storageKind: "DERIVED",
+      lockedRepr: "DB",
+      quantityKind: getTraceQuantityKind(td1),
+    },
+  };
 }
 
 /**
@@ -5882,9 +6586,17 @@ function computeDeltaDB(spec1, spec2, bandwidth, factor) {
  * Applies log-axis tick formatting, title/subtitle styling, and line styles.
  */
 function renderPlot() {
-  const bandwidth = el("sel-bandwidth").value;
-  applyBandwidthReprRestrictions();
+  applyAxisScaleDefaults();
+  let bandwidth = el("sel-bandwidth").value;
+  const bandwidthEligible = canUseBandwidthMode(State.activeTraces);
+  el("sel-bandwidth").disabled = !bandwidthEligible;
+  if (!bandwidthEligible && bandwidth !== "narrowband") {
+    el("sel-bandwidth").value = "narrowband";
+    bandwidth = "narrowband";
+  }
+  applyBandwidthReprRestrictions(bandwidth, bandwidthEligible);
   updateDeltaDropdowns();
+  const deltaState = syncDeltaFactorDisplay(bandwidth);
 
   const repr    = el("sel-repr").value;
   const xscale  = el("sel-xscale").value;
@@ -5901,19 +6613,13 @@ function renderPlot() {
 
   const lockNotes = new Set();
   const effectiveReprs = new Set();
+  const effectiveQuantityKinds = new Set();
   const plotlyTraces = State.activeTraces.map(spec => {
-    // Apply octave conversion if bandwidth is not narrowband
-    let effectiveTd = spec.traceData;
-    if (bandwidth !== "narrowband") {
-      const cacheKey = spec.traceKey + "|" + bandwidth;
-      if (!State.octaveCache.has(cacheKey)) {
-        State.octaveCache.set(cacheKey, PCHParser.computeOctaveBands(spec.traceData, parseInt(bandwidth)));
-      }
-      effectiveTd = State.octaveCache.get(cacheKey);
-    }
+    const effectiveTd = getEffectiveTraceData(spec, bandwidth);
     const result = PCHParser.computeRepresentation(effectiveTd, repr);
     const { x, y } = result;
     if (result.effectiveRepr) effectiveReprs.add(result.effectiveRepr);
+    effectiveQuantityKinds.add(getTraceQuantityKind(effectiveTd));
     if (result.isLocked && result.effectiveRepr) {
       lockNotes.add(`${spec.name} locked to ${result.effectiveRepr}`);
     }
@@ -5922,29 +6628,33 @@ function renderPlot() {
     const displayName = State.simpleLegend
       ? buildSimpleTraceName(State.runs[spec.runIdx].blocks[spec.blockIdx], spec.entityId, spec.component)
       : spec.name;
-    return {
+    const trace = {
       x: Array.from(x),
       y: Array.from(y),
       type: "scatter",
       mode: showMarkers ? "lines+markers" : "lines",
       name: displayName,
       line: { color: ls.color, width: ls.width, dash: ls.dash },
-      marker: showMarkers ? { size: 5, color: ls.color } : undefined,
-      hovertemplate: `<b>${displayName}</b><br>X: %{x:.4g}<br>Y: %{y:.4g}<extra></extra>`,
+      hovertemplate: `<b>${displayName}</b><br>%{y:.4g}<extra></extra>`,
     };
+    if (showMarkers) {
+      trace.marker = { size: 5, color: ls.color };
+    }
+    return trace;
   });
   const allDerived = State.activeTraces.length > 0 && State.activeTraces.every(spec => spec.traceData.storageKind === "DERIVED");
   const effectiveOnlyRepr = effectiveReprs.size === 1 ? Array.from(effectiveReprs)[0] : null;
+  const effectiveOnlyQuantityKind = effectiveQuantityKinds.size === 1 ? Array.from(effectiveQuantityKinds)[0] : null;
   const ylabel = manualYLabel || (
     allDerived && effectiveOnlyRepr
-      ? (REPR_YLABELS[effectiveOnlyRepr] || effectiveOnlyRepr)
-      : (REPR_YLABELS[repr] || repr)
+      ? getQuantityAwareLabel(effectiveOnlyRepr, effectiveOnlyQuantityKind)
+      : getQuantityAwareLabel(repr, effectiveOnlyQuantityKind)
   );
   let reprLockMessage = "";
   if (lockNotes.size > 0) {
     if (allDerived && effectiveOnlyRepr && effectiveOnlyRepr !== repr) {
-      const selectedLabel = REPR_YLABELS[repr] || repr;
-      const effectiveLabel = REPR_YLABELS[effectiveOnlyRepr] || effectiveOnlyRepr;
+      const selectedLabel = getQuantityAwareLabel(repr, effectiveOnlyQuantityKind);
+      const effectiveLabel = getQuantityAwareLabel(effectiveOnlyRepr, effectiveOnlyQuantityKind);
       reprLockMessage = `Imported spreadsheet traces contain ${effectiveLabel} only. ${selectedLabel} is unavailable, so ${effectiveLabel} is being plotted.`;
     } else {
       reprLockMessage = `${lockNotes.size} imported trace(s) are locked to their spreadsheet representation.`;
@@ -5965,11 +6675,6 @@ function renderPlot() {
   }
 
   const domainIsTransient = State.activeTraces[0]?.traceData.domain === "TRANSIENT";
-  const allTransient = State.activeTraces.length > 0 && State.activeTraces.every(s => s.traceData.domain === "TRANSIENT");
-  el("sel-bandwidth").disabled = allTransient;
-  if (allTransient && bandwidth !== "narrowband") {
-    el("sel-bandwidth").value = "narrowband";
-  }
   const defaultXLabel = domainIsTransient ? "Time (s)" : "Frequency (Hz)";
   const titleText = State.plotTitleText !== null ? State.plotTitleText : autoTitle;
   const subtitleText = State.plotSubtitleText !== null ? State.plotSubtitleText : autoSubtitle;
@@ -6025,24 +6730,25 @@ function renderPlot() {
 
   // --- Delta dB trace and secondary Y-axis ---
   let hasDelta = false;
-  const deltaFactor = State.deltaFactor || 10;
   const deltaChartType = State.deltaChartType || "line";
   if (State.deltaTrace1Key && State.deltaTrace2Key) {
     const spec1 = State.activeTraces.find(t => t.traceKey === State.deltaTrace1Key);
     const spec2 = State.activeTraces.find(t => t.traceKey === State.deltaTrace2Key);
-    if (spec1 && spec2) {
-      const delta = computeDeltaDB(spec1, spec2, bandwidth, deltaFactor);
+    if (spec1 && spec2 && deltaState.compatible) {
+      const delta = computeDeltaDB(spec1, spec2, bandwidth);
       if (delta.x.length > 0) {
+        const deltaLabel = buildDeltaLabelText();
         const deltaTrace = {
           x: Array.from(delta.x),
           y: Array.from(delta.y),
-          name: "\u0394 dB",
+          name: deltaLabel,
           yaxis: "y2",
-          hovertemplate: "<b>\u0394 dB</b><br>Freq: %{x:.4g} Hz<br>\u0394: %{y:.2f} dB<extra></extra>",
+          hovertemplate: `<b>${deltaLabel}</b><br>%{y:.2f} dB<extra></extra>`,
         };
         if (deltaChartType === "bar") {
           deltaTrace.type = "bar";
           deltaTrace.marker = { color: "rgba(230,126,34,0.6)", line: { color: "#e67e22", width: 1 } };
+          deltaTrace.width = computeBarWidths(delta.x, xscale === "log");
         } else {
           deltaTrace.type = "scatter";
           deltaTrace.mode = "lines";
@@ -6060,7 +6766,7 @@ function renderPlot() {
     const y2Min = readAxisBound("plot-y2min-input");
     const y2Max = readAxisBound("plot-y2max-input");
     layout.yaxis2 = {
-      title: { text: y2Label || "\u0394 dB", font: { color: "#e67e22" } },
+      title: { text: y2Label || buildDeltaLabelText(), font: { color: "#e67e22" } },
       overlaying: "y",
       side: "right",
       showgrid: false,
@@ -6085,7 +6791,25 @@ function renderPlot() {
     toImageButtonOptions: { format: "svg", filename: "pch_plot", scale: 1 },
   };
 
-  Plotly.react("plotly-div", plotlyTraces, layout, config);
+  if (!validatePlotContainer()) return;
+  try {
+    const sanitizedTraces = plotlyTraces.map(trace => sanitizePlotlyValue(trace));
+    const sanitizedLayout = sanitizePlotlyValue(layout);
+    const sanitizedConfig = sanitizePlotlyValue(config);
+    Plotly.react("plotly-div", sanitizedTraces, sanitizedLayout, sanitizedConfig);
+    if (typeof requestAnimationFrame === "function" && Plotly && Plotly.Plots && typeof Plotly.Plots.resize === "function") {
+      requestAnimationFrame(() => {
+        try {
+          Plotly.Plots.resize("plotly-div");
+        } catch (resizeErr) {
+          reportCriticalError("Plot resize", resizeErr);
+        }
+      });
+    }
+  } catch (renderErr) {
+    reportCriticalError("Plot rendering", renderErr);
+    return;
+  }
   updateTraceCount();
 }
 
@@ -6148,6 +6872,11 @@ const App = {
 
   onReprChange() { renderPlot(); },
   onAxisChange()  { renderPlot(); },
+  onAxisScaleChange(axis) {
+    if (axis === "x") State.xScaleTouched = true;
+    if (axis === "y") State.yScaleTouched = true;
+    renderPlot();
+  },
   onTitleChange() { renderPlot(); },
   onAxisLabelChange() { renderPlot(); },
   onAxisLimitChange() { renderPlot(); },
@@ -6162,12 +6891,9 @@ const App = {
   onDeltaChange() {
     State.deltaTrace1Key = el("sel-delta-trace1").value || null;
     State.deltaTrace2Key = el("sel-delta-trace2").value || null;
-    const show = !!(State.deltaTrace1Key && State.deltaTrace2Key);
-    el("y2-axis-group").style.display = show ? "flex" : "none";
     renderPlot();
   },
   onDeltaSettingChange() {
-    State.deltaFactor = parseInt(el("sel-delta-factor").value) || 10;
     State.deltaChartType = el("sel-delta-chart").value || "line";
     renderPlot();
   },
@@ -6271,6 +6997,18 @@ const App = {
    */
   onEntitySearch(value) {
     applyEntitySearch(value);
+  },
+
+  toggleKeepTreeExpanded(checked) {
+    State.keepTreeExpanded = !!checked;
+    syncTreeControls();
+    if (State.keepTreeExpanded) setAllTreeNodesExpanded(true);
+  },
+
+  collapseTree() {
+    State.keepTreeExpanded = false;
+    syncTreeControls();
+    setAllTreeNodesExpanded(false);
   },
 
   clearAllTraces() {
@@ -6409,18 +7147,10 @@ const App = {
     const scope = document.querySelector("input[name='csv-scope']:checked")?.value || "displayed";
     const bandwidth = el("sel-bandwidth").value;
     if (scope === "displayed") {
-      return State.activeTraces.map(spec => {
+      const traces = State.activeTraces.map(spec => {
         const run = State.runs[spec.runIdx];
         const blk = run.blocks[spec.blockIdx];
-        // Apply octave conversion if bandwidth is active
-        let td = spec.traceData;
-        if (bandwidth !== "narrowband") {
-          const cacheKey = spec.traceKey + "|" + bandwidth;
-          if (!State.octaveCache.has(cacheKey)) {
-            State.octaveCache.set(cacheKey, PCHParser.computeOctaveBands(td, parseInt(bandwidth)));
-          }
-          td = State.octaveCache.get(cacheKey);
-        }
+        const td = getEffectiveTraceData(spec, bandwidth);
         return {
           runName: run.sourceRunName || run.runName,
           scId: getBlockSubcaseKey(blk),
@@ -6437,6 +7167,9 @@ const App = {
           traceData: td,
         };
       });
+      const deltaTrace = buildDisplayedDeltaExportTrace(bandwidth);
+      if (deltaTrace) traces.push(deltaTrace);
+      return traces;
     } else {
       // All loaded data
       const out = [];
@@ -6526,7 +7259,7 @@ const App = {
     if (traces.length === 0) {
       warn.classList.toggle("visible", filtered.skipped.length > 0);
       warn.textContent = filtered.skipped.length > 0
-        ? "Raw export is unavailable for representation-locked spreadsheet traces."
+        ? "Raw export is unavailable for derived traces such as representation-locked spreadsheet traces and delta dB overlays."
         : "";
       preview.innerHTML = "<em>No traces to export.</em>";
       return;
@@ -6540,7 +7273,7 @@ const App = {
       warn.classList.remove("visible");
     }
     if (filtered.skipped.length > 0) {
-      warningMsgs.push(`${filtered.skipped.length} representation-locked spreadsheet trace(s) will be skipped for raw export.`);
+      warningMsgs.push(`${filtered.skipped.length} derived trace(s) will be skipped for raw export.`);
     }
     warn.classList.toggle("visible", warningMsgs.length > 0);
     if (warningMsgs.length > 0) warn.textContent = warningMsgs.join(" ");
@@ -6568,6 +7301,7 @@ const App = {
     groups.forEach((g, gi) => {
       const fname = groups.length > 1 ? `pch_export_grid${gi+1}.csv` : "pch_export.csv";
       const nTraces = g.traces.length;
+      const traceReprLabels = repr === "raw" ? [] : g.traces.map(t => getCsvTraceReprLabel(t, currentRepr));
 
       // Build header rows
       const rows = [];
@@ -6581,7 +7315,7 @@ const App = {
         ["Entity Label",   ...g.traces.map(t => t.entityLabel || "")],
         ["Direction",      ...g.traces.map(t => t.componentLabel || t.component)],
         ["Element Type",   ...g.traces.map(t => t.family === "ELEMENT_FORCES" ? (t.elementType || "") : "")],
-        ["Representation", ...g.traces.map(() => reprLabel)],
+        ["Representation", ...g.traces.map((t, idx) => traceReprLabels[idx] || reprLabel)],
       ];
       if (repr === "raw") {
         // Each trace becomes two columns: Real, Imaginary
@@ -6603,14 +7337,14 @@ const App = {
 
       // Column header row
       if (repr === "raw") {
-        const colHdrs = ["Frequency_Hz", ...g.traces.flatMap(t => [
-          `${t.runName}|${subcaseHeaderToken(t)}|${entityHeaderToken(t)}|${t.componentLabel || t.component}|Re`,
-          `${t.runName}|${subcaseHeaderToken(t)}|${entityHeaderToken(t)}|${t.componentLabel || t.component}|Im`,
-        ])];
+        const colHdrs = ["Frequency_Hz", ...g.traces.flatMap(t => {
+          const header = getCsvColumnHeader(t, currentRepr, repr);
+          return [header.re, header.im];
+        })];
         rows.push(colHdrs.map(v => `"${v.replace(/"/g,'""')}"`).join(","));
       } else {
         const colHdrs = ["Frequency_Hz", ...g.traces.map(t =>
-          `${t.runName}|${subcaseHeaderToken(t)}|${entityHeaderToken(t)}|${t.componentLabel || t.component}|${reprLabel}`
+          getCsvColumnHeader(t, currentRepr, repr)
         )];
         rows.push(colHdrs.map(v => `"${v.replace(/"/g,'""')}"`).join(","));
       }
@@ -6647,7 +7381,7 @@ const App = {
     });
 
     App.closeCsvExport();
-    const skippedMsg = filtered.skipped.length > 0 ? ` Skipped ${filtered.skipped.length} representation-locked trace(s) for raw export.` : "";
+    const skippedMsg = filtered.skipped.length > 0 ? ` Skipped ${filtered.skipped.length} derived trace(s) for raw export.` : "";
     setStatus(`Exported ${groups.length} CSV file(s).${skippedMsg}`);
   },
 
@@ -6903,6 +7637,16 @@ function escHtml(s) {
   return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
 
+window.addEventListener("error", event => {
+  const err = event && (event.error || event.message);
+  reportCriticalError("Runtime", err);
+});
+
+window.addEventListener("unhandledrejection", event => {
+  const reason = event && event.reason ? event.reason : "Unhandled promise rejection";
+  reportCriticalError("Promise rejection", reason);
+});
+
 // ---------------------------------------------------------------------------
 // Initial render (empty plot)
 // ---------------------------------------------------------------------------
@@ -6915,7 +7659,7 @@ if (plotDiv && typeof plotDiv.on === "function") {
     syncTitleFromRelayout(relayoutData);
   });
 }
-setStatus("Ready. Import a .pch file to begin.");
+setStatus("Ready. Import a .pch, .csv, or .xlsx file to begin.");
 
 </script>
 </body>
