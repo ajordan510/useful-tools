@@ -1,0 +1,37 @@
+const {chromium}=require('playwright'),fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const {pathToFileURL}=require('node:url');
+(async()=>{
+ const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe'});
+ const page=await browser.newPage({viewport:{width:1440,height:1100}}),errors=[],requests=[];
+ page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(/^https?:/.test(r.url()))requests.push(r.url());});
+ const qa=path.join(__dirname,'_qa');
+ await page.goto(pathToFileURL(path.join(__dirname,'rocket_acoustics.html')).href);
+ await page.waitForFunction(()=>document.querySelector('#status').textContent.startsWith('Prediction complete'));
+ await page.click('[data-tab="verification"]');
+ assert.ok(await page.locator('#publishedCSV').isDisabled());
+ await page.click('#runPublished');
+ assert.equal(await page.locator('#publishedRows tr').count(),21);
+ assert.match(await page.locator('#publishedMetrics').textContent(),/13.11/);
+ assert.match(await page.locator('#publishedDomain').textContent(),/14 in-range centers/);
+ assert.equal(await page.locator('#publishedSpectrum svg').count(),1);
+ await page.locator('#publishedPanel').screenshot({path:path.join(qa,'published-comparison.png')});
+ async function save(id,name){const d=page.waitForEvent('download');await page.click(id);const download=await d;await download.saveAs(path.join(qa,name));return fs.readFileSync(path.join(qa,name),'utf8');}
+ const csv=await save('#publishedCSV','published-comparison.csv');
+ assert.equal(csv.split('\r\n').length,27);assert.match(csv,/not a verification pass/);
+ const report=await save('#publishedReport','published-comparison.html');
+ assert.match(report,/sourceSha256/);assert.match(report,/353.496/);assert.ok(!report.includes('<button'));
+ await page.click('#loadPublished');await page.waitForFunction(()=>document.querySelector('#status').textContent.startsWith('Prediction complete'));
+ assert.equal(await page.inputValue('#model'),'dsm2');assert.equal(await page.inputValue('#thrust'),'794.3');
+ assert.match(await page.locator('#pinLabel').textContent(),/published prediction/);
+ assert.ok(Math.abs(await page.evaluate(()=>result.W)-14)<1e-12);
+ const loaded=await save('#report','published-calculator-report.html');assert.match(loaded,/smith2013-figure53/);
+ await page.fill('#thrust','800');assert.ok(await page.locator('#report').isDisabled());
+ await page.click('[data-tab="verification"]');
+ assert.match(await page.locator('#publishedMetrics').textContent(),/13.11/,'Fixed case does not follow calculator edits');
+ await page.setViewportSize({width:390,height:844});
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+ await page.locator('#publishedPanel').screenshot({path:path.join(qa,'published-comparison-mobile.png')});
+ assert.deepEqual(errors,[]);assert.deepEqual(requests,[]);
+ fs.writeFileSync(path.join(__dirname,'reference/published-browser-results.json'),JSON.stringify({passed:['Offline fixed-case overlay and residuals','CSV/report provenance','Load calculator and pinned source curve','Stale calculator protection; fixed case isolation','390px layout'],errors,networkRequests:requests},null,2)+'\n');
+ await browser.close();console.log('PASS published comparison browser checks');
+})().catch(e=>{console.error(e);process.exit(1);});

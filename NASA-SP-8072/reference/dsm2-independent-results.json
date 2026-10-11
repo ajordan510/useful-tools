@@ -1,10 +1,11 @@
 {
   "method": "Continuous plume integration with SciPy quad and exact piecewise power-law band integration, versus 960 midpoint slices. Same digitized NASA curves; not physical validation.",
-  "cases": 4,
-  "band_comparisons": 124,
+  "cases": 5,
+  "band_comparisons": 145,
   "tolerance_dB": 0.02,
   "checks": [
     {
+      "case_name": "Reference engine \u2022 free plume",
       "core": "eldred",
       "terminated_bend": false,
       "slices": 960,
@@ -77,6 +78,7 @@
       ]
     },
     {
+      "case_name": "Reference engine \u2022 free plume",
       "core": "eldred",
       "terminated_bend": true,
       "slices": 960,
@@ -149,6 +151,7 @@
       ]
     },
     {
+      "case_name": "Reference engine \u2022 free plume",
       "core": "varnier",
       "terminated_bend": false,
       "slices": 960,
@@ -221,6 +224,7 @@
       ]
     },
     {
+      "case_name": "Reference engine \u2022 free plume",
       "core": "varnier",
       "terminated_bend": true,
       "slices": 960,
@@ -290,6 +294,59 @@
         119.0144633549597,
         117.25336081424543,
         115.31901553312287
+      ]
+    },
+    {
+      "case_name": "Smith 2013 \u00b7 free-jet comparison",
+      "core": "eldred",
+      "terminated_bend": false,
+      "slices": 960,
+      "maximum_band_error_dB": 0.00014911453169474953,
+      "expected_band_levels": [
+        86.50941649662047,
+        88.82316306226834,
+        91.11821558010801,
+        93.37492013899296,
+        95.44352771693843,
+        97.28741045034356,
+        98.95395455513062,
+        100.37120807313664,
+        101.47181862678477,
+        102.12495616454083,
+        102.35027141496835,
+        102.20907151662759,
+        101.7023460278549,
+        100.86746078556105,
+        99.85816990125771,
+        98.75555059542967,
+        97.5553113636544,
+        96.30646741494292,
+        95.03528837738517,
+        93.7512115098055,
+        92.45715269474692
+      ],
+      "actual_band_levels": [
+        86.50926738208878,
+        88.82301797460002,
+        91.11807782891158,
+        93.37479216221092,
+        95.44341790122606,
+        97.28732972261933,
+        98.95390867391647,
+        100.3712012549277,
+        101.47184289539533,
+        102.12499944705928,
+        102.35032609466158,
+        102.20912720286172,
+        101.70238569924079,
+        100.86747409074282,
+        99.8581567706197,
+        98.7555160100238,
+        97.55526094766255,
+        96.30641318814462,
+        95.0352323290788,
+        93.751154127216,
+        92.45709843718593
       ]
     }
   ]

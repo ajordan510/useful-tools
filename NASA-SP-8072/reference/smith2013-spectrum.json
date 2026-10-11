@@ -1,0 +1,233 @@
+{
+  "id": "smith2013-figure53",
+  "title": "Smith (2013) \u00b7 free jet \u00b7 45\u00b0 receiver",
+  "source": "https://auetd.auburn.edu/handle/10415/3954",
+  "figure": "Figure 53, printed p. 63 / PDF p. 79",
+  "sourceSha256": "26f58ce09e8f0283bdb8a4f74f37d75f7b1798446a5481740a6327f5d09b1d91",
+  "curve": "Red SPL Prediction curve; published DSM-II variant, not measurements or blue SSDL",
+  "readingPrecisionDb": 0.5,
+  "frequencyBasis": "Published base-2 third-octave curve sampled at workbench base-10 centers; approximate interpolation, not exact band-energy rebinning.",
+  "readingNote": "Estimated graph-reading precision only, not experimental or model uncertainty.",
+  "calibration": {
+    "imageSize": [
+      478,
+      368
+    ],
+    "x10Hz": 47.5,
+    "x10000Hz": 403.5,
+    "y120dB": 37.5,
+    "y40dB": 327.5
+  },
+  "samples": [
+    {
+      "frequency": 100.0,
+      "level": 57.057,
+      "pixelX": 166.16666666666669,
+      "pixelY": 265.66666666666663,
+      "bracketingColumns": [
+        166,
+        167
+      ]
+    },
+    {
+      "frequency": 125.89254117941672,
+      "level": 63.88,
+      "pixelX": 178.03333333333333,
+      "pixelY": 240.93333333333334,
+      "bracketingColumns": [
+        178,
+        179
+      ]
+    },
+    {
+      "frequency": 158.48931924611134,
+      "level": 70.69,
+      "pixelX": 189.9,
+      "pixelY": 216.25,
+      "bracketingColumns": [
+        189,
+        190
+      ]
+    },
+    {
+      "frequency": 199.526231496888,
+      "level": 77.251,
+      "pixelX": 201.76666666666668,
+      "pixelY": 192.46666666666664,
+      "bracketingColumns": [
+        201,
+        202
+      ]
+    },
+    {
+      "frequency": 251.188643150958,
+      "level": 82.977,
+      "pixelX": 213.63333333333333,
+      "pixelY": 171.70833333333334,
+      "bracketingColumns": [
+        213,
+        215
+      ]
+    },
+    {
+      "frequency": 316.22776601683796,
+      "level": 85.172,
+      "pixelX": 225.5,
+      "pixelY": 163.75,
+      "bracketingColumns": [
+        225,
+        226
+      ]
+    },
+    {
+      "frequency": 398.1071705534972,
+      "level": 87.223,
+      "pixelX": 237.36666666666667,
+      "pixelY": 156.31666666666666,
+      "bracketingColumns": [
+        237,
+        238
+      ]
+    },
+    {
+      "frequency": 501.18723362727224,
+      "level": 88.754,
+      "pixelX": 249.23333333333335,
+      "pixelY": 150.76666666666665,
+      "bracketingColumns": [
+        249,
+        250
+      ]
+    },
+    {
+      "frequency": 630.9573444801932,
+      "level": 90.069,
+      "pixelX": 261.1,
+      "pixelY": 146.0,
+      "bracketingColumns": [
+        261,
+        262
+      ]
+    },
+    {
+      "frequency": 794.3282347242815,
+      "level": 91.034,
+      "pixelX": 272.9666666666667,
+      "pixelY": 142.5,
+      "bracketingColumns": [
+        272,
+        273
+      ]
+    },
+    {
+      "frequency": 1000.0,
+      "level": 91.724,
+      "pixelX": 284.83333333333337,
+      "pixelY": 140.0,
+      "bracketingColumns": [
+        284,
+        285
+      ]
+    },
+    {
+      "frequency": 1258.9254117941673,
+      "level": 92.234,
+      "pixelX": 296.70000000000005,
+      "pixelY": 138.14999999999998,
+      "bracketingColumns": [
+        296,
+        297
+      ]
+    },
+    {
+      "frequency": 1584.8931924611136,
+      "level": 92.414,
+      "pixelX": 308.56666666666666,
+      "pixelY": 137.5,
+      "bracketingColumns": [
+        308,
+        309
+      ]
+    },
+    {
+      "frequency": 1995.2623149688795,
+      "level": 92.354,
+      "pixelX": 320.43333333333334,
+      "pixelY": 137.71666666666667,
+      "bracketingColumns": [
+        320,
+        321
+      ]
+    },
+    {
+      "frequency": 2511.8864315095802,
+      "level": 91.724,
+      "pixelX": 332.3,
+      "pixelY": 140.0,
+      "bracketingColumns": [
+        332,
+        333
+      ]
+    },
+    {
+      "frequency": 3162.2776601683795,
+      "level": 91.448,
+      "pixelX": 344.1666666666667,
+      "pixelY": 141.0,
+      "bracketingColumns": [
+        344,
+        345
+      ]
+    },
+    {
+      "frequency": 3981.0717055349724,
+      "level": 91.034,
+      "pixelX": 356.03333333333336,
+      "pixelY": 142.5,
+      "bracketingColumns": [
+        356,
+        357
+      ]
+    },
+    {
+      "frequency": 5011.872336272722,
+      "level": 90.759,
+      "pixelX": 367.90000000000003,
+      "pixelY": 143.5,
+      "bracketingColumns": [
+        367,
+        368
+      ]
+    },
+    {
+      "frequency": 6309.573444801933,
+      "level": 90.345,
+      "pixelX": 379.76666666666665,
+      "pixelY": 145.0,
+      "bracketingColumns": [
+        379,
+        380
+      ]
+    },
+    {
+      "frequency": 7943.282347242815,
+      "level": 89.756,
+      "pixelX": 391.63333333333327,
+      "pixelY": 147.13333333333327,
+      "bracketingColumns": [
+        391,
+        392
+      ]
+    },
+    {
+      "frequency": 10000.0,
+      "level": 89.241,
+      "pixelX": 403.5,
+      "pixelY": 149.0,
+      "bracketingColumns": [
+        403,
+        404
+      ]
+    }
+  ]
+}

@@ -23,7 +23,7 @@ sn=exact_integral(d['fig13'],1e-9,1e7,10,-30)
 an=exact_integral(d['fig12'],.1,5,0,0)
 srgrid=np.log10(d['fig10Sr']);angles=np.array(d['fig10Theta']);dis=np.array(d['fig10DI'])
 def directivity(sr,theta):return np.interp(math.log10(np.clip(sr,.004,.4)),srgrid,[np.interp(np.clip(theta,20,180),angles,row) for row in dis])
-script="""const E=require('./engine.js');let out=[];for(const core of ['eldred','varnier'])for(const bent of [false,true]){let c={...E.defaults(),model:'dsm2',core,deflection:bent?8:0,terminate:bent,slices:960,receivers:[{name:'structure',x:-30,y:10}]};let r=E.predict(c);out.push({c,frequencies:r.bands.map(b=>b.f),actual:r.receivers[0].levels});}console.log(JSON.stringify(out));"""
+script="""const E=require('./engine.js');let out=[];for(const core of ['eldred','varnier'])for(const bent of [false,true]){let c={...E.defaults(),model:'dsm2',core,deflection:bent?8:0,terminate:bent,slices:960,receivers:[{name:'structure',x:-30,y:10}]};let r=E.predict(c);out.push({c,frequencies:r.bands.map(b=>b.f),actual:r.receivers[0].levels});}{const c={...require('./published-case.js').caseInputs(),slices:960},r=E.predict(c);out.push({c,frequencies:r.bands.map(b=>b.f),actual:r.receivers[0].levels});}console.log(JSON.stringify(out));"""
 cases=json.loads(subprocess.check_output(['node','-e',script],cwd=R,text=True,encoding='utf-8'));checks=[]
 for case in cases:
     c=case['c'];D=c['diameter'];core=(3.45 if c['core']=='eldred' else 1.75)*D*(1+.38*c['mach'])**2
@@ -43,6 +43,6 @@ for case in cases:
         integral=quad(fun,.1,5,points=sorted(set(points)),epsabs=1e-14,epsrel=2e-6,limit=250)[0]
         ref.append(10*math.log10(power/1e-12*integral))
     errors=np.abs(np.array(case['actual'])-ref);maximum=float(max(errors));assert maximum<.02,maximum
-    checks.append({'core':c['core'],'terminated_bend':c['terminate'],'slices':960,'maximum_band_error_dB':maximum,'expected_band_levels':ref,'actual_band_levels':case['actual']})
+    checks.append({'case_name':c['name'],'core':c['core'],'terminated_bend':c['terminate'],'slices':960,'maximum_band_error_dB':maximum,'expected_band_levels':ref,'actual_band_levels':case['actual']})
 result={'method':'Continuous plume integration with SciPy quad and exact piecewise power-law band integration, versus 960 midpoint slices. Same digitized NASA curves; not physical validation.','cases':len(checks),'band_comparisons':sum(len(x['actual_band_levels']) for x in checks),'tolerance_dB':.02,'checks':checks}
 (R/'reference/dsm2-independent-results.json').write_text(json.dumps(result,indent=2));print('PASS',[(v['core'],v['terminated_bend'],v['maximum_band_error_dB']) for v in checks])

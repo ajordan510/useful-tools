@@ -37,7 +37,7 @@ Read [RESEARCH.md](RESEARCH.md) for the literature assessment, equations, source
 
 - 21 engine test groups cover physical scaling, power conservation, geometric spreading, reflection, core/bend behavior, convergence and invalid inputs.
 - 992 DSM-I/modern band comparisons against an independent Python/SciPy reference: maximum difference **0.000102 dB**.
-- An independent continuous-source DSM-II integration checks 124 additional band results against 960-slice predictions; see the saved result file for residuals.
+- An independent continuous-source DSM-II integration checks 145 additional band results against 960-slice predictions; see the saved result file for residuals.
 - Browser tests cover all models, offline operation, charts, exports, import, stale results, invalid inputs and a 390-pixel mobile viewport.
 - A published Stennis check reproduces **10.58 MW → 190.244857 dB**, consistent with the report's rounded **190.25 dB**. This checks the power-level conversion only.
 - Published measured receiver cases were found, but incomplete public inputs prevent an exact end-to-end replication. No measured receiver-accuracy claim is made.
@@ -74,3 +74,9 @@ Run from this directory. Python physics verification requires NumPy and SciPy. W
 Build again whenever the engine, interface or data changes. The distributable is self-contained and can be copied anywhere. The local `research/` source downloads and `_qa/` screenshots are ignored by Git.
 
 Version 1.0.0, 2026-10-11. SATURN-derived components retain their Apache-2.0 attribution and license; see [NOTICE.txt](NOTICE.txt) and [vendor/SATURN-LICENSE.txt](vendor/SATURN-LICENSE.txt).
+
+## Published spectrum comparison
+
+In **Verification & audit**, select **Run published comparison** for Smith (2013), Figure 53. This is a laboratory-jet DSM-II reconstruction with a published prediction overlay, residual plot, complete inputs, source excerpt, CSV spreadsheet and HTML report. **Load case + overlay in calculator** supports sensitivity work. The comparison differs substantially (13.11 dB RMS); it is explicitly **unresolved**, not a verification pass or full-scale rocket validation. See [case research and audit](reference/PUBLISHED_CASE.md).
+
+Checks: `node NASA-SP-8072/test_published.cjs`, `node NASA-SP-8072/test_published_browser.cjs`, and `python NASA-SP-8072/verify_dsm2.py`. The last now checks 145 bands across five cases, including this jet. Regenerating the digitization requires the original university PDF saved as `research/smith2013.pdf`; run `python NASA-SP-8072/digitize_smith.py`.

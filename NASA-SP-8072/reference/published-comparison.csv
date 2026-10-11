@@ -1,0 +1,27 @@
+# Unresolved comparison — not a verification pass
+# Source: https://auetd.auburn.edu/handle/10415/3954; Figure 53, printed p. 63 / PDF p. 79
+# Published curve: Red SPL Prediction curve; published DSM-II variant, not measurements or blue SSDL
+# Estimated graph-reading precision: +/-0.5 dB (not model uncertainty)
+# Case JSON: {"schema":"rocket-acoustics-1","name":"Smith 2013 · free-jet comparison","notes":"Reconstruction of Smith (2013), Section 3.4, Tables 8–9 and Figure 53. Laboratory air jet, not rocket validation. F=794.3 N, U=406.6 m/s, D=0.073 m, M=1.15; 14 W acoustic power from Table 9 encoded as equivalent efficiency, not a fitted rocket efficiency. Receiver x=+3.5 m, y=3.5 m (paper Z=-3.5 m); 45 degrees from downstream at the nozzle. Ambient sound speed derived from 311 K using gamma=1.4, R=287. Workbench uses normalized historical curves, Eldred directivity, 240 slices over 0.1–5 core lengths. Smith uses fitted curves and Wilby third directivity; saved settings and the external source-power dataset referenced by the appended code are unavailable; code-to-figure provenance is unresolved. Comparison has unresolved differences; no verification pass claimed. Source: https://auetd.auburn.edu/handle/10415/3954","thrust":794.3,"velocity":406.6,"diameter":0.073,"mach":1.15,"engines":1,"eta":0.008669740419921353,"model":"dsm2","core":"eldred","normalize":true,"cluster":"merged","directivity":"legacy","propagation":"none","reflection":0,"margin":0,"fmin":100,"fmax":10000,"slices":240,"deflection":0,"bend":0,"terminate":false,"c0":353.49653463647985,"receivers":[{"name":"45° · Figure 53","x":3.5,"y":3.5}]}
+frequency_Hz,workbench_SPL_dB,published_SPL_dB,workbench_minus_published_dB,directivity_boundary_held
+100,86.50926182169906,57.057,29.452261821699054,false
+125.89254117941672,88.82301344968349,63.88,24.943013449683484,false
+158.48931924611134,91.11807418922704,70.69,20.428074189227047,false
+199.526231496888,93.3747890397923,77.251,16.1237890397923,false
+251.188643150958,95.44341608135692,82.977,12.466416081356911,false
+316.22776601683796,97.28732953463019,85.172,12.115329534630192,false
+398.1071705534972,98.95391220710414,87.223,11.73091220710414,false
+501.18723362727224,100.37120309014263,88.754,11.617203090142624,false
+630.9573444801932,101.47184370300212,90.069,11.40284370300212,false
+794.3282347242815,102.12499171133521,91.034,11.090991711335207,false
+1000,102.35031836548126,91.724,10.626318365481254,false
+1258.9254117941673,102.20911253088892,92.234,9.975112530888921,false
+1584.8931924611136,101.70235853527323,92.414,9.288358535273233,false
+1995.2623149688795,100.86745512498497,92.354,8.513455124984972,false
+2511.8864315095802,99.85813435990131,91.724,8.13413435990131,true
+3162.2776601683795,98.7554925899033,91.448,7.307492589903305,true
+3981.0717055349724,97.55523262583314,91.034,6.521232625833136,true
+5011.872336272722,96.30640046893146,90.759,5.547400468931457,true
+6309.573444801933,95.0352415123114,90.345,4.6902415123114025,true
+7943.282347242815,93.75118652384984,89.756,3.9951865238498385,true
+10000,92.45720461745725,89.241,3.216204617457251,true

@@ -100,5 +100,23 @@
     "render_scale": 2.5,
     "processing": "Page crop and rasterization only; original axes, curves and captions retained.",
     "source_sha256": "1ec9dc23eca6690935dd9cbfa42af47f758d4f726603400036f50f784d1516c5"
+  },
+  {
+    "file": "smith2013-figure53.png",
+    "source": "smith2013.pdf",
+    "source_url": "https://auetd.auburn.edu/handle/10415/3954",
+    "figure": "Figure 53",
+    "printed_page": "63",
+    "pdf_page": 79,
+    "crop_pdf_points": [
+      136.55999755859375,
+      106.80181884765625,
+      510.9659118652344,
+      394.80450439453125
+    ],
+    "render_scale": 2,
+    "processing": "Original plot excerpt with axes and legend; no curve alterations. Attribution outside crop.",
+    "source_sha256": "26f58ce09e8f0283bdb8a4f74f37d75f7b1798446a5481740a6327f5d09b1d91",
+    "rights": "Copyright 2013 Wesley Oliver Smith III. Limited excerpt for technical comparison; no endorsement."
   }
 ]

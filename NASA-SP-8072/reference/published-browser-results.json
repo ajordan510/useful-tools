@@ -1,0 +1,11 @@
+{
+  "passed": [
+    "Offline fixed-case overlay and residuals",
+    "CSV/report provenance",
+    "Load calculator and pinned source curve",
+    "Stale calculator protection; fixed case isolation",
+    "390px layout"
+  ],
+  "errors": [],
+  "networkRequests": []
+}

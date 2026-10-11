@@ -74,7 +74,7 @@ This verifies the equations and the conversion of the released directivity data.
 
 ### Independent DSM-II continuous-source integration
 
-`python verify_dsm2.py`: **4 cases × 31 bands = 124 band comparisons**.
+`python verify_dsm2.py`: **4 heritage cases × 31 bands + 21 laboratory-jet bands = 145 band comparisons**.
 
 This reference uses analytic integrals for the piecewise power-law spectra and SciPy adaptive quadrature along the continuous plume. It compares with 960 production slices for both core definitions, free plumes and bent/terminated plumes.
 
@@ -84,6 +84,7 @@ This reference uses analytic integrals for the piecewise power-law spectra and S
 | Varnier, free plume | 0.000151454 |
 | Eldred, terminated bend | 0.000154674 |
 | Varnier, terminated bend | 0.000154674 |
+| Smith laboratory-jet reconstruction, Eldred | 0.000149115 |
 
 Acceptance tolerance is 0.02 dB. The separate 240-versus-960-slice test verifies the default-resolution behavior within 0.06 dB at the tested receivers. The 60-slice map is a visualization approximation; it does not replace the receiver results.
 
@@ -164,3 +165,11 @@ Primary sources and exact implementation rules are in [RESEARCH.md](RESEARCH.md)
 - The original Haynes–Kenny Figure 8 caption specifies a 45 m vehicle station, not the previously stated 152 m. The verification panel now reports the correct 85 m / 45 m pair. The included comparison is Figure 7 (85 m).
 - The geometry diagram reports validated case inputs and calculated core/source-span values. Tests cover inactive bends, 0/30/90/170-degree turns, preserved/terminated cores, a deflector beyond the source span, and models where core/bend controls do not apply. Angle β measures the outgoing centerline relative to +x; it is not a hardware plate angle. The diamond is a turn-station symbol, not an inferred deflector shape. Geometry is schematic, not to scale.
 - Reviewed layouts at desktop and mobile widths, source-image loading, figure enlargement/keyboard dismissal, stale-case summaries, report/SVG exports and workbook round trips. These documentation and visualization changes do not add physical validation or modify the prediction equations.
+
+## Follow-up: published spectrum comparison
+
+Added Smith (2013), Figure 53 as an explicitly unresolved laboratory-jet comparison. The published curve is independently digitized, source-hashed and sampled at matching workbench frequencies (approximate interpolation from the paper’s base-2 bands). Input mapping checks preserve 14 W acoustic power and the 4.950 m receiver radius. Positive residual means workbench minus published. The full result is 13.11 dB RMS / 29.45 dB maximum difference, not a passing criterion.
+
+The case is also checked by independent continuous-plume integration. Convergence, normalization and ambient-temperature diagnostics do not explain the published mismatch. Reviewed source-model differences and the appended code’s unreleased `matlab.mat` dependency; Figure 53 code-to-output provenance remains unresolved. No prediction equations or model data were changed. See [detailed audit](reference/PUBLISHED_CASE.md) and `reference/published-comparison-results.json`.
+
+Browser checks cover fixed-case isolation, source overlay, residuals, CSV/report provenance, loading into the calculator, stale exports, offline operation and mobile layout. The comparison panel and exported reports state the failed agreement clearly. This audit is a secondary technical review, not independent professional sign-off.

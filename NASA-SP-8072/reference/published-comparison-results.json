@@ -1,0 +1,170 @@
+{
+  "status": "Unresolved comparison — not a verification pass",
+  "source": "https://auetd.auburn.edu/handle/10415/3954",
+  "metrics": {
+    "bands": 21,
+    "bias": 11.389808194418533,
+    "rmse": 13.105824638675768,
+    "maxAbsolute": 29.452261821699054
+  },
+  "unclampedMetrics": {
+    "bands": 14,
+    "bias": 14.269577098900106,
+    "rmse": 15.505408869739787,
+    "maxAbsolute": 29.452261821699054
+  },
+  "numericalDiagnostics": {
+    "maxSliceChange240to960Db": 0.0001061802713167026,
+    "maxNormalizationChangeDb": 0.8412769664991231,
+    "maxAmbientChange311to300KDb": 0.15612427323804923
+  },
+  "rows": [
+    {
+      "frequency": 100,
+      "published": 57.057,
+      "predicted": 86.50926182169906,
+      "residual": 29.452261821699054,
+      "directivityClamped": false
+    },
+    {
+      "frequency": 125.89254117941672,
+      "published": 63.88,
+      "predicted": 88.82301344968349,
+      "residual": 24.943013449683484,
+      "directivityClamped": false
+    },
+    {
+      "frequency": 158.48931924611134,
+      "published": 70.69,
+      "predicted": 91.11807418922704,
+      "residual": 20.428074189227047,
+      "directivityClamped": false
+    },
+    {
+      "frequency": 199.526231496888,
+      "published": 77.251,
+      "predicted": 93.3747890397923,
+      "residual": 16.1237890397923,
+      "directivityClamped": false
+    },
+    {
+      "frequency": 251.188643150958,
+      "published": 82.977,
+      "predicted": 95.44341608135692,
+      "residual": 12.466416081356911,
+      "directivityClamped": false
+    },
+    {
+      "frequency": 316.22776601683796,
+      "published": 85.172,
+      "predicted": 97.28732953463019,
+      "residual": 12.115329534630192,
+      "directivityClamped": false
+    },
+    {
+      "frequency": 398.1071705534972,
+      "published": 87.223,
+      "predicted": 98.95391220710414,
+      "residual": 11.73091220710414,
+      "directivityClamped": false
+    },
+    {
+      "frequency": 501.18723362727224,
+      "published": 88.754,
+      "predicted": 100.37120309014261,
+      "residual": 11.61720309014261,
+      "directivityClamped": false
+    },
+    {
+      "frequency": 630.9573444801932,
+      "published": 90.069,
+      "predicted": 101.47184370300212,
+      "residual": 11.40284370300212,
+      "directivityClamped": false
+    },
+    {
+      "frequency": 794.3282347242815,
+      "published": 91.034,
+      "predicted": 102.12499171133521,
+      "residual": 11.090991711335207,
+      "directivityClamped": false
+    },
+    {
+      "frequency": 1000,
+      "published": 91.724,
+      "predicted": 102.35031836548126,
+      "residual": 10.626318365481254,
+      "directivityClamped": false
+    },
+    {
+      "frequency": 1258.9254117941673,
+      "published": 92.234,
+      "predicted": 102.20911253088892,
+      "residual": 9.975112530888921,
+      "directivityClamped": false
+    },
+    {
+      "frequency": 1584.8931924611136,
+      "published": 92.414,
+      "predicted": 101.70235853527323,
+      "residual": 9.288358535273233,
+      "directivityClamped": false
+    },
+    {
+      "frequency": 1995.2623149688795,
+      "published": 92.354,
+      "predicted": 100.86745512498497,
+      "residual": 8.513455124984972,
+      "directivityClamped": false
+    },
+    {
+      "frequency": 2511.8864315095802,
+      "published": 91.724,
+      "predicted": 99.85813435990131,
+      "residual": 8.13413435990131,
+      "directivityClamped": true
+    },
+    {
+      "frequency": 3162.2776601683795,
+      "published": 91.448,
+      "predicted": 98.7554925899033,
+      "residual": 7.307492589903305,
+      "directivityClamped": true
+    },
+    {
+      "frequency": 3981.0717055349724,
+      "published": 91.034,
+      "predicted": 97.55523262583314,
+      "residual": 6.521232625833136,
+      "directivityClamped": true
+    },
+    {
+      "frequency": 5011.872336272722,
+      "published": 90.759,
+      "predicted": 96.30640046893146,
+      "residual": 5.547400468931457,
+      "directivityClamped": true
+    },
+    {
+      "frequency": 6309.573444801933,
+      "published": 90.345,
+      "predicted": 95.0352415123114,
+      "residual": 4.6902415123114025,
+      "directivityClamped": true
+    },
+    {
+      "frequency": 7943.282347242815,
+      "published": 89.756,
+      "predicted": 93.75118652384984,
+      "residual": 3.9951865238498385,
+      "directivityClamped": true
+    },
+    {
+      "frequency": 10000,
+      "published": 89.241,
+      "predicted": 92.45720461745725,
+      "residual": 3.216204617457251,
+      "directivityClamped": true
+    }
+  ]
+}

@@ -20,3 +20,5 @@ and technical comparison, not as new work or results of this application.
 Original figure content is retained; changes are limited to page cropping
 and rasterization. See figures/provenance.json for source URLs, pages,
 crop bounds and original PDF hashes.
+
+Smith (2013), Figure 53 excerpt: Copyright 2013 Wesley Oliver Smith III. Source: Auburn University dissertation, https://auetd.auburn.edu/handle/10415/3954, printed p.63 / PDF p.79. Limited figure excerpt for technical comparison. Numeric readings independently digitized; not author-supplied data. No endorsement or license of the original dissertation is implied.
