@@ -1,0 +1,14 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+const dir=path.dirname(fileURLToPath(import.meta.url));
+const read=p=>fs.readFileSync(path.join(dir,p),'utf8');
+let html=read('app.template.html');
+html=html.replace('<!--__APPROACH__-->',()=>read('approach-guide.html').replace('<!--__METHOD_DETAILS__-->',()=>read('method-details.html')).replace('<!--__METHOD_REFERENCES__-->',()=>read('method-references.html')));
+html=html.replace('/*__APPROACH_CSS__*/',()=>read('approach.css'));
+html=html.replace(/__FIGURE_([a-z0-9-]+)__/g,(_,id)=>'data:image/png;base64,'+fs.readFileSync(path.join(dir,'figures',id+'.png')).toString('base64'));
+const script=`window.MODEL_DATA=${read('model-data.json')};\nwindow.SATURN_DI=${read('vendor/saturn-directivity.json')};\nwindow.WORKBOOK_TEMPLATE=${read('workbook-template.json')};\n${read('engine.js')}\n${read('geometry.js')}\n${read('workbook-export.js')}\n${read('app.js')}`;
+html=html.replace('/*__APPLICATION__*/',()=>script.replace(/<\/script/gi,'<\\/script'));
+html=html.replace('<!--__LICENSE__-->',()=>`<pre>${read('vendor/SATURN-LICENSE.txt').replaceAll('&','&amp;').replaceAll('<','&lt;')}</pre>`);
+fs.writeFileSync(path.join(dir,'rocket_acoustics.html'),html);
+console.log('Built standalone rocket_acoustics.html');

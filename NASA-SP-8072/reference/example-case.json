@@ -1,0 +1,43 @@
+{
+  "schema": "rocket-acoustics-1",
+  "name": "Reference engine • free plume",
+  "notes": "Illustrative engineering case; replace with verified engine and facility inputs.",
+  "thrust": 1000000,
+  "velocity": 2800,
+  "diameter": 1,
+  "mach": 3.4,
+  "engines": 1,
+  "eta": 0.5,
+  "model": "dsm2",
+  "core": "eldred",
+  "normalize": true,
+  "cluster": "merged",
+  "directivity": "legacy",
+  "propagation": "none",
+  "reflection": 0,
+  "margin": 3,
+  "fmin": 10,
+  "fmax": 10000,
+  "slices": 240,
+  "deflection": 0,
+  "bend": 90,
+  "terminate": false,
+  "c0": 343,
+  "receivers": [
+    {
+      "name": "R1 · Primary",
+      "x": 100,
+      "y": 150
+    },
+    {
+      "name": "R2 · Aft structure",
+      "x": -30,
+      "y": 10
+    },
+    {
+      "name": "R3 · Far field",
+      "x": 1000,
+      "y": 1500
+    }
+  ]
+}

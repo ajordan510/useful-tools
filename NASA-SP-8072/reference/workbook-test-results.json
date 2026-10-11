@@ -1,0 +1,26 @@
+[
+  {
+    "case": "results",
+    "receiver_count": 3,
+    "band_rows": 93,
+    "passed": true
+  },
+  {
+    "case": "modern",
+    "receiver_count": 2,
+    "band_rows": 62,
+    "passed": true
+  },
+  {
+    "case": "deflected",
+    "receiver_count": 2,
+    "band_rows": 62,
+    "passed": true
+  },
+  {
+    "case": "literal",
+    "receiver_count": 2,
+    "band_rows": 62,
+    "passed": true
+  }
+]

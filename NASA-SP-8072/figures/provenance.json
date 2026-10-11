@@ -1,0 +1,104 @@
+[
+  {
+    "file": "sp8072-fig11.png",
+    "source": "sp8072.pdf",
+    "source_url": "https://ntrs.nasa.gov/citations/19710023719",
+    "figure": "Figure 11",
+    "printed_page": "13",
+    "pdf_page": 21,
+    "crop_pdf_points": [
+      87,
+      47,
+      494,
+      330
+    ],
+    "render_scale": 2.5,
+    "processing": "Page crop and rasterization only; original axes, curves and captions retained.",
+    "source_sha256": "84f1483c2c8477810186e98765ea99e4b7f7cc71e0a47eb8f86977d3b02aabf8"
+  },
+  {
+    "file": "sp8072-fig12.png",
+    "source": "sp8072.pdf",
+    "source_url": "https://ntrs.nasa.gov/citations/19710023719",
+    "figure": "Figure 12",
+    "printed_page": "13",
+    "pdf_page": 21,
+    "crop_pdf_points": [
+      112,
+      342,
+      465,
+      587
+    ],
+    "render_scale": 2.5,
+    "processing": "Page crop and rasterization only; original axes, curves and captions retained.",
+    "source_sha256": "84f1483c2c8477810186e98765ea99e4b7f7cc71e0a47eb8f86977d3b02aabf8"
+  },
+  {
+    "file": "sp8072-fig13.png",
+    "source": "sp8072.pdf",
+    "source_url": "https://ntrs.nasa.gov/citations/19710023719",
+    "figure": "Figure 13",
+    "printed_page": "14",
+    "pdf_page": 22,
+    "crop_pdf_points": [
+      116,
+      45,
+      537,
+      348
+    ],
+    "render_scale": 2.5,
+    "processing": "Page crop and rasterization only; original axes, curves and captions retained.",
+    "source_sha256": "84f1483c2c8477810186e98765ea99e4b7f7cc71e0a47eb8f86977d3b02aabf8"
+  },
+  {
+    "file": "sp8072-fig10.png",
+    "source": "sp8072.pdf",
+    "source_url": "https://ntrs.nasa.gov/citations/19710023719",
+    "figure": "Figure 10",
+    "printed_page": "12",
+    "pdf_page": 20,
+    "crop_pdf_points": [
+      143,
+      48,
+      533,
+      390
+    ],
+    "render_scale": 2.5,
+    "processing": "Page crop and rasterization only; original axes, curves and captions retained.",
+    "source_sha256": "84f1483c2c8477810186e98765ea99e4b7f7cc71e0a47eb8f86977d3b02aabf8"
+  },
+  {
+    "file": "haynes2009-fig6.png",
+    "source": "haynes2009.pdf",
+    "source_url": "https://ntrs.nasa.gov/citations/20090023640",
+    "figure": "Figure 6",
+    "printed_page": "7",
+    "pdf_page": 11,
+    "crop_pdf_points": [
+      73,
+      140,
+      538,
+      311
+    ],
+    "render_scale": 2.5,
+    "processing": "Page crop and rasterization only; original axes, curves and captions retained.",
+    "source_sha256": "1ec9dc23eca6690935dd9cbfa42af47f758d4f726603400036f50f784d1516c5"
+  },
+  {
+    "file": "haynes2009-fig7.png",
+    "source": "haynes2009.pdf",
+    "source_url": "https://ntrs.nasa.gov/citations/20090023640",
+    "figure": "Figure 7",
+    "printed_page": "7",
+    "pdf_page": 11,
+    "crop_pdf_points": [
+      103,
+      435,
+      508,
+      675
+    ],
+    "render_scale": 2.5,
+    "processing": "Page crop and rasterization only; original axes, curves and captions retained.",
+    "source_sha256": "1ec9dc23eca6690935dd9cbfa42af47f758d4f726603400036f50f784d1516c5"
+  }
+]

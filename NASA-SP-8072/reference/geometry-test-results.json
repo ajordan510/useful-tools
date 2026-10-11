@@ -1,0 +1,8 @@
+{
+  "passed": [
+    "Free plume ignores inactive stored bend angle",
+    "Deflector distance, angles and core treatment agree with engine",
+    "Distant deflector does not shorten a shorter free core",
+    "Other source models do not claim a core or deflector"
+  ]
+}

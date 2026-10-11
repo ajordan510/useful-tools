@@ -1,0 +1,26 @@
+{
+  "count": 21,
+  "passed": [
+    "Default is DSM-II with free plume and Eldred core",
+    "NASA Stennis Table 3 published power-level check",
+    "Thrust and efficiency doubling add 3.0103 dB",
+    "Independent engine count sums uncorrelated power",
+    "Merged engine diameter follows square-root count",
+    "Reflection applies once and design allowance separately",
+    "Pressure conversion and linear band summation",
+    "A weighting is approximately zero at 1 kHz",
+    "Exact base-10 third-octave edges are contiguous",
+    "Widening band range does not redistribute truncated power",
+    "Full spectra conserve source power after normalization",
+    "Varnier changes DSM-II core, DSM-I unchanged",
+    "Core termination never lengthens core and bend is continuous",
+    "DSM-II grid converges for free and bent geometries",
+    "Far-field spherical spreading approaches -6.0206 dB per doubling",
+    "SATURN directivity matches data nodes and rejects unsupported angles",
+    "Published SATURN components give expected fixed numerical values",
+    "Invalid, missing, nonfinite and fractional inputs rejected",
+    "Receiver coincident with a source is rejected",
+    "Modern complete case returns finite values in supported domain",
+    "Extreme attenuation retains finite dB values with stable energy summation"
+  ]
+}

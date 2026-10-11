@@ -1,0 +1,313 @@
+{
+  "method": "Independent Python/SciPy adaptive quadrature; original SATURN data, fixed stationary cases. Not MATLAB execution or experimental validation.",
+  "cases": 16,
+  "receiver_comparisons": 32,
+  "band_comparisons": 992,
+  "tolerance_dB": 0.012,
+  "maximum_band_error_dB": 0.00010164145641056166,
+  "maximum_overall_error_dB": 1.1503350435759785e-05,
+  "quadrature_normalizations": {
+    "False": 1.2244434254175447,
+    "True": 0.9656365575245381
+  },
+  "checks": [
+    {
+      "case": 0,
+      "receiver": 0,
+      "max_band_error_dB": 0.00010159602385328981,
+      "overall_error_dB": 2.1870670536827674e-06,
+      "expected_overall_dB": 135.85054840842727,
+      "actual_overall_dB": 135.85054622136022
+    },
+    {
+      "case": 0,
+      "receiver": 1,
+      "max_band_error_dB": 0.00010159602385328981,
+      "overall_error_dB": 2.2614205192894588e-06,
+      "expected_overall_dB": 111.65939464266498,
+      "actual_overall_dB": 111.65939238124446
+    },
+    {
+      "case": 1,
+      "receiver": 0,
+      "max_band_error_dB": 0.00010159602388171152,
+      "overall_error_dB": 3.2620528145343997e-07,
+      "expected_overall_dB": 135.96550218858752,
+      "actual_overall_dB": 135.9655025147928
+    },
+    {
+      "case": 1,
+      "receiver": 1,
+      "max_band_error_dB": 0.00010159602388171152,
+      "overall_error_dB": 1.178245270239131e-07,
+      "expected_overall_dB": 111.6619659186022,
+      "actual_overall_dB": 111.66196603642673
+    },
+    {
+      "case": 2,
+      "receiver": 0,
+      "max_band_error_dB": 0.00010159602385328981,
+      "overall_error_dB": 1.5794434489180276e-06,
+      "expected_overall_dB": 134.244136806802,
+      "actual_overall_dB": 134.24413522735856
+    },
+    {
+      "case": 2,
+      "receiver": 1,
+      "max_band_error_dB": 0.00010159602385328981,
+      "overall_error_dB": 1.609218173825866e-06,
+      "expected_overall_dB": 105.69076316803448,
+      "actual_overall_dB": 105.6907615588163
+    },
+    {
+      "case": 3,
+      "receiver": 0,
+      "max_band_error_dB": 0.00010159602388171152,
+      "overall_error_dB": 9.917754084654007e-07,
+      "expected_overall_dB": 134.16369038627866,
+      "actual_overall_dB": 134.16369137805407
+    },
+    {
+      "case": 3,
+      "receiver": 1,
+      "max_band_error_dB": 0.00010159602388171152,
+      "overall_error_dB": 2.754569834451104e-07,
+      "expected_overall_dB": 104.85544157022264,
+      "actual_overall_dB": 104.85544184567962
+    },
+    {
+      "case": 4,
+      "receiver": 0,
+      "max_band_error_dB": 0.00010164145641056166,
+      "overall_error_dB": 2.232499610954619e-06,
+      "expected_overall_dB": 134.97116117201995,
+      "actual_overall_dB": 134.97115893952034
+    },
+    {
+      "case": 4,
+      "receiver": 1,
+      "max_band_error_dB": 0.00010164145641056166,
+      "overall_error_dB": 2.306853048139601e-06,
+      "expected_overall_dB": 110.78000740625762,
+      "actual_overall_dB": 110.78000509940458
+    },
+    {
+      "case": 5,
+      "receiver": 0,
+      "max_band_error_dB": 0.00010164145641056166,
+      "overall_error_dB": 2.8077272418158827e-07,
+      "expected_overall_dB": 135.08611495218017,
+      "actual_overall_dB": 135.0861152329529
+    },
+    {
+      "case": 5,
+      "receiver": 1,
+      "max_band_error_dB": 0.00010164145641056166,
+      "overall_error_dB": 7.239198396291613e-08,
+      "expected_overall_dB": 110.78257868219487,
+      "actual_overall_dB": 110.78257875458685
+    },
+    {
+      "case": 6,
+      "receiver": 0,
+      "max_band_error_dB": 0.00010164145641056166,
+      "overall_error_dB": 1.6248759777681698e-06,
+      "expected_overall_dB": 133.36474957039465,
+      "actual_overall_dB": 133.36474794551867
+    },
+    {
+      "case": 6,
+      "receiver": 1,
+      "max_band_error_dB": 0.00010164145641056166,
+      "overall_error_dB": 1.654650716886863e-06,
+      "expected_overall_dB": 104.81137593162714,
+      "actual_overall_dB": 104.81137427697642
+    },
+    {
+      "case": 7,
+      "receiver": 0,
+      "max_band_error_dB": 0.00010164145641056166,
+      "overall_error_dB": 9.46342851193549e-07,
+      "expected_overall_dB": 133.28430314987133,
+      "actual_overall_dB": 133.28430409621419
+    },
+    {
+      "case": 7,
+      "receiver": 1,
+      "max_band_error_dB": 0.00010164145641056166,
+      "overall_error_dB": 2.300244261732587e-07,
+      "expected_overall_dB": 103.9760543338153,
+      "actual_overall_dB": 103.97605456383972
+    },
+    {
+      "case": 8,
+      "receiver": 0,
+      "max_band_error_dB": 2.950809442836544e-05,
+      "overall_error_dB": 6.741036628454822e-06,
+      "expected_overall_dB": 136.81538913806097,
+      "actual_overall_dB": 136.8153958790976
+    },
+    {
+      "case": 8,
+      "receiver": 1,
+      "max_band_error_dB": 2.950809442836544e-05,
+      "overall_error_dB": 5.313476691526375e-06,
+      "expected_overall_dB": 112.02416026139593,
+      "actual_overall_dB": 112.02416557487263
+    },
+    {
+      "case": 9,
+      "receiver": 0,
+      "max_band_error_dB": 7.491300539186341e-05,
+      "overall_error_dB": 8.081286011929478e-06,
+      "expected_overall_dB": 136.5314392111477,
+      "actual_overall_dB": 136.5314472924337
+    },
+    {
+      "case": 9,
+      "receiver": 1,
+      "max_band_error_dB": 7.491300539186341e-05,
+      "overall_error_dB": 7.01868599151112e-06,
+      "expected_overall_dB": 112.11301077636165,
+      "actual_overall_dB": 112.11301779504764
+    },
+    {
+      "case": 10,
+      "receiver": 0,
+      "max_band_error_dB": 2.950809442836544e-05,
+      "overall_error_dB": 7.971018220587212e-06,
+      "expected_overall_dB": 135.77053454874266,
+      "actual_overall_dB": 135.77054251976088
+    },
+    {
+      "case": 10,
+      "receiver": 1,
+      "max_band_error_dB": 2.950809442836544e-05,
+      "overall_error_dB": 8.169812304004154e-06,
+      "expected_overall_dB": 108.15094365763692,
+      "actual_overall_dB": 108.15095182744922
+    },
+    {
+      "case": 11,
+      "receiver": 0,
+      "max_band_error_dB": 7.491300539186341e-05,
+      "overall_error_dB": 8.805860630900497e-06,
+      "expected_overall_dB": 135.33356379714942,
+      "actual_overall_dB": 135.33357260301005
+    },
+    {
+      "case": 11,
+      "receiver": 1,
+      "max_band_error_dB": 7.491300539186341e-05,
+      "overall_error_dB": 7.21662543412549e-06,
+      "expected_overall_dB": 107.61764722539914,
+      "actual_overall_dB": 107.61765444202457
+    },
+    {
+      "case": 12,
+      "receiver": 0,
+      "max_band_error_dB": 2.681060465192786e-05,
+      "overall_error_dB": 9.438526461735819e-06,
+      "expected_overall_dB": 136.967252146801,
+      "actual_overall_dB": 136.96726158532746
+    },
+    {
+      "case": 12,
+      "receiver": 1,
+      "max_band_error_dB": 2.681060465192786e-05,
+      "overall_error_dB": 8.010966482174808e-06,
+      "expected_overall_dB": 112.17602327013597,
+      "actual_overall_dB": 112.17603128110245
+    },
+    {
+      "case": 13,
+      "receiver": 0,
+      "max_band_error_dB": 7.221551558700412e-05,
+      "overall_error_dB": 1.0778775759945347e-05,
+      "expected_overall_dB": 136.68330221988776,
+      "actual_overall_dB": 136.68331299866352
+    },
+    {
+      "case": 13,
+      "receiver": 1,
+      "max_band_error_dB": 7.221551558700412e-05,
+      "overall_error_dB": 9.716175796370408e-06,
+      "expected_overall_dB": 112.2648737851017,
+      "actual_overall_dB": 112.2648835012775
+    },
+    {
+      "case": 14,
+      "receiver": 0,
+      "max_band_error_dB": 2.681060465192786e-05,
+      "overall_error_dB": 1.0668508053868209e-05,
+      "expected_overall_dB": 135.9223975574827,
+      "actual_overall_dB": 135.92240822599075
+    },
+    {
+      "case": 14,
+      "receiver": 1,
+      "max_band_error_dB": 2.681060465192786e-05,
+      "overall_error_dB": 1.0867302094652587e-05,
+      "expected_overall_dB": 108.30280666637697,
+      "actual_overall_dB": 108.30281753367906
+    },
+    {
+      "case": 15,
+      "receiver": 0,
+      "max_band_error_dB": 7.221551558700412e-05,
+      "overall_error_dB": 1.1503350435759785e-05,
+      "expected_overall_dB": 135.48542680588946,
+      "actual_overall_dB": 135.4854383092399
+    },
+    {
+      "case": 15,
+      "receiver": 1,
+      "max_band_error_dB": 7.221551558700412e-05,
+      "overall_error_dB": 9.914115238984778e-06,
+      "expected_overall_dB": 107.76951023413918,
+      "actual_overall_dB": 107.76952014825441
+    }
+  ],
+  "saturn_formula_probes": [
+    [
+      0.0001,
+      -21.40101647098512
+    ],
+    [
+      0.003599,
+      9.723015915496774
+    ],
+    [
+      0.0036,
+      9.71722547744416
+    ],
+    [
+      0.01,
+      14.317830740267112
+    ],
+    [
+      0.047999,
+      7.364569882243259
+    ],
+    [
+      0.048,
+      7.364386800452117
+    ],
+    [
+      0.048001,
+      7.375329416044526
+    ],
+    [
+      0.1,
+      1.0002541177462803
+    ],
+    [
+      1,
+      -19.0
+    ],
+    [
+      10,
+      -39.00025411774628
+    ]
+  ]
+}

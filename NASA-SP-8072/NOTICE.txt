@@ -1,0 +1,22 @@
+Rocket Acoustics Workbench, version 1.0.0
+
+SATURN-related spectrum, source-location and loss equations and the directivity
+dataset are adapted from Logan T. Mathews' Scientific Acoustic Tool for
+Understanding Rocket Noise, https://github.com/logmath/saturn, commit
+7c6d1c3b38ebb32512f704fb281d7516b73fd9d6 (retrieved 2026-10-11).
+The original work is licensed under Apache License 2.0; see vendor/SATURN-LICENSE.txt.
+Changes: JavaScript stationary implementation, band integration, bounded data
+interpolation, validation, energy normalization option, and browser interface.
+This application is not SATURN and is not endorsed by its author or by NASA.
+
+SP-8072 table values are approximate manual readings of NASA's public-domain
+1971 report, figures 5, 10, 12, 13 and 14. See model-data.json and RESEARCH.md.
+
+Reference-figure excerpts: NASA SP-8072 (Eldred, 1971), Figures 10–13, and
+Haynes & Kenny (2009), Modifications to the NASA SP-8072 Distributed Source
+Method II for Ares I Lift-off Environment Predictions, Figures 6–7.
+These source figures are reproduced as attributed excerpts for explanation
+and technical comparison, not as new work or results of this application.
+Original figure content is retained; changes are limited to page cropping
+and rasterization. See figures/provenance.json for source URLs, pages,
+crop bounds and original PDF hashes.

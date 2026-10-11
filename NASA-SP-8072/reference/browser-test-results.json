@@ -1,0 +1,28 @@
+{
+  "passed": [
+    "Offline startup, four quantitative plots and geometry schematic",
+    "Desktop layout",
+    "DSM-II default with correctly reported free core",
+    "CSV includes all receiver bands",
+    "Offline native Excel workbook export",
+    "Map nozzle outline, registered origin and exhaust direction",
+    "Standalone report includes inputs, plots and references",
+    "SVG export",
+    "Pinned comparison and stale-result protection",
+    "Case import round trip",
+    "Invalid inputs rejected without export of stale results",
+    "SATURN model, directivity dataset and loss",
+    "Entirely unsupported map domain handled",
+    "Unsupported modern directivity angles rejected",
+    "DSM-II bend and terminated core",
+    "Excel export with literal formula-like names and Unicode",
+    "Geometry refresh after angle edit and SVG export",
+    "Illustrated approach: six offline source figures, source links and accessible enlargement",
+    "Published and independent benchmarks in browser",
+    "390px mobile layout without horizontal overflow",
+    "Approach and figure enlargement on mobile",
+    "No browser errors or network requests"
+  ],
+  "errors": [],
+  "networkRequests": []
+}

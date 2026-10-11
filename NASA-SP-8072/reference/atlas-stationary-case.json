@@ -1,0 +1,38 @@
+{
+  "schema": "rocket-acoustics-1",
+  "name": "Independent stationary verification case",
+  "notes": "Mathews Table 6.1 engine inputs. Fixed illustrative receivers; independent SciPy reference, not measured validation.",
+  "thrust": 1915000,
+  "velocity": 3160,
+  "diameter": 1.43,
+  "mach": 3.4,
+  "engines": 2,
+  "eta": 0.34,
+  "model": "modern",
+  "core": "eldred",
+  "normalize": true,
+  "cluster": "merged",
+  "directivity": "modern",
+  "propagation": "saturn",
+  "reflection": 0,
+  "margin": 3,
+  "fmin": 10,
+  "fmax": 10000,
+  "slices": 240,
+  "deflection": 0,
+  "bend": 90,
+  "terminate": false,
+  "c0": 343,
+  "receivers": [
+    {
+      "name": "Near reference",
+      "x": 200,
+      "y": 300
+    },
+    {
+      "name": "Far reference",
+      "x": 3000,
+      "y": 5000
+    }
+  ]
+}
