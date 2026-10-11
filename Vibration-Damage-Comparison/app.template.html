@@ -1,0 +1,1622 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Vibration Damage Comparison</title>
+    <style>
+      :root {
+        --ink: #172d40;
+        --muted: #536b7a;
+        --navy: #12344c;
+        --teal: #087f83;
+        --orange: #c86327;
+        --line: #d7e2e8;
+        --bg: #eff4f7;
+        --paper: #fff;
+        --red: #a93636;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font:
+          14px/1.5 system-ui,
+          -apple-system,
+          Segoe UI,
+          sans-serif;
+      }
+      header {
+        background: var(--navy);
+        color: white;
+        padding: 27px 4vw 24px;
+      }
+      header .eyebrow {
+        font-size: 11px;
+        letter-spacing: 2px;
+        color: #9edbe0;
+        font-weight: 700;
+      }
+      h1 {
+        font-size: 30px;
+        line-height: 1.2;
+        margin: 8px 0;
+      }
+      header p {
+        color: #c6dce7;
+        margin: 8px 0 0;
+        max-width: 850px;
+      }
+      main {
+        max-width: 1660px;
+        margin: 0 auto;
+        padding: 24px 3vw;
+      }
+      h2 {
+        font-size: 19px;
+        margin: 0 0 6px;
+      }
+      h3 {
+        font-size: 15px;
+        margin: 0 0 10px;
+      }
+      p {
+        margin: 7px 0 13px;
+      }
+      .toolbar {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-bottom: 18px;
+      }
+      button,
+      .filelabel {
+        border: 1px solid #bbcbd6;
+        background: white;
+        color: var(--ink);
+        font: 600 13px system-ui;
+        padding: 10px 14px;
+        border-radius: 7px;
+        cursor: pointer;
+      }
+      button:hover,
+      .filelabel:hover {
+        background: #e8f4f4;
+      }
+      button.primary {
+        background: var(--teal);
+        color: white;
+        border-color: var(--teal);
+      }
+      button:disabled {
+        opacity: 0.4;
+        cursor: default;
+      }
+      .tag {
+        font-size: 11px;
+        border-radius: 20px;
+        padding: 4px 9px;
+        background: #e0eef4;
+        color: #214c66;
+        font-weight: 650;
+      }
+      .toolbar .tag {
+        margin-left: auto;
+      }
+      nav {
+        display: flex;
+        border-bottom: 1px solid #bccdd7;
+        margin-bottom: 22px;
+        gap: 10px;
+      }
+      nav button {
+        background: none;
+        border: 0;
+        border-bottom: 3px solid transparent;
+        border-radius: 0;
+        padding: 12px 17px;
+      }
+      nav button.active {
+        border-bottom-color: var(--teal);
+        color: var(--teal);
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(350px, 430px) minmax(0, 1fr);
+        gap: 22px;
+        align-items: start;
+      }
+      .card {
+        background: white;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 21px;
+        margin-bottom: 18px;
+        box-shadow: 0 2px 5px #18364b05;
+      }
+      .step {
+        font-size: 11px;
+        font-weight: 750;
+        letter-spacing: 1.5px;
+        color: var(--teal);
+        margin-bottom: 6px;
+      }
+      .hint {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      label {
+        display: block;
+        font-size: 12px;
+        font-weight: 650;
+        color: #304c5d;
+        margin-bottom: 5px;
+      }
+      input,
+      select,
+      textarea {
+        width: 100%;
+        border: 1px solid #bccdd7;
+        background: #fff;
+        color: var(--ink);
+        border-radius: 6px;
+        padding: 9px 10px;
+        font: 13px system-ui;
+      }
+      textarea {
+        font:
+          12px/1.65 ui-monospace,
+          Consolas,
+          monospace;
+        resize: vertical;
+        min-height: 98px;
+        white-space: pre;
+      }
+      input:focus,
+      select:focus,
+      textarea:focus {
+        outline: 2px solid #9bd3d5;
+        outline-offset: 1px;
+      }
+      .fields {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin: 13px 0;
+      }
+      .full {
+        grid-column: 1/-1;
+      }
+      details {
+        margin: 12px 0;
+      }
+      summary {
+        cursor: pointer;
+        color: var(--teal);
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .format {
+        font:
+          11px/1.5 ui-monospace,
+          Consolas,
+          monospace;
+        color: var(--muted);
+        margin: 8px 0;
+      }
+      .notice {
+        padding: 14px 17px;
+        border: 1px solid #d8dfe4;
+        border-left: 4px solid var(--teal);
+        background: #f6fbfb;
+        border-radius: 7px;
+        margin-bottom: 18px;
+      }
+      .notice.warn {
+        background: #fff9ee;
+        border-color: #e8d5b2;
+        border-left-color: #b78124;
+      }
+      .notice.error {
+        background: #fff1f0;
+        border-color: #ecc7c4;
+        border-left-color: var(--red);
+      }
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+      .metric {
+        border: 1px solid var(--line);
+        background: white;
+        border-radius: 11px;
+        padding: 17px;
+      }
+      .metric .value {
+        font-size: 28px;
+        letter-spacing: -1px;
+        font-weight: 750;
+        color: var(--navy);
+        line-height: 1.25;
+        margin: 7px 0;
+      }
+      .metric small {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .bad {
+        color: var(--red) !important;
+      }
+      .good {
+        color: var(--teal) !important;
+      }
+      .chart {
+        position: relative;
+      }
+      .chart svg {
+        display: block;
+        width: 100%;
+        height: auto;
+        background: white;
+      }
+      .chart .tip {
+        font-size: 12px;
+        min-height: 21px;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+      }
+      .legend {
+        display: flex;
+        gap: 18px;
+        flex-wrap: wrap;
+        font-size: 12px;
+        margin-bottom: 5px;
+      }
+      .dot {
+        display: inline-block;
+        width: 15px;
+        height: 3px;
+        vertical-align: middle;
+        margin-right: 6px;
+      }
+      .charthead {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .charthead button {
+        font-size: 11px;
+        padding: 5px 8px;
+      }
+      .two {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+      }
+      .tablewrap {
+        max-height: 390px;
+        overflow: auto;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+      }
+      th,
+      td {
+        padding: 9px 10px;
+        text-align: right;
+        border-bottom: 1px solid #e4ebef;
+        white-space: nowrap;
+      }
+      th:first-child,
+      td:first-child {
+        text-align: left;
+      }
+      th {
+        background: #edf4f7;
+        position: sticky;
+        top: 0;
+        font-weight: 650;
+      }
+      tr:nth-child(even) {
+        background: #f8fafb;
+      }
+      td.gap {
+        background: #fff0ee;
+        color: var(--red);
+      }
+      .sensitivity td {
+        text-align: center;
+      }
+      .sensitivity td strong {
+        display: block;
+      }
+      .sensitivity small {
+        font-size: 10px;
+      }
+      .doc {
+        max-width: 1020px;
+      }
+      .doc h2 {
+        margin-top: 28px;
+      }
+      .doc .equation {
+        padding: 15px 19px;
+        background: #edf4f7;
+        border-left: 3px solid var(--teal);
+        font:
+          16px/1.7 Georgia,
+          serif;
+        overflow: auto;
+      }
+      .doc li {
+        margin: 8px 0;
+      }
+      .doc a {
+        color: var(--teal);
+      }
+      .doc table {
+        font-size: 13px;
+      }
+      .doc td,
+      .doc th {
+        white-space: normal;
+        text-align: left;
+      }
+      .hidden {
+        display: none !important;
+      }
+      .report-only {
+        display: none;
+      }
+      .foot {
+        color: var(--muted);
+        font-size: 11px;
+        text-align: center;
+        padding: 18px;
+      }
+      .unitlist {
+        columns: 1;
+        font:
+          11px/1.8 ui-monospace,
+          Consolas,
+          monospace;
+      }
+      .checklist {
+        font-size: 13px;
+      }
+      .checklist label {
+        font-weight: 400;
+        font-size: 13px;
+        margin: 9px 0;
+      }
+      .checklist input {
+        width: auto;
+        margin-right: 8px;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      @media (max-width: 1000px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+        .inputs {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+        }
+        .inputs .card {
+          margin: 0;
+        }
+        .inputs .card:last-child {
+          grid-column: 1/-1;
+        }
+        .two {
+          grid-template-columns: 1fr;
+        }
+      }
+      @media (max-width: 620px) {
+        main {
+          padding: 15px;
+        }
+        header {
+          padding: 24px 20px;
+        }
+        h1 {
+          font-size: 25px;
+        }
+        .inputs {
+          display: block;
+        }
+        .inputs .card {
+          margin-bottom: 16px;
+        }
+        .metrics {
+          grid-template-columns: 1fr;
+        }
+        .metric .value {
+          font-size: 26px;
+        }
+        .two {
+          display: block;
+        }
+        .toolbar .tag {
+          margin-left: 0;
+        }
+        .fields {
+          gap: 9px;
+        }
+        nav {
+          overflow: auto;
+        }
+        .card {
+          padding: 16px;
+        }
+      }
+      @media print {
+        body {
+          background: white;
+          font-size: 10pt;
+        }
+        header {
+          background: white;
+          color: #12344c;
+          padding: 10px 0;
+        }
+        header p {
+          color: #334;
+        }
+        main {
+          padding: 0;
+          max-width: none;
+        }
+        .toolbar,
+        nav,
+        .inputs,
+        .charthead button,
+        .no-print {
+          display: none !important;
+        }
+        .layout {
+          display: block;
+        }
+        .card {
+          break-inside: avoid;
+          border: 1px solid #ccc;
+          box-shadow: none;
+          margin-bottom: 12px;
+          padding: 12px;
+        }
+        .metrics {
+          grid-template-columns: repeat(3, 1fr);
+        }
+        .tablewrap {
+          overflow: visible;
+          max-height: none;
+        }
+        #rowTable .tablewrap {
+          max-height: 300px;
+          overflow: hidden;
+        }
+        .chart svg {
+          max-height: 280px;
+        }
+        .report-only {
+          display: block;
+        }
+        .hidden {
+          display: none !important;
+        }
+        h2,
+        h3 {
+          break-after: avoid;
+        }
+        .pagebreak {
+          break-before: page;
+        }
+        a {
+          color: #12344c;
+        }
+        .tip {
+          display: none;
+        }
+        .foot {
+          padding: 4px;
+        }
+      }
+      .layout > *,
+      .inputs > *,
+      .fields > *,
+      .two > * {
+        min-width: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="eyebrow">USEFUL TOOLS / VIBRATION, SHOCK &amp; ACOUSTICS</div>
+      <h1>Vibration Damage Comparison</h1>
+      <p>
+        Reconstruct the heritage sine exposure. Compare it with a random
+        requirement at each candidate resonance.
+      </p>
+    </header>
+    <main>
+      <div class="toolbar">
+        <button class="primary" id="run">Run comparison</button
+        ><button id="saveCase">Save case JSON</button
+        ><label class="filelabel" for="loadCase" style="margin: 0"
+          >Open case<input
+            id="loadCase"
+            type="file"
+            accept=".json"
+            hidden /></label
+        ><button id="csv" disabled>Export results CSV</button
+        ><button id="report" disabled>Save analysis report</button
+        ><button id="demo">Load example</button
+        ><span class="tag">v1.0.0 · OFFLINE · ONE AXIS PER CASE</span>
+      </div>
+      <nav aria-label="Workspace">
+        <button class="active" data-tab="analysis">Comparison workspace</button
+        ><button data-tab="method">Method &amp; interpretation</button>
+      </nav>
+      <div id="status" class="notice warn" role="status" aria-live="polite">
+        Example inputs are loaded. Run the comparison to explore the tool, then
+        replace them with your test records.
+      </div>
+      <section id="analysis">
+        <div class="layout">
+          <aside class="inputs">
+            <div class="card">
+              <div class="step">01 / CASE BASIS</div>
+              <h2>Define the comparison</h2>
+              <p class="hint">
+                Qualification evidence for the design, evaluated one axis at a
+                time.
+              </p>
+              <label for="caseName">Case / component / axis</label
+              ><input id="caseName" value="Illustrative component · X axis" />
+              <div class="fields">
+                <div>
+                  <label for="Q">Quality factor Q</label
+                  ><input
+                    id="Q"
+                    type="number"
+                    value="10"
+                    min="0.5"
+                    max="100"
+                    step="0.5"
+                  />
+                </div>
+                <div>
+                  <label for="b">Fatigue exponent b</label
+                  ><input
+                    id="b"
+                    type="number"
+                    value="6"
+                    min="2"
+                    max="12"
+                    step="0.5"
+                  />
+                </div>
+                <div>
+                  <label for="methodSelect">Random damage model</label
+                  ><select id="methodSelect">
+                    <option value="dirlik">Dirlik</option>
+                    <option value="nb">Narrowband / Rayleigh</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="damageFactor">Required damage ratio</label
+                  ><input
+                    id="damageFactor"
+                    type="number"
+                    value="1"
+                    min="1"
+                    step="0.1"
+                  />
+                </div>
+              </div>
+              <p class="hint">
+                Damping ζ = 1/(2Q). The same Q and b apply to both exposures.
+                The required ratio is a damage factor, not an acceleration
+                factor.
+              </p>
+              <label for="basis">Evidence and assumptions</label
+              ><textarea
+                id="basis"
+                placeholder="Test report, dates, hardware configuration, mounting, axis, tolerances, notches, observed resonances, and rationale for Q and b."
+              ></textarea>
+            </div>
+            <div class="card">
+              <div class="step">02 / HERITAGE SINE</div>
+              <h2>Profile and sweep</h2>
+              <p class="hint">
+                Use contiguous segments; each row can use different units.
+                Levels interpolate logarithmically within each segment.
+              </p>
+              <label for="sineText">Sine segments</label>
+              <div class="format">
+                f_low, f_high, unit, level_low, level_high
+              </div>
+              <textarea id="sineText" rows="4">
+5,20,disp_da_in,0.1,0.1
+20,80,vel_pk_ips,6.283185307,6.283185307
+80,500,accel_g_pk,8.17997886,8.17997886</textarea>
+              <details>
+                <summary>Unit codes and amplitude conventions</summary>
+                <div id="unitlist" class="unitlist"></div>
+                <p class="hint">
+                  DA = double amplitude = peak-to-peak. Historical velocity and
+                  G labels are ambiguous: verify peak versus RMS in the source
+                  specification. Segment endpoint jumps are preserved.
+                </p>
+              </details>
+              <div class="fields">
+                <div>
+                  <label for="passes">One-way sweep traversals</label
+                  ><input
+                    id="passes"
+                    type="number"
+                    value="2"
+                    min="0"
+                    step="1"
+                  />
+                </div>
+                <div>
+                  <label for="sweepType">Sweep rate units</label
+                  ><select id="sweepType">
+                    <option value="oct">octaves / minute</option>
+                    <option value="linear">Hz / minute</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="sweepRate">Sweep rate</label
+                  ><input
+                    id="sweepRate"
+                    type="number"
+                    value="1"
+                    min="0.001"
+                    step="0.1"
+                  />
+                </div>
+                <div>
+                  <label for="sineScale">Sine amplitude multiplier</label
+                  ><input
+                    id="sineScale"
+                    type="number"
+                    value="1"
+                    min="0.001"
+                    step="0.05"
+                  />
+                </div>
+              </div>
+              <p class="hint">
+                Up + down = 2 traversals. Set 0 to exclude resonance-search
+                sweeps. Sweep response is quasi-steady; transients are not
+                simulated.
+              </p>
+              <h3>Documented resonance dwells</h3>
+              <label for="dwellText">Dwell schedule</label>
+              <div class="format">
+                Hz, g_peak_override, hour_cap, cycle_cap, repeats
+              </div>
+              <textarea id="dwellText" rows="4">
+35,0,8,1000000,1
+120,0,8,1000000,1
+280,0,8,1000000,1</textarea>
+              <p class="hint">
+                An override of 0 uses the sine profile. A cap of 0 disables that
+                cap. Each dwell stops at the earlier positive cap. Enter the
+                actual achieved duration when it is shorter. Only these dwells
+                receive credit; repeats multiply the exposure.
+              </p>
+            </div>
+            <div class="card">
+              <div class="step">03 / NEW RANDOM REQUIREMENT</div>
+              <h2>PSD and exposure</h2>
+              <label for="psdText">One-sided acceleration PSD</label>
+              <div class="format">frequency_Hz, PSD_g²_per_Hz</div>
+              <textarea id="psdText" rows="5">
+20,0.01
+80,0.04
+350,0.04
+2000,0.007</textarea>
+              <div class="fields">
+                <div>
+                  <label for="duration">Minutes per exposure</label
+                  ><input id="duration" type="number" value="60" min="0.001" />
+                </div>
+                <div>
+                  <label for="randomRepeats">Number of exposures</label
+                  ><input
+                    id="randomRepeats"
+                    type="number"
+                    value="1"
+                    min="1"
+                    step="1"
+                  />
+                </div>
+                <div>
+                  <label for="psdDb">PSD level adjustment, dB</label
+                  ><input id="psdDb" type="number" value="0" step="0.5" />
+                </div>
+                <div>
+                  <label for="peakFactor">Peak screen factor, k × RMS</label
+                  ><input
+                    id="peakFactor"
+                    type="number"
+                    value="4"
+                    min="1"
+                    max="20"
+                    step="0.1"
+                  />
+                </div>
+              </div>
+              <p class="hint">
+                PSD interpolates log-log and is zero outside the supplied band.
+                +3 dB nearly doubles PSD. Use the specified test duration or
+                justified equivalent service duration. Do not add a
+                qualification margin twice.
+              </p>
+            </div>
+            <div class="card">
+              <div class="step">04 / MODAL ASSESSMENT</div>
+              <h2>Choose the frequency scope</h2>
+              <div class="fields">
+                <div>
+                  <label for="fmin">Lowest mode, Hz</label
+                  ><input id="fmin" type="number" value="5" />
+                </div>
+                <div>
+                  <label for="fmax">Highest mode, Hz</label
+                  ><input id="fmax" type="number" value="2000" />
+                </div>
+                <div>
+                  <label for="density">Points per octave</label
+                  ><select id="density">
+                    <option>24</option>
+                    <option selected>48</option>
+                    <option>96</option>
+                    <option>192</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="scope">Summary scope</label
+                  ><select id="scope">
+                    <option value="bank">Full oscillator bank</option>
+                    <option value="modes">Known modes only</option>
+                  </select>
+                </div>
+                <div class="full">
+                  <label for="modesText"
+                    >Known mode frequencies, Hz (optional)</label
+                  ><input id="modesText" value="35,120,280" />
+                </div>
+                <div class="full">
+                  <label for="inspectFn">Mode to inspect, Hz</label
+                  ><input id="inspectFn" type="number" value="120" />
+                </div>
+              </div>
+              <p class="hint">
+                Known frequencies are always added exactly. For uncertainty, add
+                bounding mode frequencies or use the full bank. Repeat with a
+                finer grid when a margin is close. Q sensitivity spans 5, 10,
+                20, 50 plus your Q; b spans 4, 6, 8 plus your b.
+              </p>
+            </div>
+          </aside>
+          <div id="results">
+            <div class="card">
+              <h2>From excitation to evidence</h2>
+              <p>
+                Run a comparison to see fatigue coverage, peak response,
+                equivalent random duration and sensitivity.
+              </p>
+              <p class="hint">
+                No input level alone establishes equivalence. Each virtual
+                oscillator filters both exposures before cycles are accumulated.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section id="method" class="doc hidden">
+        <div class="card">
+          <div class="step">ENGINEERING BASIS</div>
+          <h2>What this tool answers</h2>
+          <p>
+            For the specified Q, fatigue exponent, axis, exposure and modal
+            scope: is the modeled heritage fatigue severity at least as large as
+            the modeled new random severity? A separate comparison asks whether
+            the selected random peak-response screen exceeds the heritage
+            response.
+          </p>
+          <p>
+            A ratio above the requested target is evidence of modeled exposure
+            coverage. A ratio below it identifies a coverage gap to investigate.
+            Neither result alone establishes hardware qualification.
+          </p>
+          <h2>Available comparison methods</h2>
+          <table>
+            <tr>
+              <th>Method</th>
+              <th>Appropriate use</th>
+              <th>In this release</th>
+            </tr>
+            <tr>
+              <td>Fatigue-damage spectrum (FDS)</td>
+              <td>
+                Compare unlike base excitations with limited component response
+                data.
+              </td>
+              <td>Implemented with relative-displacement SDOF oscillators.</td>
+            </tr>
+            <tr>
+              <td>Measured / FEM stress response</td>
+              <td>
+                Known critical locations, correlated transfer functions and
+                fatigue data.
+              </td>
+              <td>
+                Recommended follow-on; stress FRF import is not implemented.
+              </td>
+            </tr>
+            <tr>
+              <td>Time histories + rainflow + Miner</td>
+              <td>
+                Measured stress, transient sweeps or cases needing direct cycle
+                counting.
+              </td>
+              <td>
+                Follow-on method; simulation and rainflow are not implemented.
+              </td>
+            </tr>
+            <tr>
+              <td>gRMS / equal energy / peak matching</td>
+              <td>Input and peak sanity checks.</td>
+              <td>Not accepted as fatigue equivalence.</td>
+            </tr>
+          </table>
+          <h2>1. Normalize the heritage profile</h2>
+          <div class="equation">
+            x<sub>peak</sub> = DA / 2<br />a<sub>peak</sub> = (2πf)² x<sub
+              >peak</sub
+            >
+            = 2πf v<sub>peak</sub><br />a<sub>peak</sub> = √2 a<sub>RMS</sub>
+            &nbsp; (sine only); &nbsp; g<sub>0</sub> = 9.80665 m/s²
+          </div>
+          <p>
+            All calculations use sine peak amplitude. A PSD ordinate is density,
+            not a sinusoidal G amplitude. Velocity peak/RMS and acceleration
+            peak/RMS/peak-to-peak must be identified explicitly.
+          </p>
+          <h2>2. Filter through the same oscillator</h2>
+          <div class="equation">
+            |H<sub>z/a</sub>| = 1 / √[(ω<sub>n</sub>² − ω²)² +
+            (2ζω<sub>n</sub>ω)²]<br />S<sub>z</sub>(f) = g<sub>0</sub>²
+            |H<sub>z/a</sub>|² S<sub>a</sub>(f); &nbsp; ζ = 1/(2Q)
+          </div>
+          <p>
+            Relative displacement z is a fatigue stress proxy. The unknown
+            stress-per-displacement coefficient cancels only when the same mode,
+            stress relationship and fatigue law apply to both cases. Bank points
+            are independent hypothetical oscillators; their damage must not be
+            summed across frequency.
+          </p>
+          <h2>3. Accumulate cycles consistently</h2>
+          <div class="equation">
+            I = Σ n<sub>i</sub>(z<sub>peak,i</sub> /
+            z<sub>ref</sub>)<sup>b</sup>, &nbsp; z<sub>ref</sub> = 1 mm<br />t<sub
+              >dwell</sub
+            >
+            = min(t<sub>cap</sub>, N<sub>cap</sub>/f<sub>dwell</sub>)<br />I<sub
+              >sweep</sub
+            >
+            = ∫ f [z<sub>peak</sub>(f)/z<sub>ref</sub>]<sup>b</sup> (dt/df) df
+          </div>
+          <p>
+            I is a normalized damage index. It is not an absolute Miner
+            fraction. The 1 mm reference is numerical normalization, not an
+            allowable. Heritage index is the sum of separate sequential sweeps
+            and dwells. A stationary random response uses spectral moments m<sub
+              >j</sub
+            >
+            = ∫ f<sup>j</sup>S<sub>z</sub>(f) df with frequency in Hz.
+          </p>
+          <h2>4. Estimate random fatigue</h2>
+          <div class="equation">
+            ν<sub>0</sub> = √(m<sub>2</sub>/m<sub>0</sub>), &nbsp; ν<sub>p</sub>
+            = √(m<sub>4</sub>/m<sub>2</sub>)<br />I<sub>NB</sub> =
+            Tν<sub>0</sub>(√(2m<sub>0</sub>)/z<sub>ref</sub>)<sup>b</sup>
+            Γ(1+b/2)
+          </div>
+          <p>
+            Dirlik estimates rainflow-amplitude statistics from m₀, m₁, m₂ and
+            m₄ and is the default. The narrowband formula provides a transparent
+            cross-check. Their spread is method sensitivity, not a confidence
+            interval. The complete Dirlik equations are in the white paper. Both
+            assume stationary, Gaussian random response and linear, elastic
+            dynamics.
+          </p>
+          <h2>5. Read the outputs</h2>
+          <ul>
+            <li>
+              <b>Damage ratio R = I<sub>heritage</sub>/I<sub>random</sub>.</b>
+              Coverage ratio = R / requested damage factor. At least 1 means the
+              modeled target is met at that oscillator.
+            </li>
+            <li>
+              <b>Equivalent duration = total random duration × R.</b> This is
+              the random exposure giving the same modeled damage, with the same
+              PSD shape and level. It is not remaining life.
+            </li>
+            <li>
+              <b>Allowable amplitude scale = (R / target)<sup>1/b</sup>.</b> The
+              corresponding PSD scale is its square; exported per mode.
+            </li>
+            <li>
+              <b
+                >Peak ratio = maximum modeled heritage relative displacement /
+                (k × random RMS relative displacement).</b
+              >
+              This independently screens for peak severity. k is user-selected,
+              not a stated probability or duration-based maximum.
+            </li>
+            <li>
+              <b>Sensitivity matrix.</b> The worst coverage ratio within the
+              chosen scope is recalculated for each Q and b, using the same
+              assumptions on both sides.
+            </li>
+          </ul>
+          <h2>Ground rules before a determination</h2>
+          <ol>
+            <li>
+              Verify the actual test article passed the heritage exposure;
+              confirm records, axis, control points, dwell tracking, notches,
+              tolerances and achieved levels.
+            </li>
+            <li>
+              Establish configuration and mounting equivalence. Added mass,
+              changed fasteners or boundary conditions can invalidate resonance
+              and stress mapping.
+            </li>
+            <li>
+              Use representative Q and fatigue slopes, then resolve sensitivity
+              and modal-frequency uncertainty. Defaults are illustrative, not
+              material allowables.
+            </li>
+            <li>
+              Evaluate critical stresses or measured response when modal
+              coupling, multiple hot spots, nonlinear joints, clearances,
+              contact, fretting, solder fatigue, mean-stress shifts or
+              multiaxial loading govern.
+            </li>
+            <li>
+              Separate design qualification from the life of an already-tested
+              article. Consumed life and future life add; qualification exposure
+              is not a bank of remaining capacity.
+            </li>
+            <li>
+              Document the peak check, numerical convergence, all coverage gaps,
+              and the governing program's acceptance basis. This tool does not
+              declare compliance with a standard.
+            </li>
+          </ol>
+          <h2>References</h2>
+          <ol>
+            <li>
+              T. Dirlik and D. Benasciutti (2021),
+              <a href="https://doi.org/10.3390/met11091333"
+                >Dirlik and Tovo-Benasciutti Spectral Methods in Vibration
+                Fatigue</a
+              >, Metals 11(9), 1333.
+            </li>
+            <li>
+              A. Zorman, J. Slavič and M. Boltežar (2023),
+              <a href="https://doi.org/10.1016/j.ymssp.2023.110149"
+                >Vibration fatigue by spectral methods: a review with
+                open-source support</a
+              >, MSSP 190, 110149, especially equations 30–32.
+            </li>
+            <li>
+              T. Irvine,
+              <a
+                href="https://nescacademy.nasa.gov/video/2584e207341e411b95fa829e191d81441d"
+                >NASA NESC Academy, Using Fatigue to Compare Sine and Random
+                Environments</a
+              >, training resource.
+            </li>
+          </ol>
+          <p class="hint">
+            The white paper accompanies this file in the repository. No
+            standard, source or vendor is represented as approving this
+            implementation.
+          </p>
+        </div>
+      </section>
+      <div class="foot">
+        Vibration Damage Comparison · 1.0.0 · No network requests. Input data
+        stays in your browser.
+      </div>
+    </main>
+    <script>
+      /*__ENGINE__*/
+    </script>
+    <script>
+      "use strict";
+      const $ = (id) => document.getElementById(id),
+        ids = [
+          "caseName",
+          "basis",
+          "sineText",
+          "dwellText",
+          "psdText",
+          "Q",
+          "b",
+          "damageFactor",
+          "passes",
+          "sweepType",
+          "sweepRate",
+          "sineScale",
+          "duration",
+          "randomRepeats",
+          "psdDb",
+          "peakFactor",
+          "fmin",
+          "fmax",
+          "density",
+          "scope",
+          "modesText",
+          "inspectFn",
+        ];
+      let example = true,
+        last = null,
+        chartRegistry = {},
+        busy = false;
+      const esc = (x) =>
+        String(x).replace(
+          /[&<>"']/g,
+          (c) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            })[c],
+        );
+      const fmt = (n, d = 3) =>
+        Number.isFinite(n)
+          ? n === 0
+            ? "0"
+            : Math.abs(n) >= 1e5 || Math.abs(n) < 0.001
+              ? n.toExponential(d - 1)
+              : Number(n.toPrecision(d)).toLocaleString("en-US", {
+                  maximumFractionDigits: 8,
+                })
+          : "—";
+      const defaults = Object.fromEntries(ids.map((k) => [k, $(k).value]));
+      defaults.method = $("methodSelect").value;
+      defaults.example = true;
+      function raw() {
+        const r = Object.fromEntries(ids.map((k) => [k, $(k).value]));
+        r.method = $("methodSelect").value;
+        r.example = example;
+        return r;
+      }
+      function stale() {
+        if (busy) return;
+        example = false;
+        last = null;
+        $("csv").disabled = $("report").disabled = true;
+        $("status").className = "notice warn";
+        $("status").textContent =
+          "Inputs changed. Run comparison to refresh plots and exports.";
+        $("results").style.opacity = ".45";
+      }
+      ids.forEach((k) => $(k).addEventListener("input", stale));
+      $("methodSelect").addEventListener("change", stale);
+      document.querySelectorAll("nav button").forEach(
+        (b) =>
+          (b.onclick = () => {
+            document
+              .querySelectorAll("nav button")
+              .forEach((x) => x.classList.toggle("active", x === b));
+            ["analysis", "method"].forEach((t) =>
+              $(t).classList.toggle("hidden", b.dataset.tab !== t),
+            );
+          }),
+      );
+      $("unitlist").innerHTML = Object.entries(VDC.UNITS)
+        .map(([k, v]) => `<div><b>${k}</b> — ${esc(v)}</div>`)
+        .join("");
+      function download(name, content, type) {
+        const a = document.createElement("a"),
+          u = URL.createObjectURL(new Blob([content], { type }));
+        a.href = u;
+        a.download = name;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(u), 1000);
+      }
+      function caseJSON() {
+        return JSON.stringify(
+          { schema: "vdc-case-1", version: VDC.VERSION, inputs: raw() },
+          null,
+          2,
+        );
+      }
+      $("saveCase").onclick = () =>
+        download(
+          "vibration-comparison-case.json",
+          caseJSON(),
+          "application/json",
+        );
+      $("loadCase").onchange = async (e) => {
+        try {
+          const f = e.target.files[0];
+          if (!f) return;
+          if (f.size > 2e6) throw Error("Case file is too large.");
+          const x = JSON.parse(await f.text());
+          if (x.schema !== "vdc-case-1")
+            throw Error("Expected a vdc-case-1 JSON file.");
+          VDC.parse(x.inputs);
+          for (const k of ids) $(k).value = x.inputs[k];
+          $("methodSelect").value = x.inputs.method;
+          stale();
+          example = !!x.inputs.example;
+          $("status").textContent =
+            "Case loaded. Run comparison to calculate this case.";
+        } catch (err) {
+          $("status").className = "notice error";
+          $("status").textContent = err.message;
+        }
+        e.target.value = "";
+      };
+      $("demo").onclick = () => {
+        for (const k of ids) $(k).value = defaults[k];
+        $("methodSelect").value = defaults.method;
+        stale();
+        example = true;
+        run();
+      };
+      function metric(label, value, sub, bad = false) {
+        return `<div class="metric"><small>${label}</small><div class="value ${bad ? "bad" : ""}">${value}</div><small>${sub}</small></div>`;
+      }
+      function chartCard(id, title, description) {
+        return `<div class="card"><div class="charthead"><h3>${title}</h3><button data-svg="${id}">Save SVG</button></div><p class="hint">${description}</p><div class="chart" id="${id}"></div></div>`;
+      }
+      function plot(
+        id,
+        series,
+        yLabel,
+        {
+          logY = true,
+          threshold = null,
+          xLabel = "Natural frequency, Hz",
+          yMin = null,
+          yMax = null,
+        } = {},
+      ) {
+        const W = 780,
+          H = 320,
+          L = 84,
+          R = 22,
+          T = 14,
+          B = 52,
+          colors = ["#087f83", "#c86327", "#6673a0", "#b276a0"];
+        const all = series
+          .flatMap((s) => s.data)
+          .filter(
+            (p) => p[0] > 0 && Number.isFinite(p[1]) && (!logY || p[1] > 0),
+          );
+        if (!all.length) {
+          $(id).textContent = "No positive values to plot.";
+          return;
+        }
+        let xmin = Math.min(...all.map((p) => p[0])),
+          xmax = Math.max(...all.map((p) => p[0])),
+          lo = yMin ?? Math.min(...all.map((p) => p[1])),
+          hi = yMax ?? Math.max(...all.map((p) => p[1]));
+        if (threshold !== null) {
+          lo = Math.min(lo, threshold);
+          hi = Math.max(hi, threshold);
+        }
+        if (logY) {
+          lo = 10 ** Math.floor(Math.log10(lo));
+          hi = 10 ** Math.ceil(Math.log10(hi));
+          if (lo === hi) hi *= 10;
+        } else {
+          lo = Math.min(0, lo);
+          hi *= 1.1;
+        }
+        const X = (x) =>
+            L + (Math.log(x / xmin) / Math.log(xmax / xmin)) * (W - L - R),
+          Y = (y) =>
+            T +
+            (1 -
+              (logY
+                ? Math.log(y / lo) / Math.log(hi / lo)
+                : (y - lo) / (hi - lo))) *
+              (H - T - B);
+        let body = "";
+        const xt = [];
+        for (
+          let k = Math.floor(Math.log10(xmin));
+          k <= Math.ceil(Math.log10(xmax));
+          k++
+        )
+          for (const a of [1, 2, 5]) {
+            const x = a * 10 ** k;
+            if (x >= xmin && x <= xmax) xt.push(x);
+          }
+        for (const x of xt)
+          body += `<line x1="${X(x)}" y1="${T}" x2="${X(x)}" y2="${H - B}" stroke="#e5ecef"/><text x="${X(x)}" y="${H - B + 21}" text-anchor="middle" font-size="11" fill="#536b7a">${fmt(x)}</text>`;
+        const yt = logY
+          ? Array.from(
+              { length: Math.min(30, Math.round(Math.log10(hi / lo)) + 1) },
+              (_, i) =>
+                lo *
+                10 ** (i * Math.max(1, Math.ceil(Math.log10(hi / lo) / 12))),
+            )
+          : Array.from({ length: 6 }, (_, i) => lo + ((hi - lo) * i) / 5);
+        for (const y of yt) {
+          if (y > hi * 1.001) continue;
+          body += `<line x1="${L}" y1="${Y(y)}" x2="${W - R}" y2="${Y(y)}" stroke="#e5ecef"/><text x="${L - 9}" y="${Y(y) + 4}" text-anchor="end" font-size="11" fill="#536b7a">${fmt(y)}</text>`;
+        }
+        if (threshold !== null)
+          body += `<line x1="${L}" y1="${Y(threshold)}" x2="${W - R}" y2="${Y(threshold)}" stroke="#a93636" stroke-dasharray="6 4"/><text x="${W - R - 5}" y="${Y(threshold) - 5}" text-anchor="end" font-size="11" fill="#a93636">target ${fmt(threshold)}</text>`;
+        series.forEach((s, i) => {
+          let pen = false,
+            d = "";
+          for (const [x, y] of s.data) {
+            if (!Number.isFinite(y) || x <= 0 || (logY && y <= 0)) {
+              pen = false;
+              continue;
+            }
+            d +=
+              (pen ? "L" : "M") + X(x).toFixed(2) + "," + Y(y).toFixed(2) + " ";
+            pen = true;
+          }
+          body += `<path d="${d}" fill="none" stroke="${s.color || colors[i % colors.length]}" stroke-width="2.2" ${s.dashed ? 'stroke-dasharray="5 4"' : ""}/>`;
+        });
+        body += `<text x="${(L + W - R) / 2}" y="${H - 8}" font-size="12" text-anchor="middle" fill="#304c5d">${esc(xLabel)}</text><text transform="translate(15,${(T + H - B) / 2}) rotate(-90)" text-anchor="middle" font-size="12" fill="#304c5d">${esc(yLabel)}</text>`;
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(yLabel)}" style="font-family:system-ui,sans-serif"><rect width="${W}" height="${H}" fill="white"/>${body}</svg>`;
+        chartRegistry[id] = { svg, series };
+        $(id).innerHTML =
+          `<div class="legend">${series.map((s, i) => `<span><i class="dot" style="background:${s.color || colors[i % colors.length]}"></i>${esc(s.name)}</span>`).join("")}</div>${svg}<div class="tip">Move over the plot to inspect values. Full-resolution data is in the CSV.</div>`;
+        const node = $(id).querySelector("svg");
+        node.onpointermove = (e) => {
+          const box = node.getBoundingClientRect(),
+            px = ((e.clientX - box.left) / box.width) * W,
+            f =
+              xmin *
+              Math.exp(
+                Math.max(0, Math.min(1, (px - L) / (W - L - R))) *
+                  Math.log(xmax / xmin),
+              );
+          $(id).querySelector(".tip").textContent = series
+            .map((s) => {
+              const p = s.data.reduce((a, b) =>
+                Math.abs(Math.log(a[0] / f)) < Math.abs(Math.log(b[0] / f))
+                  ? a
+                  : b,
+              );
+              return `${s.name}: ${fmt(p[1], 4)} at ${fmt(p[0], 4)} Hz`;
+            })
+            .join(" | ");
+        };
+      }
+      function render(c, r) {
+        chartRegistry = {};
+        const w = r.worst,
+          kw = r.peakWorst,
+          scope = c.scope === "modes" ? "listed modes" : "oscillator bank";
+        $("results").innerHTML =
+          `<div class="notice ${w.margin < 1 || kw.peakRatio < 1 ? "warn" : ""}"><b>${c.example ? "EXAMPLE · " : ""}${w.margin >= 1 ? "Modeled fatigue target met" : "Modeled fatigue coverage gap"} within the ${scope}.</b><br>${esc(c.caseName)} · Q = ${fmt(c.Q)}, b = ${fmt(c.b)} · ${esc(c.method === "dirlik" ? "Dirlik" : "Narrowband")} · damage target ${fmt(c.damageFactor)}. ${kw.peakRatio < 1 ? "The peak-response screen also has a gap." : "The selected peak-response screen is covered."} These are analytical comparisons, not qualification approval.</div><div class="metrics">${metric("MINIMUM FATIGUE COVERAGE", fmt(w.margin) + "×", `R / target at ${fmt(w.fn, 5)} Hz`, w.margin < 1)}${metric("EQUAL-DAMAGE RANDOM EXPOSURE", fmt(w.eqMinutes) + " min", `At the fatigue-governing mode; new exposure ${fmt(c.T / 60)} min`)}${metric("MINIMUM PEAK COVERAGE", fmt(kw.peakRatio) + "×", `At ${fmt(kw.fn, 5)} Hz · selected ${fmt(c.peakFactor)}σ screen`, kw.peakRatio < 1)}</div>` +
+          chartCard(
+            "ratioPlot",
+            "Fatigue coverage across frequency",
+            "Heritage / new random damage. Both estimators are shown; the selected method governs the summary. The red line is your requested damage ratio.",
+          ) +
+          chartCard(
+            "damagePlot",
+            "Fatigue-damage spectra",
+            "Normalized indices use zref = 1 mm. Compare curves only for the same b and Q; never sum across oscillator frequency.",
+          ) +
+          chartCard(
+            "peakPlot",
+            "Independent peak-response screen",
+            "Relative displacement amplitude. Sine peak is the largest modeled sweep or dwell response. Random peak = selected k × response RMS.",
+          ) +
+          `<div class="two">${chartCard("sinePlot", "Normalized sine profile", "Peak acceleration after unit conversion and the sine multiplier.")}${chartCard("psdPlot", "Random input PSD", `${fmt(r.grms, 4)} gRMS over ${fmt(c.psd[0][0])}–${fmt(c.psd.at(-1)[0])} Hz; level adjustment ${fmt(c.psdDb)} dB.`)}</div>` +
+          `<div class="card"><h3>Dwell exposure actually credited</h3><div class="tablewrap"><table><thead><tr><th>Frequency, Hz</th><th>Peak g</th><th>Minutes / dwell</th><th>Limiter</th><th>Repeats</th><th>Total cycles</th></tr></thead><tbody>${c.dwell.map((d) => `<tr><td>${fmt(d.f)}</td><td>${fmt(d.a, 5)}</td><td>${fmt(d.t / 60, 5)}</td><td>${d.limiter}</td><td>${d.repeats}</td><td>${fmt(d.cycles, 6)}</td></tr>`).join("") || '<tr><td colspan="6">No dwell credit; sweeps only.</td></tr>'}</tbody></table></div><p class="hint">Caps apply to each repeat. At 1,000,000 cycles and 8 hours, the crossover is 34.722 Hz. Above that frequency the cycle cap stops the dwell sooner.</p></div>` +
+          `<div class="card"><h3>Q and fatigue-slope sensitivity</h3><p class="hint">Each cell is the minimum coverage ratio R / target within the selected ${scope}. The smaller text identifies its governing frequency. These are analyst scenarios, not confidence bounds.</p><div class="tablewrap"><table class="sensitivity"><thead><tr><th>Q / damping</th>${[...new Set(r.sensitivity.map((x) => x.b))].map((b) => `<th>b = ${b}</th>`).join("")}</tr></thead><tbody>${[
+            ...new Set(r.sensitivity.map((x) => x.Q)),
+          ]
+            .map(
+              (Q) =>
+                `<tr><td>Q ${Q} / ${fmt(50 / Q)}%</td>${r.sensitivity
+                  .filter((x) => x.Q === Q)
+                  .map(
+                    (s) =>
+                      `<td class="${s.margin < 1 ? "gap" : ""}"><strong>${fmt(s.margin)}×</strong><small>${fmt(s.fn, 4)} Hz</small></td>`,
+                  )
+                  .join("")}</tr>`,
+            )
+            .join("")}</tbody></table></div></div>` +
+          `<div class="card"><h3>Mode detail · ${fmt(r.inspect.fn, 6)} Hz</h3><p>Damage ratio <b>${fmt(r.inspect.ratio, 5)}×</b> · response RMS <b>${fmt(r.inspect.sigma * 1000, 5)} mm</b> · bandwidth α <b>${fmt(r.inspect.alpha, 5)}</b> · ν₀ <b>${fmt(r.inspect.nu0, 5)} Hz</b></p><div class="tablewrap"><table><thead><tr><th>Heritage contribution</th><th>Damage index</th><th>Share</th></tr></thead><tbody><tr><td>All sweeps</td><td>${fmt(r.inspect.sweep, 6)}</td><td>${fmt((100 * r.inspect.sweep) / r.inspect.heritage)}%</td></tr>${r.inspect.contributions.map((d, i) => `<tr><td>Dwell ${i + 1}: ${fmt(d.f)} Hz</td><td>${fmt(d.index, 6)}</td><td>${fmt((100 * d.index) / r.inspect.heritage)}%</td></tr>`).join("")}</tbody></table></div><p class="hint">Dirlik index ${fmt(r.inspect.dirlik, 6)} · narrowband index ${fmt(r.inspect.nb, 6)} · spectral method used: ${r.inspect.method}.</p></div>` +
+          chartCard(
+            "responsePlot",
+            `Response PSD at ${fmt(c.inspectFn)} Hz`,
+            "Relative-displacement PSD of the selected oscillator; the response bandwidth controls the random fatigue statistics.",
+          ) +
+          `<div class="card" id="rowTable"><h3>Assessment data · ${r.assessed.length} frequencies</h3><p class="hint">The full CSV includes every bank frequency, assessment-scope flags, spectral moments, sweep/dwell indices, equivalent duration and amplitude/PSD scales.</p><div class="tablewrap"><table><thead><tr><th>fₙ, Hz</th><th>Damage R</th><th>R / target</th><th>Equal min</th><th>Peak ratio</th><th>α</th></tr></thead><tbody>${r.assessed.map((x) => `<tr><td>${fmt(x.fn, 6)}</td><td>${fmt(x.ratio, 5)}</td><td class="${x.margin < 1 ? "gap" : ""}">${fmt(x.margin, 5)}</td><td>${fmt(x.eqMinutes, 5)}</td><td class="${x.peakRatio < 1 ? "gap" : ""}">${fmt(x.peakRatio, 5)}</td><td>${fmt(x.alpha, 4)}</td></tr>`).join("")}</tbody></table></div></div>` +
+          `<div class="card"><h3>Review notes and numerical checks</h3><ul class="hint">${r.warnings.map((s) => `<li>${esc(s)}</li>`).join("")}</ul><p class="hint">Governing-point integration refinement: ${fmt(r.convergence * 100, 4)}% change in damage ratio. Frequency grid: ${c.density} points/octave plus explicit modes, inspection frequency, dwells and profile boundaries. Refine the bank separately to resolve narrow minima.</p><p class="hint">Generated ${esc(r.generated)} · engine ${r.version}. Case basis: ${esc(c.basis || "No evidence notes supplied.")}</p></div>`;
+        const xy = (k) => r.rows.map((x) => [x.fn, x[k]]);
+        plot(
+          "ratioPlot",
+          [
+            {
+              name: "Dirlik ratio",
+              data: r.rows.map((x) => [x.fn, x.heritage / x.dirlik]),
+            },
+            {
+              name: "Narrowband ratio",
+              data: r.rows.map((x) => [x.fn, x.heritage / x.nb]),
+              dashed: true,
+            },
+          ],
+          "Heritage / random damage",
+          { threshold: c.damageFactor },
+        );
+        plot(
+          "damagePlot",
+          [
+            { name: "Heritage total", data: xy("heritage") },
+            {
+              name:
+                "Random " + (c.method === "dirlik" ? "Dirlik" : "narrowband"),
+              data: xy("random"),
+            },
+            { name: "Heritage dwells", data: xy("dwell"), dashed: true },
+            { name: "Heritage sweeps", data: xy("sweep"), dashed: true },
+          ],
+          "Normalized damage index",
+        );
+        plot(
+          "peakPlot",
+          [
+            {
+              name: "Heritage peak",
+              data: r.rows.map((x) => [x.fn, x.peakSine * 1000]),
+            },
+            {
+              name: `Random ${c.peakFactor}σ`,
+              data: r.rows.map((x) => [x.fn, x.peakRandom * 1000]),
+            },
+          ],
+          "Relative displacement, mm",
+        );
+        const sp = [];
+        for (const s of c.sine)
+          for (let j = 0; j <= 30; j++) {
+            const f = s.f1 * (s.f2 / s.f1) ** (j / 30),
+              v = s.a1 * (s.a2 / s.a1) ** (j / 30);
+            sp.push([f, VDC.accel(f, s.unit, v) * c.sineScale]);
+          }
+        plot(
+          "sinePlot",
+          [{ name: "Sine base peak", data: sp }],
+          "Acceleration, g peak",
+          { xLabel: "Excitation frequency, Hz" },
+        );
+        plot(
+          "psdPlot",
+          [
+            {
+              name: "Random input",
+              data: c.psd.map(([f, p]) => [f, p * c.psdScale]),
+              color: "#c86327",
+            },
+          ],
+          "PSD, g²/Hz",
+          { xLabel: "Excitation frequency, Hz" },
+        );
+        const pq = VDC.quadrature(
+          c.psd[0][0],
+          c.psd.at(-1)[0],
+          c.inspectFn,
+          c.Q,
+          c.psd.map((x) => x[0]),
+        );
+        plot(
+          "responsePlot",
+          [
+            {
+              name: "Response PSD",
+              data: pq.map(([f]) => [
+                f,
+                VDC.psdAt(f, c.psd) *
+                  c.psdScale *
+                  VDC.transfer(f, c.inspectFn, c.Q) ** 2 *
+                  1e6,
+              ]),
+            },
+          ],
+          "Relative-displacement PSD, mm²/Hz",
+          { xLabel: "Excitation frequency, Hz" },
+        );
+        document
+          .querySelectorAll("[data-svg]")
+          .forEach(
+            (b) =>
+              (b.onclick = () =>
+                download(
+                  b.dataset.svg + ".svg",
+                  chartRegistry[b.dataset.svg].svg,
+                  "image/svg+xml",
+                )),
+          );
+      }
+      async function run() {
+        if (busy) return;
+        busy = true;
+        $("run").disabled = true;
+        $("csv").disabled = $("report").disabled = true;
+        $("status").className = "notice";
+        $("status").textContent =
+          "Calculating response spectra and sensitivity scenarios…";
+        last = null;
+        await new Promise((r) => setTimeout(r, 40));
+        try {
+          const inputs = raw(),
+            c = VDC.parse(inputs),
+            r = VDC.analyze(c);
+          render(c, r);
+          last = { inputs, c, r };
+          $("results").style.opacity = "1";
+          $("status").className = "notice" + (example ? " warn" : "");
+          $("status").textContent = example
+            ? "Illustrative analysis complete. These inputs are not hardware qualification data."
+            : "Analysis complete. Review fatigue coverage, peaks, assumptions and sensitivity before making a determination.";
+          $("csv").disabled = $("report").disabled = false;
+        } catch (e) {
+          $("status").className = "notice error";
+          $("status").textContent = e.message;
+          $("results").style.opacity = ".45";
+          console.error(e);
+        } finally {
+          busy = false;
+          $("run").disabled = false;
+        }
+      }
+      $("run").onclick = run;
+      function csvText() {
+        const { c, r } = last;
+        const keys = [
+          "fn",
+          "Q",
+          "b",
+          "heritage",
+          "sweep",
+          "dwell",
+          "dirlik",
+          "nb",
+          "random",
+          "ratio",
+          "margin",
+          "eqMinutes",
+          "amplitudeReserve",
+          "psdReserve",
+          "sigma",
+          "peakSine",
+          "peakRandom",
+          "peakRatio",
+          "alpha",
+          "nu0",
+          "nup",
+        ];
+        const names = [
+          "fn_Hz",
+          "Q",
+          "fatigue_b",
+          "heritage_index",
+          "sweep_index",
+          "dwell_index",
+          "random_Dirlik_index",
+          "random_NB_index",
+          "random_selected_index",
+          "damage_ratio_R",
+          "coverage_R_over_target",
+          "equivalent_random_minutes",
+          "allowable_input_amplitude_scale",
+          "allowable_PSD_scale",
+          "random_response_RMS_m",
+          "heritage_peak_m",
+          "random_k_sigma_peak_m",
+          "peak_ratio",
+          "alpha",
+          "nu0_Hz",
+          "nup_Hz",
+        ];
+        const quote = (x) => '"' + String(x).replace(/"/g, '""') + '"';
+        const meta = [
+          ["engine", r.version],
+          ["generated_UTC", r.generated],
+          ["case", c.caseName],
+          ["scope", c.scope],
+          ["method", c.method],
+          ["total_random_seconds", c.T],
+          ["damage_target", c.damageFactor],
+          ["peak_factor_k", c.peakFactor],
+          ["base_random_gRMS", r.grms],
+          ["zref_m", VDC.ZREF],
+          ["example", c.example],
+          ["case_inputs_JSON", JSON.stringify(last.inputs)],
+        ];
+        return (
+          meta.map((x) => "# " + x.map(quote).join(",")).join("\n") +
+          "\n" +
+          [
+            "in_assessment_scope",
+            ...names,
+            "m0_m2",
+            "m1_m2_Hz",
+            "m2_m2_Hz2",
+            "m4_m2_Hz4",
+            "Dirlik_D1",
+            "Dirlik_D2",
+            "Dirlik_D3",
+            "Dirlik_Q",
+            "Dirlik_R",
+            "spectral_method_used",
+          ].join(",") +
+          "\n" +
+          r.rows
+            .map((x) =>
+              [
+                c.scope === "bank" || c.modes.includes(x.fn) ? 1 : 0,
+                ...keys.map((k) => x[k]),
+                ...x.m,
+                ...["d1", "d2", "d3", "q", "R"].map((k) => x.coeff?.[k] ?? ""),
+                x.method,
+              ].join(","),
+            )
+            .join("\n")
+        );
+      }
+      $("csv").onclick = () => {
+        if (last)
+          download("vibration-comparison-results.csv", csvText(), "text/csv");
+      };
+      $("report").onclick = () => {
+        if (!last) return;
+        const { inputs, c, r } = last;
+        const result = $("results").cloneNode(true);
+        result.querySelectorAll("button").forEach((x) => x.remove());
+        const caseText = Object.entries(inputs)
+          .map(
+            ([k, v]) =>
+              `<tr><td>${esc(k)}</td><td style="white-space:pre-wrap">${esc(v)}</td></tr>`,
+          )
+          .join("");
+        const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(c.caseName)} — vibration comparison report</title><style>${document.querySelector("style").textContent}\nbody{background:white}main{max-width:1000px}.tablewrap{max-height:none}.card{box-shadow:none}th{position:static}.charthead button{display:none}#rowTable .tablewrap{max-height:none;overflow:visible}</style></head><body><header><div class="eyebrow">ANALYSIS RECORD · ${r.version}</div><h1>${esc(c.caseName)}</h1><p>Heritage sine / random fatigue comparison · ${esc(r.generated)}</p></header><main><p>Static report. Use browser Print to save as PDF. The complete input record is below; pair it with the exported case JSON and results CSV.</p>${result.innerHTML}<div class="card pagebreak"><h2>Complete input record</h2><table>${caseText}</table></div><div class="card pagebreak">${$("method").firstElementChild.innerHTML}</div></main></body></html>`;
+        download("vibration-comparison-report.html", html, "text/html");
+      };
+    </script>
+  </body>
+</html>

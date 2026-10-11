@@ -1,0 +1,30 @@
+{
+  "schema": "vdc-case-1",
+  "version": "1.0.0",
+  "inputs": {
+    "caseName": "Illustrative component · X axis",
+    "Q": "10",
+    "b": "6",
+    "damageFactor": "1",
+    "passes": "2",
+    "sweepRate": "1",
+    "sineScale": "1",
+    "duration": "60",
+    "randomRepeats": "1",
+    "psdDb": "0",
+    "peakFactor": "4",
+    "fmin": "5",
+    "fmax": "2000",
+    "modesText": "35,120,280",
+    "inspectFn": "120",
+    "basis": "",
+    "sineText": "5,20,disp_da_in,0.1,0.1\n20,80,vel_pk_ips,6.283185307,6.283185307\n80,500,accel_g_pk,8.17997886,8.17997886",
+    "dwellText": "35,0,8,1000000,1\n120,0,8,1000000,1\n280,0,8,1000000,1",
+    "psdText": "20,0.01\n80,0.04\n350,0.04\n2000,0.007",
+    "method": "dirlik",
+    "sweepType": "oct",
+    "scope": "bank",
+    "density": 48,
+    "example": true
+  }
+}

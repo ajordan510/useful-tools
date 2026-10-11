@@ -1,0 +1,72 @@
+# Vibration Damage Comparison
+
+An offline engineering tool for comparing a documented heritage sine sweep / resonance-dwell qualification exposure with a new random vibration PSD requirement.
+
+## Start
+
+Download `vibration_damage_comparison.html` and open it in a modern browser. No server, installation or network connection is required. The initial data is illustrative, not a hardware qualification case.
+
+Read `Vibration_Damage_Comparison_White_Paper.pdf` for the method, equations, ground rules, assumptions, examples and references. The editable source is `WHITE_PAPER.md`.
+
+## Inputs
+
+- One axis and hardware configuration per case, with evidence notes.
+- Sine segments with independent unit conventions: double-amplitude or peak displacement, peak/RMS velocity, and peak/RMS/peak-to-peak acceleration.
+- Documented dwell frequencies, optional peak-G overrides, time/cycle caps (earlier positive limit), and repetition counts.
+- Optional quasi-steady sweeps specified by one-way traversals and oct/min or Hz/min rate.
+- Positive log-log PSD breakpoints in g²/Hz, duration, repetitions and optional dB adjustment.
+- Q, fatigue exponent b, damage coverage factor, random peak screen factor and frequency scope.
+
+Sine row: `low_Hz,high_Hz,unit,low_level,high_level`.
+
+Dwell row: `Hz,g_peak_override,hour_cap,cycle_cap,repeats`. A zero override uses the profile; a zero cap disables that cap. At least one cap must be positive. The sine amplitude multiplier applies to overrides too.
+
+PSD row: `Hz,g2_per_Hz`. Blank lines and trailing `# comments` are accepted. Fields may use commas, tabs, semicolons or spaces. Omit headers. See the unit-code menu in the tool.
+
+## Outputs
+
+- Fatigue-damage spectra and heritage/new damage ratios: Dirlik and narrowband cross-check.
+- Separate relative-displacement peak-response comparison.
+- Equivalent random duration and required uniform amplitude/PSD scaling.
+- Explicit dwell duration and cycle accounting; per-dwell damage contributions at an inspection mode.
+- Q/b sensitivity matrix, normalized input plots, response PSD and assessment table.
+- Self-contained HTML analysis report, complete results CSV, editable case JSON and individual SVG plots.
+
+The report can be printed to PDF. Exports include the case assumptions and version; changing inputs disables results exports until recalculation. All data stays in the local browser. Cases are saved explicitly; there is no background persistence.
+
+## Interpretation
+
+The model is an SDOF **relative exposure severity comparison**, not an absolute life model or automatic qualification decision. Relative displacement serves as a stress proxy. The unknown stress conversion and S-N intercept cancel only for the same dynamics, stress mapping and fatigue law. Do not sum damage across oscillator-bank frequencies.
+
+Dirlik is the primary stationary Gaussian random model; narrowband/Rayleigh is a cross-check. The sine model is steady-state at fixed dwells and quasi-steady during sweeps. The peak factor is user-selected, not a duration-based confidence bound. Review assumptions, actual test completion, modal coverage, configuration/axis equivalence, peak response and sensitivity before making a disposition.
+
+The same Q and b apply to both exposures. Different configurations, stress FRFs, nonlinear response, multiaxial interaction, non-Gaussian histories, mean-stress corrections, endurance limits, variable PSD blocks and rainflow time-history analysis are not implemented. Already-tested hardware needs a separate consumed/remaining-life assessment.
+
+## Development and verification
+
+```sh
+node build.mjs
+node test_engine.cjs
+python3 validate_reference.py
+```
+
+`engine.js` contains the independent calculation engine. `app.template.html` holds the UI. Build after editing either; `vibration_damage_comparison.html` embeds the engine and is the distributable.
+
+The SciPy reference check needs NumPy and SciPy. PDF generation (`python3 build_white_paper.py`) needs Matplotlib, Pillow and ReportLab. These are development dependencies only.
+
+Browser smoke tests require Playwright and Chromium:
+
+```sh
+node test_browser.mjs
+# Optional: CHROMIUM_PATH=/path/to/chromium TEST_ARTIFACT_DIR=/tmp/vdc-qa node test_browser.mjs
+```
+
+Fourteen engine test groups and 96 independent quadrature/PDF-integration cases verify the calculations. Browser checks cover file-based operation, plots, exports, case import, stale-result protection, invalid inputs, mobile layout and absence of network requests. This is numerical/software verification; experimental validation and engineering approval remain specific to the hardware and program.
+
+## References
+
+- Dirlik & Benasciutti (2021), https://doi.org/10.3390/met11091333
+- Zorman, Slavič & Boltežar (2023), https://doi.org/10.1016/j.ymssp.2023.110149
+- NASA NESC Academy, Tom Irvine, *Using Fatigue to Compare Sine and Random Environments*: https://nescacademy.nasa.gov/video/2584e207341e411b95fa829e191d81441d
+
+Version 1.0.0, 2026-10-11. See the white paper for source roles and implementation details.
