@@ -25,6 +25,10 @@ page.on("request", (r) => {
 await page.goto(
   new URL("vibration_damage_comparison.html", import.meta.url).href,
 );
+assert.equal(await page.locator("#startup").isVisible(), false);
+assert.ok(
+  (await page.locator("#status").innerText()).includes("Calculator ready"),
+);
 async function run() {
   await page.click("#run");
   await page.waitForFunction(() => !document.querySelector("#run").disabled);
@@ -96,6 +100,19 @@ assert.equal(await page.locator("#csv").isDisabled(), true);
 await page.click("#demo");
 await page.waitForFunction(() => !document.querySelector("#run").disabled);
 await page.setViewportSize({ width: 390, height: 844 });
+await run();
+assert.equal(
+  await page
+    .locator("#results")
+    .evaluate((el) => document.activeElement === el),
+  true,
+);
+assert.ok(
+  await page.locator("#results").evaluate((el) => {
+    const rect = el.getBoundingClientRect();
+    return rect.top >= -1 && rect.top < innerHeight;
+  }),
+);
 assert.equal(
   await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
   false,
@@ -105,6 +122,9 @@ await page.locator("#results").scrollIntoViewIfNeeded();
 await page.screenshot({ path: path.join(out, "mobile-results.png") });
 await page.click('[data-tab="method"]');
 assert.equal(await page.locator("#method").isVisible(), true);
+await run();
+assert.equal(await page.locator("#analysis").isVisible(), true);
+assert.equal(await page.locator("#method").isVisible(), false);
 assert.equal(
   await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
   false,
@@ -115,7 +135,39 @@ await page.setViewportSize({ width: 1100, height: 1000 });
 await page.screenshot({ path: path.join(out, "report.png") });
 assert.deepEqual(errors, []);
 assert.deepEqual(requests, []);
+// Attachment previews may render the form while disallowing all JavaScript.
+const blockedContext = await browser.newContext({ javaScriptEnabled: false });
+const blockedPage = await blockedContext.newPage();
+await blockedPage.goto(
+  new URL("vibration_damage_comparison.html", import.meta.url).href,
+);
+assert.equal(await blockedPage.locator("#startup").isVisible(), true);
+assert.equal(await blockedPage.locator("#run").isDisabled(), true);
+assert.ok(
+  (await blockedPage.locator("#startup").innerText()).includes(
+    "Download this HTML file",
+  ),
+);
+await blockedContext.close();
+// A failed engine must leave an actionable message, not a live-looking Run button.
+const brokenPage = await browser.newPage();
+const packaged = fs.readFileSync(
+  path.join(root, "vibration_damage_comparison.html"),
+  "utf8",
+);
+await brokenPage.setContent(
+  packaged.replace(
+    "const api = factory();",
+    'throw new Error("Simulated engine startup failure");',
+  ),
+);
+assert.equal(await brokenPage.locator("#startup").isVisible(), true);
+assert.equal(await brokenPage.locator("#run").isDisabled(), true);
+assert.ok(
+  (await brokenPage.locator("#startup").innerText()).includes("browser error"),
+);
+await brokenPage.close();
 await browser.close();
 console.log(
-  "PASS browser: file:// calculation, 6 plots, CSV/SVG/case/report exports, case roundtrip, stale-result protection, known modes, alternate method/rate, validation errors, mobile layout, saved report and zero network requests.",
+  "PASS browser: file:// calculation, 6 plots, CSV/SVG/case/report exports, case roundtrip, stale-result protection, known modes, alternate method/rate, validation errors, mobile result navigation, method-tab run, blocked scripts, startup failure diagnostics, saved report and zero network requests.",
 );

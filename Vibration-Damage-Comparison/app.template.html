@@ -555,8 +555,15 @@
       </p>
     </header>
     <main>
+      <div id="startup" class="notice warn" role="alert">
+        <strong>The calculator has not started.</strong> If this message stays
+        visible, this viewer may be blocking JavaScript. Download this HTML file
+        and open the saved file in a browser with JavaScript enabled, rather
+        than a document preview. Run comparison becomes available when the
+        calculator is ready.
+      </div>
       <div class="toolbar">
-        <button class="primary" id="run">Run comparison</button
+        <button class="primary" id="run" disabled>Run comparison</button
         ><button id="saveCase">Save case JSON</button
         ><label class="filelabel" for="loadCase" style="margin: 0"
           >Open case<input
@@ -567,7 +574,7 @@
         ><button id="csv" disabled>Export results CSV</button
         ><button id="report" disabled>Save analysis report</button
         ><button id="demo">Load example</button
-        ><span class="tag">v1.0.0 · OFFLINE · ONE AXIS PER CASE</span>
+        ><span class="tag">UI v1.0.1 · OFFLINE · ONE AXIS PER CASE</span>
       </div>
       <nav aria-label="Workspace">
         <button class="active" data-tab="analysis">Comparison workspace</button
@@ -819,7 +826,7 @@
               </p>
             </div>
           </aside>
-          <div id="results">
+          <div id="results" tabindex="-1" aria-label="Comparison results">
             <div class="card">
               <h2>From excitation to evidence</h2>
               <p>
@@ -1049,10 +1056,23 @@
         </div>
       </section>
       <div class="foot">
-        Vibration Damage Comparison · 1.0.0 · No network requests. Input data
-        stays in your browser.
+        Vibration Damage Comparison · UI 1.0.1 · Engine 1.0.0 · No network
+        requests. Input data stays in your browser.
       </div>
     </main>
+    <script>
+      // Keep this small bootstrap separate so a later script failure is visible.
+      window.addEventListener("error", function (event) {
+        var banner = document.getElementById("startup");
+        banner.hidden = false;
+        banner.className = "notice error";
+        banner.textContent =
+          "The calculator encountered a browser error: " +
+          (event.message || "unknown script error") +
+          ". Download and reopen the HTML in a current browser with JavaScript enabled. " +
+          "If this persists, include this message when reporting the problem.";
+      });
+    </script>
     <script>
       /*__ENGINE__*/
     </script>
@@ -1476,6 +1496,8 @@
         if (busy) return;
         busy = true;
         $("run").disabled = true;
+        $("run").textContent = "Calculating…";
+        $("results").setAttribute("aria-busy", "true");
         $("csv").disabled = $("report").disabled = true;
         $("status").className = "notice";
         $("status").textContent =
@@ -1494,14 +1516,20 @@
             ? "Illustrative analysis complete. These inputs are not hardware qualification data."
             : "Analysis complete. Review fatigue coverage, peaks, assumptions and sensitivity before making a determination.";
           $("csv").disabled = $("report").disabled = false;
+          document.querySelector('[data-tab="analysis"]').click();
+          $("results").focus({ preventScroll: true });
+          $("results").scrollIntoView({ block: "start" });
         } catch (e) {
           $("status").className = "notice error";
           $("status").textContent = e.message;
           $("results").style.opacity = ".45";
+          $("status").scrollIntoView({ block: "center" });
           console.error(e);
         } finally {
           busy = false;
           $("run").disabled = false;
+          $("run").textContent = "Run comparison";
+          $("results").setAttribute("aria-busy", "false");
         }
       }
       $("run").onclick = run;
@@ -1617,6 +1645,11 @@
         const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(c.caseName)} — vibration comparison report</title><style>${document.querySelector("style").textContent}\nbody{background:white}main{max-width:1000px}.tablewrap{max-height:none}.card{box-shadow:none}th{position:static}.charthead button{display:none}#rowTable .tablewrap{max-height:none;overflow:visible}</style></head><body><header><div class="eyebrow">ANALYSIS RECORD · ${r.version}</div><h1>${esc(c.caseName)}</h1><p>Heritage sine / random fatigue comparison · ${esc(r.generated)}</p></header><main><p>Static report. Use browser Print to save as PDF. The complete input record is below; pair it with the exported case JSON and results CSV.</p>${result.innerHTML}<div class="card pagebreak"><h2>Complete input record</h2><table>${caseText}</table></div><div class="card pagebreak">${$("method").firstElementChild.innerHTML}</div></main></body></html>`;
         download("vibration-comparison-report.html", html, "text/html");
       };
+      // Enable Run only after all handlers and the calculation engine are ready.
+      $("startup").hidden = true;
+      $("run").disabled = false;
+      $("status").textContent =
+        "Calculator ready. Example inputs are loaded. Run the comparison, then replace them with your test records.";
     </script>
   </body>
 </html>

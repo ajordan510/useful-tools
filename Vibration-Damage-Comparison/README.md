@@ -6,6 +6,10 @@ An offline engineering tool for comparing a documented heritage sine sweep / res
 
 Download `vibration_damage_comparison.html` and open it in a modern browser. No server, installation or network connection is required. The initial data is illustrative, not a hardware qualification case.
 
+Wait for **Calculator ready**, then choose **Run comparison**. The tool brings the results into view after calculating, including on narrow screens. Input errors appear above the inputs and are brought into view.
+
+If Run comparison is disabled and **The calculator has not started** remains visible, the file viewer may be blocking JavaScript. Download the HTML and open the saved file in a browser with JavaScript enabled; an attachment or document preview may display the form without running it. If a browser error appears, include its exact message when reporting the issue.
+
 Read `Vibration_Damage_Comparison_White_Paper.pdf` for the method, equations, ground rules, assumptions, examples and references. The editable source is `WHITE_PAPER.md`.
 
 ## Inputs
@@ -69,4 +73,4 @@ Fourteen engine test groups and 96 independent quadrature/PDF-integration cases 
 - Zorman, Slavič & Boltežar (2023), https://doi.org/10.1016/j.ymssp.2023.110149
 - NASA NESC Academy, Tom Irvine, *Using Fatigue to Compare Sine and Random Environments*: https://nescacademy.nasa.gov/video/2584e207341e411b95fa829e191d81441d
 
-Version 1.0.0, 2026-10-11. See the white paper for source roles and implementation details.
+UI version 1.0.1, engine/method version 1.0.0, 2026-10-11. UI 1.0.1 adds startup diagnostics and brings completed results or validation errors into view. See the white paper for source roles and implementation details.
