@@ -1,0 +1,115 @@
+{
+  "scope": "Independent continuous spatial integration of the diagnostic Smith fits; not experimental validation",
+  "bands": 21,
+  "sliceCountJS": 960,
+  "toleranceDb": 0.01,
+  "maxReplayDifferenceDb": 0.00012019982258948403,
+  "maxPhysicalDifferenceDb": 0.00012019982258948403,
+  "rows": [
+    {
+      "frequency": 100,
+      "continuousPhysicalDb": 74.38364539824164,
+      "continuousReplayDb": 56.97607791333645
+    },
+    {
+      "frequency": 125.89254117941672,
+      "continuousPhysicalDb": 76.57952051053367,
+      "continuousReplayDb": 63.70710302562848
+    },
+    {
+      "frequency": 158.48931924611134,
+      "continuousPhysicalDb": 78.78901869086346,
+      "continuousReplayDb": 70.45175120595826
+    },
+    {
+      "frequency": 199.526231496888,
+      "continuousPhysicalDb": 80.98349751816156,
+      "continuousReplayDb": 77.18138003325637
+    },
+    {
+      "frequency": 251.188643150958,
+      "continuousPhysicalDb": 83.1141049983294,
+      "continuousReplayDb": 83.1141049983294
+    },
+    {
+      "frequency": 316.22776601683796,
+      "continuousPhysicalDb": 85.11922442736756,
+      "continuousReplayDb": 85.11922442736756
+    },
+    {
+      "frequency": 398.1071705534972,
+      "continuousPhysicalDb": 86.944938117133,
+      "continuousReplayDb": 86.944938117133
+    },
+    {
+      "frequency": 501.18723362727224,
+      "continuousPhysicalDb": 88.54485313899858,
+      "continuousReplayDb": 88.54485313899858
+    },
+    {
+      "frequency": 630.9573444801932,
+      "continuousPhysicalDb": 89.87952408914681,
+      "continuousReplayDb": 89.87952408914681
+    },
+    {
+      "frequency": 794.3282347242815,
+      "continuousPhysicalDb": 90.91663594576642,
+      "continuousReplayDb": 90.91663594576642
+    },
+    {
+      "frequency": 1000,
+      "continuousPhysicalDb": 91.63676606150244,
+      "continuousReplayDb": 91.63676606150244
+    },
+    {
+      "frequency": 1258.9254117941673,
+      "continuousPhysicalDb": 92.035304611249,
+      "continuousReplayDb": 92.035304611249
+    },
+    {
+      "frequency": 1584.8931924611136,
+      "continuousPhysicalDb": 92.14016946340377,
+      "continuousReplayDb": 92.14016946340377
+    },
+    {
+      "frequency": 1995.2623149688795,
+      "continuousPhysicalDb": 92.01501788942099,
+      "continuousReplayDb": 92.01501788942099
+    },
+    {
+      "frequency": 2511.8864315095802,
+      "continuousPhysicalDb": 91.73599008853822,
+      "continuousReplayDb": 91.73599008853822
+    },
+    {
+      "frequency": 3162.2776601683795,
+      "continuousPhysicalDb": 91.36790595246265,
+      "continuousReplayDb": 91.36790595246265
+    },
+    {
+      "frequency": 3981.0717055349724,
+      "continuousPhysicalDb": 90.9525624363949,
+      "continuousReplayDb": 90.9525624363949
+    },
+    {
+      "frequency": 5011.872336272722,
+      "continuousPhysicalDb": 90.51472189019141,
+      "continuousReplayDb": 90.51472189019141
+    },
+    {
+      "frequency": 6309.573444801933,
+      "continuousPhysicalDb": 90.06997569925086,
+      "continuousReplayDb": 90.06997569925086
+    },
+    {
+      "frequency": 7943.282347242815,
+      "continuousPhysicalDb": 89.62846103020568,
+      "continuousReplayDb": 89.62846103020568
+    },
+    {
+      "frequency": 10000,
+      "continuousPhysicalDb": 89.19673145568085,
+      "continuousReplayDb": 89.19673145568085
+    }
+  ]
+}

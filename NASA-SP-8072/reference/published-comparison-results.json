@@ -1,5 +1,5 @@
 {
-  "status": "Unresolved comparison — not a verification pass",
+  "status": "Discrepancy traced — diagnostic reconstruction, not a verification pass",
   "source": "https://auetd.auburn.edu/handle/10415/3954",
   "metrics": {
     "bands": 21,
@@ -13,10 +13,237 @@
     "rmse": 15.505408869739787,
     "maxAbsolute": 29.452261821699054
   },
+  "replayMetrics": {
+    "bands": 21,
+    "bias": -0.14306536552336166,
+    "rmse": 0.1815955653325803,
+    "maxAbsolute": 0.3384873508909294
+  },
+  "correctedMetrics": {
+    "bands": 21,
+    "bias": 1.876904631601437,
+    "rmse": 5.0786465828923575,
+    "maxAbsolute": 17.327074899353605
+  },
+  "stages": [
+    {
+      "name": "Workbench baseline",
+      "options": null,
+      "levels": [
+        86.50926182169906,
+        88.82301344968349,
+        91.11807418922704,
+        93.3747890397923,
+        95.44341608135692,
+        97.28732953463019,
+        98.95391220710414,
+        100.37120309014261,
+        101.47184370300212,
+        102.12499171133521,
+        102.35031836548126,
+        102.20911253088892,
+        101.70235853527323,
+        100.86745512498497,
+        99.85813435990131,
+        98.7554925899033,
+        97.55523262583314,
+        96.30640046893146,
+        95.0352415123114,
+        93.75118652384984,
+        92.45720461745725
+      ],
+      "metrics": {
+        "bands": 21,
+        "bias": 11.389808194418533,
+        "rmse": 13.105824638675768,
+        "maxAbsolute": 29.452261821699054
+      }
+    },
+    {
+      "name": "Use Wilby III; keep physical angles",
+      "options": {},
+      "levels": [
+        75.50498341396744,
+        77.68512874245747,
+        79.8750303461073,
+        82.05096756896637,
+        84.18883670519011,
+        86.23748052186386,
+        88.13174796568515,
+        89.81539527768209,
+        91.2330553828154,
+        92.35531092176586,
+        93.17501170587153,
+        93.68300212697847,
+        93.87928497572156,
+        93.79707331048947,
+        93.50164787843485,
+        93.069563321962,
+        92.56885844847092,
+        92.04747089155767,
+        91.53165843793946,
+        91.03144534543914,
+        90.5505448302358
+      ],
+      "metrics": {
+        "bands": 21,
+        "bias": 3.274928481885802,
+        "rmse": 5.644048896152446,
+        "maxAbsolute": 18.447983413967435
+      }
+    },
+    {
+      "name": "Replay Appendix D angle error",
+      "options": {
+        "appendixAngle": true
+      },
+      "levels": [
+        58.09741592906224,
+        64.81271125755227,
+        71.53776286120208,
+        78.24885008406117,
+        84.18883670519011,
+        86.23748052186386,
+        88.13174796568515,
+        89.81539527768209,
+        91.2330553828154,
+        92.35531092176586,
+        93.17501170587153,
+        93.68300212697847,
+        93.87928497572156,
+        93.79707331048947,
+        93.50164787843485,
+        93.069563321962,
+        92.56885844847092,
+        92.04747089155767,
+        91.53165843793946,
+        91.03144534543914,
+        90.5505448302358
+      ],
+      "metrics": {
+        "bands": 21,
+        "bias": 1.2549584847610018,
+        "rmse": 1.2782749961229258,
+        "maxAbsolute": 1.7776478784348484
+      }
+    },
+    {
+      "name": "Disable curve normalization",
+      "options": {
+        "appendixAngle": true,
+        "raw": true
+      },
+      "levels": [
+        57.25613896256313,
+        63.971434291053164,
+        70.69648589470299,
+        77.40757311756208,
+        83.34755973869102,
+        85.39620355536474,
+        87.29047099918604,
+        88.97411831118298,
+        90.39177841631628,
+        91.51403395526678,
+        92.33373473937242,
+        92.84172516047937,
+        93.03800800922247,
+        92.95579634399036,
+        92.66037091193576,
+        92.2282863554629,
+        91.72758148197182,
+        91.20619392505857,
+        90.69038147144035,
+        90.19016837894003,
+        89.70926786373668
+      ],
+      "metrics": {
+        "bands": 21,
+        "bias": 0.4136815182619001,
+        "rmse": 0.4797901268168286,
+        "maxAbsolute": 0.9363709119357537
+      }
+    },
+    {
+      "name": "Use Smith axial and spectral fits",
+      "options": {
+        "appendixAngle": true,
+        "raw": true,
+        "fits": true
+      },
+      "levels": [
+        56.99012535124618,
+        63.719851727901826,
+        70.46248977344548,
+        77.18761404097917,
+        83.1132234006015,
+        85.11017500588524,
+        86.9273613110449,
+        88.51920333515729,
+        89.84703361032848,
+        90.87951384443338,
+        91.5978455957428,
+        91.99822296347983,
+        92.1081598952422,
+        91.98911320917595,
+        91.71540273298967,
+        91.35096680543997,
+        90.93782634190909,
+        90.5018131078655,
+        90.05829729895332,
+        89.61761179079272,
+        89.18659529472167
+      ],
+      "metrics": {
+        "bands": 21,
+        "bias": -0.15816921726970753,
+        "rmse": 0.1965565457943577,
+        "maxAbsolute": 0.36488679082404474
+      }
+    },
+    {
+      "name": "Use center PSD × base-2 bandwidth",
+      "options": {
+        "appendixAngle": true,
+        "raw": true,
+        "fits": true,
+        "centerBands": true
+      },
+      "levels": [
+        56.97650741444843,
+        63.707486140161635,
+        70.45210151211818,
+        77.18196492414395,
+        83.11449882267252,
+        85.1196791274924,
+        86.9453314364845,
+        88.54517490305119,
+        89.87995761802165,
+        90.91699623611022,
+        91.63712778526349,
+        92.03513760664065,
+        92.1399415350566,
+        92.01551264910907,
+        91.73667174901394,
+        91.36857489405678,
+        90.95249117857892,
+        90.51471808698676,
+        90.07043255088269,
+        89.62862059774861,
+        89.19670055596727
+      ],
+      "metrics": {
+        "bands": 21,
+        "bias": -0.14306536552336166,
+        "rmse": 0.1815955653325803,
+        "maxAbsolute": 0.3384873508909294
+      }
+    }
+  ],
   "numericalDiagnostics": {
     "maxSliceChange240to960Db": 0.0001061802713167026,
     "maxNormalizationChangeDb": 0.8412769664991231,
-    "maxAmbientChange311to300KDb": 0.15612427323804923
+    "maxAmbientChange311to300KDb": 0.15612427323804923,
+    "maxReplaySliceChange240to960Db": 0.0007535252440931117
   },
   "rows": [
     {
@@ -24,147 +251,210 @@
       "published": 57.057,
       "predicted": 86.50926182169906,
       "residual": 29.452261821699054,
-      "directivityClamped": false
+      "directivityClamped": false,
+      "replay": 56.97650741444843,
+      "replayResidual": -0.08049258555157479,
+      "correctedWilby": 74.3840748993536
     },
     {
       "frequency": 125.89254117941672,
       "published": 63.88,
       "predicted": 88.82301344968349,
       "residual": 24.943013449683484,
-      "directivityClamped": false
+      "directivityClamped": false,
+      "replay": 63.707486140161635,
+      "replayResidual": -0.17251385983836798,
+      "correctedWilby": 76.57990362506682
     },
     {
       "frequency": 158.48931924611134,
       "published": 70.69,
       "predicted": 91.11807418922704,
       "residual": 20.428074189227047,
-      "directivityClamped": false
+      "directivityClamped": false,
+      "replay": 70.45210151211818,
+      "replayResidual": -0.23789848788182155,
+      "correctedWilby": 78.78936899702339
     },
     {
       "frequency": 199.526231496888,
       "published": 77.251,
       "predicted": 93.3747890397923,
       "residual": 16.1237890397923,
-      "directivityClamped": false
+      "directivityClamped": false,
+      "replay": 77.18196492414395,
+      "replayResidual": -0.06903507585604984,
+      "correctedWilby": 80.98408240904915
     },
     {
       "frequency": 251.188643150958,
       "published": 82.977,
       "predicted": 95.44341608135692,
       "residual": 12.466416081356911,
-      "directivityClamped": false
+      "directivityClamped": false,
+      "replay": 83.11449882267252,
+      "replayResidual": 0.13749882267251223,
+      "correctedWilby": 83.11449882267252
     },
     {
       "frequency": 316.22776601683796,
       "published": 85.172,
       "predicted": 97.28732953463019,
       "residual": 12.115329534630192,
-      "directivityClamped": false
+      "directivityClamped": false,
+      "replay": 85.1196791274924,
+      "replayResidual": -0.05232087250759321,
+      "correctedWilby": 85.1196791274924
     },
     {
       "frequency": 398.1071705534972,
       "published": 87.223,
       "predicted": 98.95391220710414,
       "residual": 11.73091220710414,
-      "directivityClamped": false
+      "directivityClamped": false,
+      "replay": 86.9453314364845,
+      "replayResidual": -0.27766856351550473,
+      "correctedWilby": 86.9453314364845
     },
     {
       "frequency": 501.18723362727224,
       "published": 88.754,
       "predicted": 100.37120309014261,
       "residual": 11.61720309014261,
-      "directivityClamped": false
+      "directivityClamped": false,
+      "replay": 88.54517490305119,
+      "replayResidual": -0.20882509694881435,
+      "correctedWilby": 88.54517490305119
     },
     {
       "frequency": 630.9573444801932,
       "published": 90.069,
       "predicted": 101.47184370300212,
       "residual": 11.40284370300212,
-      "directivityClamped": false
+      "directivityClamped": false,
+      "replay": 89.87995761802165,
+      "replayResidual": -0.18904238197835355,
+      "correctedWilby": 89.87995761802165
     },
     {
       "frequency": 794.3282347242815,
       "published": 91.034,
       "predicted": 102.12499171133521,
       "residual": 11.090991711335207,
-      "directivityClamped": false
+      "directivityClamped": false,
+      "replay": 90.91699623611022,
+      "replayResidual": -0.11700376388978384,
+      "correctedWilby": 90.91699623611022
     },
     {
       "frequency": 1000,
       "published": 91.724,
       "predicted": 102.35031836548126,
       "residual": 10.626318365481254,
-      "directivityClamped": false
+      "directivityClamped": false,
+      "replay": 91.63712778526349,
+      "replayResidual": -0.08687221473651618,
+      "correctedWilby": 91.63712778526349
     },
     {
       "frequency": 1258.9254117941673,
       "published": 92.234,
       "predicted": 102.20911253088892,
       "residual": 9.975112530888921,
-      "directivityClamped": false
+      "directivityClamped": false,
+      "replay": 92.03513760664065,
+      "replayResidual": -0.19886239335934874,
+      "correctedWilby": 92.03513760664065
     },
     {
       "frequency": 1584.8931924611136,
       "published": 92.414,
       "predicted": 101.70235853527323,
       "residual": 9.288358535273233,
-      "directivityClamped": false
+      "directivityClamped": false,
+      "replay": 92.1399415350566,
+      "replayResidual": -0.27405846494340835,
+      "correctedWilby": 92.1399415350566
     },
     {
       "frequency": 1995.2623149688795,
       "published": 92.354,
       "predicted": 100.86745512498497,
       "residual": 8.513455124984972,
-      "directivityClamped": false
+      "directivityClamped": false,
+      "replay": 92.01551264910907,
+      "replayResidual": -0.3384873508909294,
+      "correctedWilby": 92.01551264910907
     },
     {
       "frequency": 2511.8864315095802,
       "published": 91.724,
       "predicted": 99.85813435990131,
       "residual": 8.13413435990131,
-      "directivityClamped": true
+      "directivityClamped": true,
+      "replay": 91.73667174901394,
+      "replayResidual": 0.012671749013932754,
+      "correctedWilby": 91.73667174901394
     },
     {
       "frequency": 3162.2776601683795,
       "published": 91.448,
       "predicted": 98.7554925899033,
       "residual": 7.307492589903305,
-      "directivityClamped": true
+      "directivityClamped": true,
+      "replay": 91.36857489405678,
+      "replayResidual": -0.07942510594321561,
+      "correctedWilby": 91.36857489405678
     },
     {
       "frequency": 3981.0717055349724,
       "published": 91.034,
       "predicted": 97.55523262583314,
       "residual": 6.521232625833136,
-      "directivityClamped": true
+      "directivityClamped": true,
+      "replay": 90.95249117857892,
+      "replayResidual": -0.08150882142108173,
+      "correctedWilby": 90.95249117857892
     },
     {
       "frequency": 5011.872336272722,
       "published": 90.759,
       "predicted": 96.30640046893146,
       "residual": 5.547400468931457,
-      "directivityClamped": true
+      "directivityClamped": true,
+      "replay": 90.51471808698676,
+      "replayResidual": -0.2442819130132392,
+      "correctedWilby": 90.51471808698676
     },
     {
       "frequency": 6309.573444801933,
       "published": 90.345,
       "predicted": 95.0352415123114,
       "residual": 4.6902415123114025,
-      "directivityClamped": true
+      "directivityClamped": true,
+      "replay": 90.07043255088269,
+      "replayResidual": -0.27456744911731334,
+      "correctedWilby": 90.07043255088269
     },
     {
       "frequency": 7943.282347242815,
       "published": 89.756,
       "predicted": 93.75118652384984,
       "residual": 3.9951865238498385,
-      "directivityClamped": true
+      "directivityClamped": true,
+      "replay": 89.62862059774861,
+      "replayResidual": -0.12737940225139255,
+      "correctedWilby": 89.62862059774861
     },
     {
       "frequency": 10000,
       "published": 89.241,
       "predicted": 92.45720461745725,
       "residual": 3.216204617457251,
-      "directivityClamped": true
+      "directivityClamped": true,
+      "replay": 89.19670055596727,
+      "replayResidual": -0.04429944403273112,
+      "correctedWilby": 89.19670055596727
     }
   ]
 }

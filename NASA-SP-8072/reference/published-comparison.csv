@@ -1,27 +1,29 @@
-# Unresolved comparison — not a verification pass
+# Discrepancy traced — diagnostic reconstruction, not a verification pass
 # Source: https://auetd.auburn.edu/handle/10415/3954; Figure 53, printed p. 63 / PDF p. 79
 # Published curve: Red SPL Prediction curve; published DSM-II variant, not measurements or blue SSDL
 # Estimated graph-reading precision: +/-0.5 dB (not model uncertainty)
-# Case JSON: {"schema":"rocket-acoustics-1","name":"Smith 2013 · free-jet comparison","notes":"Reconstruction of Smith (2013), Section 3.4, Tables 8–9 and Figure 53. Laboratory air jet, not rocket validation. F=794.3 N, U=406.6 m/s, D=0.073 m, M=1.15; 14 W acoustic power from Table 9 encoded as equivalent efficiency, not a fitted rocket efficiency. Receiver x=+3.5 m, y=3.5 m (paper Z=-3.5 m); 45 degrees from downstream at the nozzle. Ambient sound speed derived from 311 K using gamma=1.4, R=287. Workbench uses normalized historical curves, Eldred directivity, 240 slices over 0.1–5 core lengths. Smith uses fitted curves and Wilby third directivity; saved settings and the external source-power dataset referenced by the appended code are unavailable; code-to-figure provenance is unresolved. Comparison has unresolved differences; no verification pass claimed. Source: https://auetd.auburn.edu/handle/10415/3954","thrust":794.3,"velocity":406.6,"diameter":0.073,"mach":1.15,"engines":1,"eta":0.008669740419921353,"model":"dsm2","core":"eldred","normalize":true,"cluster":"merged","directivity":"legacy","propagation":"none","reflection":0,"margin":0,"fmin":100,"fmax":10000,"slices":240,"deflection":0,"bend":0,"terminate":false,"c0":353.49653463647985,"receivers":[{"name":"45° · Figure 53","x":3.5,"y":3.5}]}
-frequency_Hz,workbench_SPL_dB,published_SPL_dB,workbench_minus_published_dB,directivity_boundary_held
-100,86.50926182169906,57.057,29.452261821699054,false
-125.89254117941672,88.82301344968349,63.88,24.943013449683484,false
-158.48931924611134,91.11807418922704,70.69,20.428074189227047,false
-199.526231496888,93.3747890397923,77.251,16.1237890397923,false
-251.188643150958,95.44341608135692,82.977,12.466416081356911,false
-316.22776601683796,97.28732953463019,85.172,12.115329534630192,false
-398.1071705534972,98.95391220710414,87.223,11.73091220710414,false
-501.18723362727224,100.37120309014263,88.754,11.617203090142624,false
-630.9573444801932,101.47184370300212,90.069,11.40284370300212,false
-794.3282347242815,102.12499171133521,91.034,11.090991711335207,false
-1000,102.35031836548126,91.724,10.626318365481254,false
-1258.9254117941673,102.20911253088892,92.234,9.975112530888921,false
-1584.8931924611136,101.70235853527323,92.414,9.288358535273233,false
-1995.2623149688795,100.86745512498497,92.354,8.513455124984972,false
-2511.8864315095802,99.85813435990131,91.724,8.13413435990131,true
-3162.2776601683795,98.7554925899033,91.448,7.307492589903305,true
-3981.0717055349724,97.55523262583314,91.034,6.521232625833136,true
-5011.872336272722,96.30640046893146,90.759,5.547400468931457,true
-6309.573444801933,95.0352415123114,90.345,4.6902415123114025,true
-7943.282347242815,93.75118652384984,89.756,3.9951865238498385,true
-10000,92.45720461745725,89.241,3.216204617457251,true
+# Case JSON: {"schema":"rocket-acoustics-1","name":"Smith 2013 · free-jet comparison","notes":"Reconstruction of Smith (2013), Section 3.4, Tables 8–9 and Figure 53. Laboratory air jet, not rocket validation. F=794.3 N, U=406.6 m/s, D=0.073 m, M=1.15; 14 W acoustic power from Table 9 encoded as equivalent efficiency, not a fitted rocket efficiency. Receiver x=+3.5 m, y=3.5 m (paper Z=-3.5 m); 45 degrees from downstream at the nozzle. Ambient sound speed derived from 311 K using gamma=1.4, R=287. Workbench uses normalized historical curves, Eldred directivity, 240 slices over 0.1–5 core lengths. Smith uses fitted curves and Wilby third directivity. The audit traces the baseline 13.11 dB RMS discrepancy to model choices and a quadrant error in Appendix D. A separate diagnostic replay reproduces the graph to 0.18 dB RMS, including that source error; the calculator retains physical angles. Saved run settings are unavailable; this is not experimental validation. Source: https://auetd.auburn.edu/handle/10415/3954","thrust":794.3,"velocity":406.6,"diameter":0.073,"mach":1.15,"engines":1,"eta":0.008669740419921353,"model":"dsm2","core":"eldred","normalize":true,"cluster":"merged","directivity":"legacy","propagation":"none","reflection":0,"margin":0,"fmin":100,"fmax":10000,"slices":240,"deflection":0,"bend":0,"terminate":false,"c0":353.49653463647985,"receivers":[{"name":"45° · Figure 53","x":3.5,"y":3.5}]}
+# Diagnostic replay uses Smith fits and the erroneous Appendix D angle; NOT a physical prediction mode. Fixed 240 slices / 0.1-5 core lengths; no fitted offsets.
+# Cumulative stages: [{"name":"Workbench baseline","options":null,"metrics":{"bands":21,"bias":11.389808194418533,"rmse":13.105824638675768,"maxAbsolute":29.452261821699054}},{"name":"Use Wilby III; keep physical angles","options":{},"metrics":{"bands":21,"bias":3.2749284818858033,"rmse":5.644048896152446,"maxAbsolute":18.447983413967435}},{"name":"Replay Appendix D angle error","options":{"appendixAngle":true},"metrics":{"bands":21,"bias":1.2549584847610031,"rmse":1.2782749961229272,"maxAbsolute":1.7776478784348484}},{"name":"Disable curve normalization","options":{"appendixAngle":true,"raw":true},"metrics":{"bands":21,"bias":0.4136815182619001,"rmse":0.4797901268168286,"maxAbsolute":0.9363709119357537}},{"name":"Use Smith axial and spectral fits","options":{"appendixAngle":true,"raw":true,"fits":true},"metrics":{"bands":21,"bias":-0.15816921726970753,"rmse":0.1965565457943576,"maxAbsolute":0.36488679082404474}},{"name":"Use center PSD × base-2 bandwidth","options":{"appendixAngle":true,"raw":true,"fits":true,"centerBands":true},"metrics":{"bands":21,"bias":-0.14306536552336166,"rmse":0.1815955653325803,"maxAbsolute":0.3384873508909294}}]
+frequency_Hz,workbench_SPL_dB,published_SPL_dB,workbench_minus_published_dB,directivity_boundary_held,diagnostic_replay_SPL_dB,replay_minus_published_dB,smith_fits_physical_angles_SPL_dB
+100,86.50926182169906,57.057,29.452261821699054,false,56.97650741444843,-0.08049258555157479,74.3840748993536
+125.89254117941672,88.82301344968349,63.88,24.943013449683484,false,63.707486140161635,-0.17251385983836798,76.57990362506682
+158.48931924611134,91.11807418922704,70.69,20.428074189227047,false,70.45210151211818,-0.23789848788182155,78.78936899702339
+199.526231496888,93.3747890397923,77.251,16.1237890397923,false,77.18196492414395,-0.06903507585604984,80.98408240904915
+251.188643150958,95.44341608135692,82.977,12.466416081356911,false,83.11449882267252,0.13749882267251223,83.11449882267252
+316.22776601683796,97.28732953463019,85.172,12.115329534630192,false,85.1196791274924,-0.05232087250759321,85.1196791274924
+398.1071705534972,98.95391220710414,87.223,11.73091220710414,false,86.9453314364845,-0.27766856351550473,86.9453314364845
+501.18723362727224,100.37120309014263,88.754,11.617203090142624,false,88.54517490305119,-0.20882509694881435,88.54517490305119
+630.9573444801932,101.47184370300212,90.069,11.40284370300212,false,89.87995761802165,-0.18904238197835355,89.87995761802165
+794.3282347242815,102.12499171133521,91.034,11.090991711335207,false,90.91699623611022,-0.11700376388978384,90.91699623611022
+1000,102.35031836548126,91.724,10.626318365481254,false,91.63712778526349,-0.08687221473651618,91.63712778526349
+1258.9254117941673,102.20911253088892,92.234,9.975112530888921,false,92.03513760664065,-0.19886239335934874,92.03513760664065
+1584.8931924611136,101.70235853527323,92.414,9.288358535273233,false,92.1399415350566,-0.27405846494340835,92.1399415350566
+1995.2623149688795,100.86745512498497,92.354,8.513455124984972,false,92.01551264910907,-0.3384873508909294,92.01551264910907
+2511.8864315095802,99.85813435990131,91.724,8.13413435990131,true,91.73667174901394,0.012671749013932754,91.73667174901394
+3162.2776601683795,98.7554925899033,91.448,7.307492589903305,true,91.36857489405678,-0.07942510594321561,91.36857489405678
+3981.0717055349724,97.55523262583314,91.034,6.521232625833136,true,90.95249117857892,-0.08150882142108173,90.95249117857892
+5011.872336272722,96.30640046893146,90.759,5.547400468931457,true,90.51471808698676,-0.2442819130132392,90.51471808698676
+6309.573444801933,95.0352415123114,90.345,4.6902415123114025,true,90.07043255088269,-0.27456744911731334,90.07043255088269
+7943.282347242815,93.75118652384984,89.756,3.9951865238498385,true,89.62862059774861,-0.12737940225139255,89.62862059774861
+10000,92.45720461745725,89.241,3.216204617457251,true,89.19670055596727,-0.04429944403273112,89.19670055596727

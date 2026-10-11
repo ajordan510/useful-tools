@@ -1,5 +1,6 @@
 {
   "passed": [
+    "Three spectra with published-point markers; cumulative diagnostics and angle explanation",
     "Offline fixed-case overlay and residuals",
     "CSV/report provenance",
     "Load calculator and pinned source curve",

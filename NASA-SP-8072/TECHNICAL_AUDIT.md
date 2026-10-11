@@ -166,10 +166,30 @@ Primary sources and exact implementation rules are in [RESEARCH.md](RESEARCH.md)
 - The geometry diagram reports validated case inputs and calculated core/source-span values. Tests cover inactive bends, 0/30/90/170-degree turns, preserved/terminated cores, a deflector beyond the source span, and models where core/bend controls do not apply. Angle β measures the outgoing centerline relative to +x; it is not a hardware plate angle. The diamond is a turn-station symbol, not an inferred deflector shape. Geometry is schematic, not to scale.
 - Reviewed layouts at desktop and mobile widths, source-image loading, figure enlargement/keyboard dismissal, stale-case summaries, report/SVG exports and workbook round trips. These documentation and visualization changes do not add physical validation or modify the prediction equations.
 
-## Follow-up: published spectrum comparison
+## Follow-up: published spectrum discrepancy audit
 
-Added Smith (2013), Figure 53 as an explicitly unresolved laboratory-jet comparison. The published curve is independently digitized, source-hashed and sampled at matching workbench frequencies (approximate interpolation from the paper’s base-2 bands). Input mapping checks preserve 14 W acoustic power and the 4.950 m receiver radius. Positive residual means workbench minus published. The full result is 13.11 dB RMS / 29.45 dB maximum difference, not a passing criterion.
+The original Smith Figure 53 comparison showed 13.11 dB RMS difference. This is an RMS of 21 band residuals, not a uniform offset or overall SPL error. The subsequent investigation isolates the differences cumulatively:
 
-The case is also checked by independent continuous-plume integration. Convergence, normalization and ambient-temperature diagnostics do not explain the published mismatch. Reviewed source-model differences and the appended code’s unreleased `matlab.mat` dependency; Figure 53 code-to-output provenance remains unresolved. No prediction equations or model data were changed. See [detailed audit](reference/PUBLISHED_CASE.md) and `reference/published-comparison-results.json`.
+| Cumulative change | RMS difference, dB |
+|---|---:|
+| Calculator baseline | 13.106 |
+| Wilby III with physical angles | 5.644 |
+| Replay the Appendix D angle error | 1.278 |
+| Disable curve normalization | 0.480 |
+| Use Smith axial/spectral fits | 0.197 |
+| Center PSD × base-2 bandwidth | 0.182 |
 
-Browser checks cover fixed-case isolation, source overlay, residuals, CSV/report provenance, loading into the calculator, stale exports, offline operation and mobile layout. The comparison panel and exported reports state the failed agreement clearly. This audit is a secondary technical review, not independent professional sign-off.
+Confirmed source-code defect: the one-argument arctangent in Appendix D, printed p. 262, gives the physical angle plus 180 degrees for sources before this downstream microphone. Wilby's ≥170-degree low-frequency correction then applies spuriously. At 100 Hz it subtracts 17.4076 dB. Replaying that defect and the stated formula choices matches all digitized points within 0.339 dB, below the estimated ±0.5 dB graph-reading precision. The match strongly supports attribution, but the exact Figure 53 saved configuration is unavailable.
+
+No calculator angle, power summation, unit conversion or numerical integration error was found. The fix is to the comparison: it now separates the baseline, diagnostic replay and physical-angle sensitivity, supplies the cumulative audit, and removes the earlier suggestion that an unexplained solver error remained the leading issue. The erroneous geometry is confined to `published-case.js` forensic helpers and cannot be selected in the calculator. No calibration offsets or efficiency changes were made. The original independent fixture is unchanged.
+
+The Appendix D Proudman external-data branch is consistent with Section 5.3's later CFD replacement of the axial distribution (printed p. 123). It is not required for this empirical Chapter 3 reconstruction. Exact original-run provenance, source support/spacing and numerical output remain unavailable. Thus agreement is a published-curve reconstruction, not validation against independent experimental data.
+
+Secondary audit and checks:
+
+- Verified the angle and directivity code against rendered original PDF pages, plus the source's explicit assumption extending Wilby below its stated angular range.
+- Regression checks distinguish physical and erroneous angles, test Wilby's threshold behavior, preserve the production engine's 0–180-degree convention, and require replay agreement within graph-reading precision.
+- Increasing replay slices 240→960 changes bands by at most 0.000754 dB. Independent SciPy continuous spatial integration differs from the 960-slice reconstruction by at most 0.000121 dB for both erroneous and physical-angle variants.
+- Browser checks cover three plotted spectra, two residual series, cumulative diagnostics, all-band values, CSV/report provenance, calculator loading, fixed-case isolation, mobile layout and offline use.
+
+See [detailed source audit](reference/PUBLISHED_CASE.md), `reference/published-comparison-results.json` and `reference/published-independent-results.json`. This is a secondary technical review, not independent professional sign-off or full-scale rocket validation.
