@@ -1,0 +1,30 @@
+{
+  "schema": "vdc-case-1",
+  "version": "1.0.2",
+  "inputs": {
+    "caseName": "Reference example: 100 Hz sine dwell / 90-110 Hz random",
+    "Q": "10",
+    "b": "4",
+    "damageFactor": "1",
+    "passes": "0",
+    "sweepRate": "1",
+    "sineScale": "1",
+    "duration": "0.5",
+    "randomRepeats": "1",
+    "psdDb": "0",
+    "peakFactor": "4",
+    "fmin": "90",
+    "fmax": "110",
+    "modesText": "100",
+    "inspectFn": "100",
+    "basis": "Irvine (2011), random_sine_rainflow.pdf, second method: 1 g peak at 100 Hz for 30 s; 0.03 g^2/Hz from 90 to 110 Hz for 30 s; Q=10, b=4. The tool uses relative displacement and stationary spectral expected damage. Compare like-for-like with FLife; the published acceleration rainflow sample is not an exact target.",
+    "sineText": "90,110,accel_g_pk,1,1",
+    "dwellText": "100,1,0,3000,1",
+    "psdText": "90,0.03\n110,0.03",
+    "method": "dirlik",
+    "sweepType": "oct",
+    "scope": "modes",
+    "density": 48,
+    "example": true
+  }
+}

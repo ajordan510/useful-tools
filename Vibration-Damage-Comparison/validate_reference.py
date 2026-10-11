@@ -35,7 +35,16 @@ for row in rows:
         err=abs(actual/ref-1);maxerr=max(maxerr,err)
         assert err<1e-6,(fn,Q,b,actual,ref,err)
     # Integrate Dirlik amplitude PDF independently instead of the engine's closed form.
-    D=row['coeff'];sig=math.sqrt(m[0]);nu=math.sqrt(m[3]/m[2])
+    # Recompute coefficients from the independent moments, never from engine output.
+    alpha=m[2]/math.sqrt(m[0]*m[3]);xm=m[1]/m[0]*math.sqrt(m[2]/m[3])
+    d1=2*(xm-alpha**2)/(1+alpha**2)
+    den=1-alpha-d1+d1*d1
+    R=(alpha-xm-d1*d1)/den;d2=den/(1-R);d3=1-d1-d2
+    q=1.25*(alpha-d3-d2*R)/d1
+    D=dict(d1=d1,d2=d2,d3=d3,R=R,q=q)
+    for key,value in D.items():
+        assert abs(row['coeff'][key]-value)<1e-9, (fn,Q,b,key)
+    sig=math.sqrt(m[0]);nu=math.sqrt(m[3]/m[2])
     def integrand(z):
         p=D['d1']/D['q']*math.exp(-z/D['q'])+D['d2']*z/D['R']**2*math.exp(-z*z/(2*D['R']**2))+D['d3']*z*math.exp(-z*z/2)
         return z**b*p

@@ -574,7 +574,8 @@
         ><button id="csv" disabled>Export results CSV</button
         ><button id="report" disabled>Save analysis report</button
         ><button id="demo">Load example</button
-        ><span class="tag">UI v1.0.1 · OFFLINE · ONE AXIS PER CASE</span>
+        ><button id="referenceCase">Load reference case</button
+        ><span class="tag">v1.0.2 · OFFLINE · ONE AXIS PER CASE</span>
       </div>
       <nav aria-label="Workspace">
         <button class="active" data-tab="analysis">Comparison workspace</button
@@ -669,7 +670,8 @@
                 <p class="hint">
                   DA = double amplitude = peak-to-peak. Historical velocity and
                   G labels are ambiguous: verify peak versus RMS in the source
-                  specification. Segment endpoint jumps are preserved.
+                  specification. A dwell at a segment jump requires an explicit
+                  peak-G override.
                 </p>
               </details>
               <div class="fields">
@@ -1023,6 +1025,35 @@
               declare compliance with a standard.
             </li>
           </ol>
+          <h2>Published reference check</h2>
+          <p>
+            The same spectral engine can reproduce FLife's published regression
+            from its measured stress-record moments: Dirlik life 1595.031603 s
+            and narrowband life 1064.200649 s, with b = 6 and C = 1.8 × 10¹⁹.
+            This checks the random-fatigue kernel, not the base-input transfer
+            model or a hardware qualification. The benchmark
+            stress-to-displacement mapping is numerical only and is not an
+            engineering stress calibration.
+          </p>
+          <button id="verifyReference">Check published benchmark</button>
+          <p id="referenceStatus" role="status" aria-live="polite">
+            Benchmark has not been run in this session.
+          </p>
+          <p>
+            <b>Load reference case</b> uses Irvine's 2011 input example: 100 Hz,
+            Q = 10, b = 4, a 1 g peak dwell for 30 s and 0.03 g²/Hz over 90–110
+            Hz for 30 s. The independently checked relative-displacement
+            heritage/random ratio is 1.131908593. It is not an exact
+            reproduction of Irvine's finite-record acceleration rainflow result.
+            See the audit and saved example in the repository's reference folder
+            for the distinction.
+          </p>
+          <p>
+            <a
+              href="https://github.com/ladisk/FLife/blob/f39ba53d608b3338b16c9ebb5bd52c86635898b0/tests/test_basic.py"
+              >Pinned FLife published regression</a
+            >
+          </p>
           <h2>References</h2>
           <ol>
             <li>
@@ -1056,8 +1087,8 @@
         </div>
       </section>
       <div class="foot">
-        Vibration Damage Comparison · UI 1.0.1 · Engine 1.0.0 · No network
-        requests. Input data stays in your browser.
+        Vibration Damage Comparison · 1.0.2 · No network requests. Input data
+        stays in your browser.
       </div>
     </main>
     <script>
@@ -1078,6 +1109,7 @@
     </script>
     <script>
       "use strict";
+      const REFERENCE = /*__REFERENCE__*/ null;
       const $ = (id) => document.getElementById(id),
         ids = [
           "caseName",
@@ -1212,6 +1244,33 @@
         stale();
         example = true;
         run();
+      };
+      $("referenceCase").onclick = () => {
+        const r = REFERENCE.case.inputs;
+        for (const k of ids) $(k).value = r[k];
+        $("methodSelect").value = r.method;
+        stale();
+        example = true;
+        run();
+      };
+      $("verifyReference").onclick = () => {
+        const ref = REFERENCE.benchmark;
+        try {
+          const result = VDC.spectral(
+            ref.stress_moments_Hz.map((v) => v * VDC.ZREF ** 2),
+            ref.b,
+            1,
+          );
+          const dk = ref.C / result.dirlik,
+            nb = ref.C / result.nb;
+          const pass =
+            Math.abs(dk - ref.published_seconds.Dirlik) < 1e-6 &&
+            Math.abs(nb - ref.published_seconds.Narrowband) < 1e-6;
+          $("referenceStatus").textContent =
+            `${pass ? "PASS" : "FAIL"}: Dirlik ${dk.toFixed(6)} s; narrowband ${nb.toFixed(6)} s. Absolute tolerance: 0.000001 s against the published values.`;
+        } catch (e) {
+          $("referenceStatus").textContent = "FAIL: " + e.message;
+        }
       };
       function metric(label, value, sub, bad = false) {
         return `<div class="metric"><small>${label}</small><div class="value ${bad ? "bad" : ""}">${value}</div><small>${sub}</small></div>`;
@@ -1636,13 +1695,15 @@
         const { inputs, c, r } = last;
         const result = $("results").cloneNode(true);
         result.querySelectorAll("button").forEach((x) => x.remove());
+        const method = $("method").firstElementChild.cloneNode(true);
+        method.querySelectorAll("button").forEach((x) => x.remove());
         const caseText = Object.entries(inputs)
           .map(
             ([k, v]) =>
               `<tr><td>${esc(k)}</td><td style="white-space:pre-wrap">${esc(v)}</td></tr>`,
           )
           .join("");
-        const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(c.caseName)} — vibration comparison report</title><style>${document.querySelector("style").textContent}\nbody{background:white}main{max-width:1000px}.tablewrap{max-height:none}.card{box-shadow:none}th{position:static}.charthead button{display:none}#rowTable .tablewrap{max-height:none;overflow:visible}</style></head><body><header><div class="eyebrow">ANALYSIS RECORD · ${r.version}</div><h1>${esc(c.caseName)}</h1><p>Heritage sine / random fatigue comparison · ${esc(r.generated)}</p></header><main><p>Static report. Use browser Print to save as PDF. The complete input record is below; pair it with the exported case JSON and results CSV.</p>${result.innerHTML}<div class="card pagebreak"><h2>Complete input record</h2><table>${caseText}</table></div><div class="card pagebreak">${$("method").firstElementChild.innerHTML}</div></main></body></html>`;
+        const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(c.caseName)} — vibration comparison report</title><style>${document.querySelector("style").textContent}\nbody{background:white}main{max-width:1000px}.tablewrap{max-height:none}.card{box-shadow:none}th{position:static}.charthead button{display:none}#rowTable .tablewrap{max-height:none;overflow:visible}</style></head><body><header><div class="eyebrow">ANALYSIS RECORD · ${r.version}</div><h1>${esc(c.caseName)}</h1><p>Heritage sine / random fatigue comparison · ${esc(r.generated)}</p></header><main><p>Static report. Use browser Print to save as PDF. The complete input record is below; pair it with the exported case JSON and results CSV.</p>${result.innerHTML}<div class="card pagebreak"><h2>Complete input record</h2><table>${caseText}</table></div><div class="card pagebreak">${method.innerHTML}</div></main></body></html>`;
         download("vibration-comparison-report.html", html, "text/html");
       };
       // Enable Run only after all handlers and the calculation engine are ready.

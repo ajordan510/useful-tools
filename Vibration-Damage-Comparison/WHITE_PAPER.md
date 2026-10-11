@@ -2,7 +2,7 @@
 
 ## A response-based fatigue severity method
 
-Technical white paper | Vibration Damage Comparison v1.0.0 | 11 October 2026
+Technical white paper | Vibration Damage Comparison v1.0.2 | 11 October 2026
 
 Prepared for Alex Jordan's useful-tools repository. The companion is a single-file, offline HTML application. This paper specifies the implemented model and its interpretation; it does not establish a component-specific qualification disposition.
 
@@ -63,7 +63,7 @@ For a sine wave only, peak = sqrt(2) times RMS. Acceleration peak-to-peak is twi
 | Velocity-controlled | Peak or RMS velocity | Proportional to frequency |
 | Acceleration-controlled | Peak, RMS or peak-to-peak G | Constant acceleration |
 
-The tool accepts ordered, contiguous sine segments. Each segment has lower and upper frequencies, a unit code, and a level at each endpoint. Entered levels interpolate as a power law. A constant displacement or velocity segment therefore retains its correct acceleration slope after conversion. Endpoint jumps are preserved; the analyst should decide whether a small jump is intentional or transcription error.
+The tool accepts ordered, contiguous sine segments. Each segment has lower and upper frequencies, a unit code, and a level at each endpoint. Entered levels interpolate as a power law. A constant displacement or velocity segment therefore retains its correct acceleration slope after conversion. Endpoint jumps are preserved for sweeps. A dwell at a boundary with peak-G levels differing by more than one part per million requires an explicit override; the software does not choose a side.
 
 $$y(f)=y_1(f/f_1)^p,\qquad p=\frac{\ln(y_2/y_1)}{\ln(f_2/f_1)}$$
 
@@ -217,7 +217,7 @@ The deliverable is one HTML file with embedded JavaScript and SVG plots. It requ
 
 ### Integration and modal grid
 
-The engine uses eight-point Gauss-Legendre quadrature in logarithmic excitation frequency. Intervals include all input breakpoints, a background grid of at least 12 intervals/octave, and added points around each evaluated resonance scaled by damping. Response moments and sine damage use the same physical transfer function. The base PSD integral for gRMS is analytic for each power-law segment, including the inverse-frequency special case.
+The engine uses eight-point Gauss-Legendre quadrature in logarithmic excitation frequency. Intervals include all input breakpoints, a background grid of at least 12 intervals/octave, and added points around each evaluated resonance scaled by damping. Response moments and sine damage use the same physical transfer function. The base PSD integral for gRMS is analytic for each power-law segment, including the inverse-frequency special case. Sweep peaks evaluate segment endpoints and all interior stationary points of the power-law acceleration times the response transfer function.
 
 The displayed bank defaults to 48 points/octave. Known modes, inspection frequency, dwells and input boundaries are inserted exactly. The software doubles the background integration density at the governing nominal point and reports the change in damage ratio. A change above 0.5% triggers a warning. This is an integration check; it does not prove that the modal grid captured the true continuous minimum. Repeat with 96 or 192 points/octave and narrower modal bounds near a decision boundary.
 
@@ -229,11 +229,11 @@ $$\epsilon=\frac{|\dot f|}{2\pi\zeta^2 f^2}$$
 
 The warning threshold epsilon > 0.1 is a documented engineering heuristic in this implementation, not a limit prescribed by a cited standard. A dwell shorter than five resonant decay time constants also warns. The checks do not turn the steady-state solver into a transient solver. When material, exclude sweep credit or perform a transient analysis; steady-state error is not guaranteed to be conservative in every case.
 
-### Verification performed for version 1.0.0
+### Verification performed for version 1.0.2
 
-Fourteen automated test groups exercise unit conversions, PSD integration, resonant transfer, dwell caps/repetitions, the narrowband limit, Hz-rate conventions, damage scaling, sweep-rate scaling, off-resonant dwell response, exact mode insertion, invalid inputs and high-Q/high-b integration refinement.
+Eighteen automated groups check unit conventions, PSD integration, resonant response, dwell caps, damage/rate scaling, off-resonant dwells, mode insertion, invalid inputs, boundary ambiguity, exact sweep peaks and published reference results.
 
-A separate Python/SciPy implementation independently integrated 96 combinations of frequency, Q and b. Maximum relative difference in response moments and sine sweep/dwell indices was 6.43 x 10^-12. Numerical integration of the Dirlik amplitude PDF also agreed with the engine's closed-form index within 10^-6. These are software calculation checks, not experimental validation of a hardware fatigue model.
+Independent SciPy integration of 96 frequency/Q/b combinations gives a maximum relative difference of 6.43 x 10^-12 in response moments and sweep/dwell indices. Separately reconstructed Dirlik coefficients and numerical PDF integration agree within 10^-6 in damage. Another 32 cases verify both sweep laws and peak locations. The pinned FLife regression matches all six published decimals. TECHNICAL_AUDIT.md and its PDF provide results, tolerances, source traceability and the importable example. These are calculation checks, not experimental hardware validation.
 
 @@page
 

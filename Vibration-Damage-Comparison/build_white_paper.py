@@ -2,7 +2,12 @@
 The standalone browser tool does not need this authoring script or dependencies.
 """
 from pathlib import Path
-import json, subprocess, re, html
+import json, subprocess, re, html, argparse
+parser=argparse.ArgumentParser()
+parser.add_argument("--source",default="WHITE_PAPER.md")
+parser.add_argument("--output",default="Vibration_Damage_Comparison_White_Paper.pdf")
+parser.add_argument("--audit",action="store_true")
+args=parser.parse_args()
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -37,6 +42,13 @@ ss.add(ParagraphStyle(name='H2V',fontName='DVS-B',fontSize=17,leading=21,textCol
 ss.add(ParagraphStyle(name='H3V',fontName='DVS-B',fontSize=10.7,leading=14,textColor=colors.HexColor('#087f83'),spaceBefore=7,spaceAfter=6,keepWithNext=True))
 ss.add(ParagraphStyle(name='TableV',fontName='DVS',fontSize=8,leading=11,textColor=colors.HexColor('#203849')))
 ss.add(ParagraphStyle(name='TableH',parent=ss['TableV'],fontName='DVS-B',textColor=colors.white))
+if args.audit:
+    ss['BodyV'].leading=12.5
+    ss['BodyV'].spaceAfter=7
+    ss['TableV'].leading=10
+    ss['TableH'].leading=10
+    ss['H3V'].spaceBefore=5
+PAD=6 if args.audit else 8
 WIDTH=484
 def p(t,sty='BodyV'):
     t=html.escape(t)
@@ -58,9 +70,9 @@ def table(lines):
     n=len(rows[0]);widths=([125,170,189] if n==3 else [152,332] if n==2 else [WIDTH/n]*n)
     cells=[[p(x,'TableH' if i==0 else 'TableV') for x in row] for i,row in enumerate(rows)]
     t=Table(cells,colWidths=widths,repeatRows=1,hAlign='LEFT')
-    t.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,0),colors.HexColor('#12344c')),('ROWBACKGROUNDS',(0,1),(-1,-1),[colors.HexColor('#f0f5f7'),colors.white]),('VALIGN',(0,0),(-1,-1),'TOP'),('LEFTPADDING',(0,0),(-1,-1),8),('RIGHTPADDING',(0,0),(-1,-1),8),('TOPPADDING',(0,0),(-1,-1),8),('BOTTOMPADDING',(0,0),(-1,-1),8),('LINEBELOW',(0,0),(-1,-1),.3,colors.HexColor('#d2dfe5'))]))
+    t.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,0),colors.HexColor('#12344c')),('ROWBACKGROUNDS',(0,1),(-1,-1),[colors.HexColor('#f0f5f7'),colors.white]),('VALIGN',(0,0),(-1,-1),'TOP'),('LEFTPADDING',(0,0),(-1,-1),8),('RIGHTPADDING',(0,0),(-1,-1),8),('TOPPADDING',(0,0),(-1,-1),PAD),('BOTTOMPADDING',(0,0),(-1,-1),PAD),('LINEBELOW',(0,0),(-1,-1),.3,colors.HexColor('#d2dfe5'))]))
     return[t,Spacer(1,12)]
-story=[];lines=(root/'WHITE_PAPER.md').read_text().splitlines();i=0
+story=[];lines=(root/args.source).read_text().splitlines();i=0
 while i<len(lines):
     line=lines[i].strip();i+=1
     if not line:continue
@@ -79,8 +91,8 @@ while i<len(lines):
     story.append(p(line))
 def page(canvas,doc):
     canvas.setStrokeColor(colors.HexColor('#d2dfe5'));canvas.setLineWidth(.6);canvas.line(54,746,558,746)
-    canvas.setFont('DVS',7.5);canvas.setFillColor(colors.HexColor('#536b7a'));canvas.drawString(54,759,'USEFUL TOOLS  /  TECHNICAL WHITE PAPER');canvas.drawRightString(558,759,'VIBRATION DAMAGE COMPARISON 1.0.0')
+    canvas.setFont('DVS',7.5);canvas.setFillColor(colors.HexColor('#536b7a'));canvas.drawString(54,759,'USEFUL TOOLS  /  TECHNICAL AUDIT' if args.audit else 'USEFUL TOOLS  /  TECHNICAL WHITE PAPER');canvas.drawRightString(558,759,'VIBRATION DAMAGE COMPARISON 1.0.2')
     canvas.line(54,42,558,42);canvas.drawString(54,29,'Heritage sine qualification / random vibration requirements');canvas.drawRightString(558,29,f'{doc.page}')
-doc=SimpleDocTemplate(str(root/'Vibration_Damage_Comparison_White_Paper.pdf'),pagesize=(612,792),rightMargin=64,leftMargin=64,topMargin=61,bottomMargin=58,title='Comparing heritage sine qualification with random vibration requirements',author='Useful Tools',subject='Response-based fatigue severity method, equations, assumptions and verification')
+doc=SimpleDocTemplate(str(root/args.output),pagesize=(612,792),rightMargin=64,leftMargin=64,topMargin=61,bottomMargin=58,title='Vibration Damage Comparison - Technical Audit' if args.audit else 'Comparing heritage sine qualification with random vibration requirements',author='Useful Tools',subject='Response-based fatigue severity method, equations, assumptions and verification')
 doc.build(story,onFirstPage=page,onLaterPages=page)
-print(root/'Vibration_Damage_Comparison_White_Paper.pdf')
+print(root/args.output)

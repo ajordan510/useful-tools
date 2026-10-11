@@ -122,6 +122,12 @@ await page.locator("#results").scrollIntoViewIfNeeded();
 await page.screenshot({ path: path.join(out, "mobile-results.png") });
 await page.click('[data-tab="method"]');
 assert.equal(await page.locator("#method").isVisible(), true);
+await page.click("#verifyReference");
+assert.ok(
+  (await page.locator("#referenceStatus").innerText()).startsWith(
+    "PASS: Dirlik 1595.031603 s; narrowband 1064.200649 s.",
+  ),
+);
 await run();
 assert.equal(await page.locator("#analysis").isVisible(), true);
 assert.equal(await page.locator("#method").isVisible(), false);
@@ -129,7 +135,18 @@ assert.equal(
   await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
   false,
 );
-await page.goto(new URL("file://" + path.join(out, "report.html")).href);
+await page.click("#referenceCase");
+await page.waitForFunction(() => !document.querySelector("#run").disabled);
+assert.equal(await page.locator("#csv").isEnabled(), true);
+assert.equal(await page.locator("#b").inputValue(), "4");
+const referenceCSV = await save("#csv", "analysis-results.csv");
+assert.ok(referenceCSV.includes("1.131908593"));
+const referenceReport = await save("#report", "analysis-report.html");
+assert.ok(referenceReport.includes("Reference example: 100 Hz"));
+assert.ok(!referenceReport.includes("<button"));
+await page.goto(
+  new URL("file://" + path.join(out, "analysis-report.html")).href,
+);
 assert.equal(await page.locator("svg").count(), 6);
 await page.setViewportSize({ width: 1100, height: 1000 });
 await page.screenshot({ path: path.join(out, "report.png") });

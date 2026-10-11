@@ -160,4 +160,47 @@ test("Refined quadrature resolves high-Q and high-b damage", () => {
     close(a.heritage, b.heritage, 1e-5);
   }
 });
+test("Discontinuous dwell boundaries require an explicit override", () => {
+  const r = {
+    ...raw,
+    sineText: "5,100,accel_g_pk,10,10\n100,500,accel_g_pk,1,1",
+    dwellText: "100,0,1,0,1",
+    passes: 0,
+  };
+  assert.throws(() => V.parse(r), /discontinuous/);
+  close(V.parse({ ...r, dwellText: "100,1,1,0,1" }).dwell[0].a, 1);
+  close(
+    V.parse({ ...r, sineText: "5,100,accel_g_pk,1,1\n100,500,accel_g_pk,1,1" })
+      .dwell[0].a,
+    1,
+  );
+});
+test("Displacement sweep peak includes the exact shifted maximum", () => {
+  const c = V.parse({
+    ...raw,
+    Q: 1,
+    sineText: "5,500,disp_pk_mm,1,1",
+    dwellText: "",
+    passes: 1,
+  });
+  close(V.atMode(c, 100).peakSine, (0.001 * 2) / Math.sqrt(3), 1e-12);
+});
+test("Published FLife regression matches at its stated precision", () => {
+  const r = require("./reference/benchmark-results.json").published_regression;
+  const actual = V.spectral(
+    r.stress_moments_Hz.map((x) => x * V.ZREF ** 2),
+    r.b,
+    1,
+  );
+  assert.ok(Math.abs(r.C / actual.dirlik - r.published_seconds.Dirlik) < 1e-6);
+  assert.ok(Math.abs(r.C / actual.nb - r.published_seconds.Narrowband) < 1e-6);
+});
+test("Importable reference case matches independent FLife response calculation", () => {
+  const c = V.parse(require("./reference/irvine-2011-case.json").inputs),
+    r = V.atMode(c, 100);
+  const ref = require("./reference/benchmark-results.json").end_to_end;
+  close(r.dwell, ref.analytical_dwell_index, 1e-12);
+  close(r.dirlik, ref.flife.at(-1).dirlik, 1e-8);
+  close(r.nb, ref.flife.at(-1).nb, 1e-8);
+});
 console.log(`${tests} test groups passed.`);

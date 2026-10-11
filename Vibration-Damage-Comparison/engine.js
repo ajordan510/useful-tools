@@ -1,11 +1,11 @@
-/* Vibration Damage Comparison 1.0.0. Original implementation; equations and scope in WHITE_PAPER.md. */
+/* Vibration Damage Comparison 1.0.2. Original implementation; equations and scope in WHITE_PAPER.md. */
 (function (root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
   else root.VDC = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
-  const VERSION = "1.0.0",
+  const VERSION = "1.0.2",
     G = 9.80665,
     ZREF = 0.001;
   const UNITS = {
@@ -99,10 +99,54 @@
     );
   }
   function sineAt(f, segments) {
-    const s = segments.find(
+    const matches = segments.filter(
       (s) => f >= s.f1 * (1 - 1e-12) && f <= s.f2 * (1 + 1e-12),
     );
-    return s ? accel(f, s.unit, power(f, s.f1, s.f2, s.a1, s.a2)) : 0;
+    const values = matches.map((s) =>
+      accel(f, s.unit, power(f, s.f1, s.f2, s.a1, s.a2)),
+    );
+    assert(
+      values.length < 2 ||
+        Math.max(...values) / Math.min(...values) - 1 <= 1e-6,
+      "Dwell at a discontinuous sine segment boundary requires an explicit peak-G override.",
+    );
+    return values[0] || 0;
+  }
+  // Exact stationary points for power-law acceleration times the SDOF FRF.
+  // u=(f/fn)^2: (p-2)u^2+(p-1)(Q^-2-2)u+p=0.
+  function sinePeak(s, fn, Q, scale) {
+    const a1 = accel(s.f1, s.unit, s.a1),
+      a2 = accel(s.f2, s.unit, s.a2);
+    const p = Math.log(a2 / a1) / Math.log(s.f2 / s.f1);
+    const A = p - 2,
+      B = (p - 1) * (1 / (Q * Q) - 2),
+      C = p;
+    const roots = [];
+    if (Math.abs(A) < 1e-12) {
+      if (B !== 0) roots.push(-C / B);
+    } else {
+      const disc = B * B - 4 * A * C;
+      if (disc >= 0) {
+        const q = -0.5 * (B + (B >= 0 ? 1 : -1) * Math.sqrt(disc));
+        roots.push(q / A);
+        if (q !== 0) roots.push(C / q);
+      }
+    }
+    const frequencies = [
+      s.f1,
+      s.f2,
+      ...roots.filter((u) => u > 0).map((u) => fn * Math.sqrt(u)),
+    ];
+    return Math.max(
+      ...frequencies
+        .filter((f) => f >= s.f1 && f <= s.f2)
+        .map(
+          (f) =>
+            accel(f, s.unit, power(f, s.f1, s.f2, s.a1, s.a2)) *
+            scale *
+            transfer(f, fn, Q),
+        ),
+    );
   }
   function psdAt(f, p) {
     if (f < p[0][0] || f > p[p.length - 1][0]) return 0;
@@ -385,19 +429,7 @@
         sweep += c.passes * f * (a / ZREF) ** b * dt * w;
         peak = Math.max(peak, a);
       }
-      for (const f of [
-        s.f1,
-        s.f2,
-        ...[fn, fn * Math.sqrt(Math.max(0, 1 - 1 / (2 * Q * Q)))].filter(
-          (x) => x >= s.f1 && x <= s.f2,
-        ),
-      ])
-        peak = Math.max(
-          peak,
-          accel(f, s.unit, power(f, s.f1, s.f2, s.a1, s.a2)) *
-            c.sineScale *
-            transfer(f, fn, Q),
-        );
+      peak = Math.max(peak, sinePeak(s, fn, Q, c.sineScale));
     }
     const contributions = c.dwell.map((d) => {
       const amp = d.a * transfer(d.f, fn, Q);

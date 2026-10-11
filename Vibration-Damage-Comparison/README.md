@@ -12,6 +12,26 @@ If Run comparison is disabled and **The calculator has not started** remains vis
 
 Read `Vibration_Damage_Comparison_White_Paper.pdf` for the method, equations, ground rules, assumptions, examples and references. The editable source is `WHITE_PAPER.md`.
 
+## Technical audit and reproducible reference case
+
+- [Audit findings and equation traceability](TECHNICAL_AUDIT.md) and [audit PDF](Vibration_Damage_Comparison_Technical_Audit.pdf).
+- **Method & interpretation → Check published benchmark** reproduces FLife's published regression: Dirlik **1595.031603 s**, narrowband **1064.200649 s**. This checks the random-fatigue kernel against fixed stress moments; it is not a full base-input benchmark.
+- **Load reference case** runs the 100 Hz sine / 90–110 Hz random example. Its full relative-displacement calculation independently agrees with FLife: heritage/random Dirlik ratio **1.131908593**. [Importable case](reference/irvine-2011-case.json), [saved analysis report](reference/analysis-report.html), [results CSV](reference/analysis-results.csv), and [full benchmark data](reference/benchmark-results.json).
+- Irvine's published random result uses finite-record acceleration rainflow and is **not exactly reproduced** by this stationary relative-displacement model. The audit quantifies and explains the difference. Numerical agreement with FLife does not validate a component fatigue prediction.
+
+To regenerate the external checks, clone `https://github.com/ladisk/FLife`, check out `f39ba53d608b3338b16c9ebb5bd52c86635898b0`, and run:
+
+```sh
+python3 verify_audit.py --flife-root /path/to/FLife
+node build.mjs
+node test_engine.cjs
+python3 validate_reference.py
+python3 build_white_paper.py
+python3 build_white_paper.py --source TECHNICAL_AUDIT.md --output Vibration_Damage_Comparison_Technical_Audit.pdf --audit
+```
+
+The audit script requires NumPy, SciPy, Matplotlib and Tkinter (imported by the external source; no GUI opens). It uses unmodified pinned FLife modules without installing optional visualization packages. Source hashes and runtime versions are recorded in the benchmark JSON. `reference/audit-manifest.json` records delivered calculation-file hashes.
+
 ## Inputs
 
 - One axis and hardware configuration per case, with evidence notes.
@@ -65,7 +85,7 @@ node test_browser.mjs
 # Optional: CHROMIUM_PATH=/path/to/chromium TEST_ARTIFACT_DIR=/tmp/vdc-qa node test_browser.mjs
 ```
 
-Fourteen engine test groups and 96 independent quadrature/PDF-integration cases verify the calculations. Browser checks cover file-based operation, plots, exports, case import, stale-result protection, invalid inputs, mobile layout and absence of network requests. This is numerical/software verification; experimental validation and engineering approval remain specific to the hardware and program.
+Eighteen engine test groups, 96 independent quadrature/PDF-integration cases and 32 additional sweep/peak cases verify the calculations. Browser checks cover file-based operation, plots, exports, case import, stale-result protection, invalid inputs, mobile layout and absence of network requests. This is numerical/software verification; experimental validation and engineering approval remain specific to the hardware and program.
 
 ## References
 
@@ -73,4 +93,4 @@ Fourteen engine test groups and 96 independent quadrature/PDF-integration cases 
 - Zorman, Slavič & Boltežar (2023), https://doi.org/10.1016/j.ymssp.2023.110149
 - NASA NESC Academy, Tom Irvine, *Using Fatigue to Compare Sine and Random Environments*: https://nescacademy.nasa.gov/video/2584e207341e411b95fa829e191d81441d
 
-UI version 1.0.1, engine/method version 1.0.0, 2026-10-11. UI 1.0.1 adds startup diagnostics and brings completed results or validation errors into view. See the white paper for source roles and implementation details.
+Version 1.0.2, 2026-10-11. This release adds audited reference checks, exact sweep peaks and explicit handling of ambiguous dwell boundaries; it retains the 1.0.1 startup and result-navigation fixes. See the white paper for source roles and implementation details.
