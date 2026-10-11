@@ -206,6 +206,72 @@ assert.ok(referenceCSV.includes("1.131908593"));
 const referenceReport = await save("#report", "analysis-report.html");
 assert.ok(referenceReport.includes("Reference example: 100 Hz"));
 assert.ok(!referenceReport.includes("<button"));
+// Tutorial is independent of the working case and result-export registry.
+const tutorialWorkspace = await page.evaluate(() => ({
+  inputs: raw(), csv: csvText(), ratioSVG: chartRegistry.ratioPlot.svg,
+}));
+await page.click('[data-tab="tutorial"]');
+assert.equal(await page.locator("#tutorial").isVisible(), true);
+assert.equal(await page.locator("#analysis").isVisible(), false);
+assert.equal(await page.locator("#method").isVisible(), false);
+assert.equal(await page.locator("#tutorial svg").count(), 4);
+assert.equal(await page.locator('[data-tut="coverage"]').first().innerText(), "1.1319×");
+assert.equal(await page.locator('[data-tut="sineIndex"]').first().innerText(), "11.4226");
+assert.equal(await page.locator('[data-tut="randomIndex"]').first().innerText(), "10.0915");
+assert.equal(await page.locator('[data-tut="peakCoverage"]').innerText(), "0.4332×");
+assert.equal(await page.locator("#tutorialModeRows tr").count(), 3);
+assert.equal(await page.locator("#tutorial [data-tut]").evaluateAll((els) =>
+  els.every((el) => el.textContent.length > 0 && !/undefined|NaN/.test(el.textContent))), true);
+for (const section of ["learn-oscillator", "learn-random", "learn-results", "learn-unknown"]) {
+  await page.locator(`#${section}`).screenshot({ path: path.join(out, `tutorial-${section}.png`) });
+}
+await page.selectOption("#tutorialCycles", "6000");
+assert.equal(await page.locator("#tutorialExperimentCoverage").innerText(), "2.2638×");
+await page.selectOption("#tutorialRandomSeconds", "60");
+assert.equal(await page.locator("#tutorialExperimentCoverage").innerText(), "1.1319×");
+await page.selectOption("#tutorialCycles", "1500");
+assert.equal(await page.locator("#tutorialExperimentCoverage").innerText(), "0.28298×");
+assert.match(await page.locator("#tutorialExperimentResult").innerText(), /below target/);
+// Static worked-example numbers remain fixed when the local experiment changes.
+assert.equal(await page.locator('[data-tut="coverage"]').first().innerText(), "1.1319×");
+assert.deepEqual(await page.evaluate(() => ({
+  inputs: raw(), csv: csvText(), ratioSVG: chartRegistry.ratioPlot.svg,
+})), tutorialWorkspace);
+await page.setViewportSize({ width: 390, height: 844 });
+await page.waitForFunction(() => {
+  const plot = document.querySelector("#tutorialTransfer");
+  return Math.abs(plot.clientWidth - plot.querySelector("svg").viewBox.baseVal.width) < 1;
+});
+assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+assert.deepEqual(await page.locator(".tutorial-plot svg").evaluateAll((els) =>
+  els.flatMap((svg) => {
+    const box = svg.getBoundingClientRect();
+    return [...svg.querySelectorAll("text")].filter((el) => {
+      const t = el.getBoundingClientRect();
+      return t.left < box.left - 1 || t.right > box.right + 1 || t.top < box.top - 1 || t.bottom > box.bottom + 1;
+    }).map((el) => el.textContent);
+  })), []);
+for (const section of ["learn-oscillator", "learn-random", "learn-unknown", "learn-experiment"]) {
+  await page.locator(`#${section}`).screenshot({ path: path.join(out, `tutorial-mobile-${section}.png`) });
+}
+await page.click("#tutorialLoadDocumented");
+await page.waitForFunction(() => !document.querySelector("#run").disabled);
+assert.equal(await page.locator("#analysis").isVisible(), true);
+assert.equal(await page.locator("#tutorial").isVisible(), false);
+assert.equal(await page.locator("#dwellMode").inputValue(), "documented");
+assert.ok(Math.abs(await page.evaluate(() => last.r.inspect.ratio) - 1.131908593) < 1e-8);
+await page.click('[data-tab="tutorial"]');
+const tutorialMinimum = await page.evaluate(() => tutorialNumbers().minimum.assumed.margin);
+await page.click("#tutorialLoadAssumed");
+await page.waitForFunction(() => !document.querySelector("#run").disabled);
+assert.equal(await page.locator("#dwellMode").inputValue(), "assumed");
+assert.equal(await page.locator("#scope").inputValue(), "bank");
+assert.equal(await page.locator("#assumedCycles").inputValue(), "3000");
+assert.equal(await page.locator("#passes").inputValue(), "0");
+assert.equal(await page.locator("#csv").isEnabled(), true);
+assert.equal(await page.evaluate(() => last.r.worst.margin), tutorialMinimum);
+assert.equal(await page.evaluate(() => last.r.rows.every((r) =>
+  r.contributions.length === 1 && r.contributions[0].f === r.fn)), true);
 await page.goto(
   pathToFileURL(path.join(out, "analysis-report.html")).href,
 );
@@ -248,5 +314,5 @@ assert.ok(
 await brokenPage.close();
 await browser.close();
 console.log(
-  "PASS browser: file:// calculation, 6 plots, CSV/SVG/case/report exports, documented and assumed case roundtrip, legacy imports, assumed boundary/cap validation, zero coverage, stale-result protection, known modes, alternate method/rate, mobile layout, blocked scripts, startup failure diagnostics, saved report and zero network requests.",
+  "PASS browser: file:// calculation, 6 plots, CSV/SVG/case/report exports, documented and assumed case roundtrip, legacy imports, validation, zero coverage, stale-result protection, mobile layout, tutorial calculations/plots/experiment/isolation/example loaders, blocked scripts, startup failure diagnostics, saved report and zero network requests.",
 );

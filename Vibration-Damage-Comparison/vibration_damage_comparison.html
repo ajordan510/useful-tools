@@ -109,6 +109,7 @@
       }
       nav {
         display: flex;
+        flex-wrap: wrap;
         border-bottom: 1px solid #bccdd7;
         margin-bottom: 22px;
         gap: 10px;
@@ -378,6 +379,39 @@
       .hidden {
         display: none !important;
       }
+      #tutorial { max-width: 1100px; margin: 0 auto; }
+      #tutorial .card { padding: clamp(18px, 4vw, 38px); }
+      #tutorial h2 { margin-top: 0; font-size: 23px; }
+      #tutorial p, #tutorial li { max-width: 78ch; }
+      #tutorial .tutorial-lead { font-size: 17px; }
+      .tutorial-links { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 20px 0; }
+      .tutorial-links a { font-weight: 600; }
+      .tutorial-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; align-items: start; }
+      #tutorial figure { margin: 22px 0; min-width: 0; }
+      #tutorial figcaption { font-size: 13px; color: var(--muted); margin-top: 12px; }
+      .tutorial-schematic { display: block; width: 100%; max-width: 400px; margin: 0 auto; }
+      .tutorial-plot { min-width: 0; }
+      .tutorial-plot svg { display: block; width: 100%; }
+      .tutorial-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 12px; margin: 8px 0; }
+      .tutorial-line { display: inline-block; width: 24px; border-top: 3px solid; margin-right: 6px; vertical-align: middle; }
+      .tutorial-line.dashed { border-top-style: dashed; }
+      .tutorial-equation { overflow-wrap: anywhere; padding: 15px 0 15px 18px; border-left: 3px solid var(--teal); margin: 16px 0; font-size: 17px; }
+      .tutorial-answer { border-top: 3px solid var(--teal); padding-top: 16px; }
+      .tutorial-answer.peak { border-color: var(--red); }
+      .tutorial-value { display: block; font-size: 30px; font-weight: 750; margin: 8px 0; }
+      .tutorial-scenarios { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 20px 0; }
+      .tutorial-scenarios p { border-top: 2px solid var(--line); padding: 12px 0; margin: 0; }
+      #tutorial .tablewrap { max-height: none; }
+      #tutorial th, #tutorial td { white-space: normal; }
+      #tutorial [id^="learn-"] { scroll-margin-top: 18px; }
+      #tutorial .tutorial-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 8px; }
+      @media (max-width: 700px) {
+        .tutorial-pair, .tutorial-scenarios { grid-template-columns: 1fr; }
+        #tutorial .fields { grid-template-columns: 1fr; }
+        #tutorial h2 { font-size: 21px; }
+        #tutorial .tutorial-lead { font-size: 16px; }
+        #tutorial th, #tutorial td { padding: 8px; font-size: 12px; }
+      }
       .report-only {
         display: none;
       }
@@ -609,10 +643,11 @@
         ><button id="report" disabled>Save analysis report</button
         ><button id="demo">Load example</button
         ><button id="referenceCase">Load reference case</button
-        ><span class="tag">v1.1.0 · OFFLINE · ONE AXIS PER CASE</span>
+        ><span class="tag">v1.2.0 · OFFLINE · ONE AXIS PER CASE</span>
       </div>
       <nav aria-label="Workspace">
         <button class="active" data-tab="analysis">Comparison workspace</button
+        ><button data-tab="tutorial">Worked example &amp; tutorial</button
         ><button data-tab="method">Method &amp; interpretation</button>
       </nav>
       <div id="status" class="notice warn" role="status" aria-live="polite">
@@ -898,6 +933,182 @@
           </div>
         </div>
       </section>
+      <section id="tutorial" class="doc hidden" aria-labelledby="tutorialTitle">
+  <div class="card">
+    <div class="step">FIRST-TIME GUIDE · ABOUT 10 MINUTES</div>
+    <h2 id="tutorialTitle">Follow one resonance from input to decision</h2>
+    <p class="tutorial-lead">A sine dwell and a random PSD describe different kinds of excitation. To compare them, ask what each one does to the <strong>same possible resonance</strong>, then account for the response amplitude and the number of cycles.</p>
+    <p>We will work through a 100 Hz oscillator, check its fatigue coverage and peak response, then ask what changes when the resonance frequency is unknown. The plots and numerical steps below are calculated by this tool from its checked reference case.</p>
+    <div class="tutorial-links" aria-label="Tutorial contents">
+      <a href="#learn-inputs">1. Inputs</a><a href="#learn-oscillator">2. The oscillator</a>
+      <a href="#learn-dwell">3. Dwell damage</a><a href="#learn-random">4. Random damage</a>
+      <a href="#learn-results">5. Read the result</a><a href="#learn-unknown">6. Unknown resonances</a>
+      <a href="#learn-experiment">7. Try a change</a><a href="#learn-your-case">8. Your own case</a>
+    </div>
+    <p class="hint">Reading this tab and using its experiment leave your workspace inputs and results intact. The explicit “Load” buttons replace the workspace inputs with the example and run it. Save your current case first if you want to keep it.</p>
+    <noscript><p>The walkthrough text is available here, but its calculated values and plots need JavaScript. Open the downloaded HTML in a browser with scripts enabled.</p></noscript>
+  </div>
+
+  <article class="card" id="learn-inputs">
+    <div class="step">1 / DEFINE A SMALL, TRACEABLE CASE</div>
+    <h2>Start with the exposure, not the answer</h2>
+    <p>Imagine comparing a documented sine dwell with a new random requirement for the same component, mounting and axis. To keep the arithmetic visible, this example uses one known resonance and no sweeps.</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Input</th><th>Worked-example value</th><th>Why it matters</th></tr></thead>
+      <tbody>
+        <tr><td>Sine specification</td><td>1 g peak over 90–110 Hz</td><td>A peak acceleration, not RMS or peak-to-peak.</td></tr>
+        <tr><td>Documented dwell</td><td>100 Hz; 3,000 cycles; 1 repeat</td><td>3,000 / 100 = 30 seconds. The time cap is disabled.</td></tr>
+        <tr><td>Sweep traversals</td><td>0</td><td>Only the dwell receives sine exposure credit.</td></tr>
+        <tr><td>Random specification</td><td>One-sided PSD: 0.03 g²/Hz from 90 to 110 Hz; 30 seconds</td><td>PSD is a density. Its area is acceleration variance.</td></tr>
+        <tr><td>Oscillator and fatigue law</td><td>fₙ = 100 Hz; Q = 10; b = 4</td><td>Q sets damping; b sets the amplitude sensitivity of fatigue.</td></tr>
+        <tr><td>Assessment</td><td>Known mode: 100 Hz; damage target = 1</td><td>The specified mode governs. Coverage of 1 means equal modeled damage.</td></tr>
+        <tr><td>Separate peak screen</td><td>4 × random response RMS</td><td>A user-selected screen, not a predicted maximum with a stated probability.</td></tr>
+      </tbody>
+    </table></div>
+    <p>The random input is √(0.03 × 20) = <strong><span data-tut="inputRMS"></span> gRMS</strong>. That number alone cannot be compared with 1 g peak to establish fatigue coverage. Frequency content, oscillator response and time all matter.</p>
+    <div class="tutorial-actions"><button id="tutorialLoadDocumented">Load this documented example into workspace</button></div>
+    <p class="hint">This loads the same case as “Load reference case.” The teaching values are illustrative inputs, not records for your hardware.</p>
+  </article>
+
+  <article class="card" id="learn-oscillator">
+    <div class="step">2 / LET THE HARDWARE FILTER THE INPUT</div>
+    <h2>A resonance magnifies some frequencies more than others</h2>
+    <p>An SDOF oscillator is a simple mass, spring and damper. The base motion is y(t); the mass moves by x(t). Their difference, <strong>z(t) = x(t) − y(t)</strong>, represents deformation and serves as this tool’s fatigue stress proxy.</p>
+    <div class="tutorial-pair">
+      <figure>
+        <svg class="tutorial-schematic" viewBox="0 0 360 280" role="img" aria-labelledby="tutorialSDOFTitle tutorialSDOFDesc">
+          <title id="tutorialSDOFTitle">A base-excited mass, spring and damper</title>
+          <desc id="tutorialSDOFDesc">A spring and damper connect an effective mass to a moving base in parallel. Upward motion coordinates x for the mass and y for the base define relative displacement z equals x minus y. This is a schematic, not to scale.</desc>
+          <defs><marker id="tutorialArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#172d40"/></marker></defs>
+          <rect x="38" y="42" width="190" height="50" fill="#edf4f7" stroke="#172d40" stroke-width="2"/>
+          <text x="133" y="73" text-anchor="middle" fill="#172d40" font-family="system-ui" font-size="16">Effective mass</text>
+          <path d="M80 92V114L68 123L92 137L68 151L92 165L68 179L92 193L80 202V230" fill="none" stroke="#172d40" stroke-width="2.5"/>
+          <path d="M176 92V166M160 166H192M155 142V199H197V142M176 199V230" fill="none" stroke="#172d40" stroke-width="2.5"/>
+          <rect x="26" y="230" width="214" height="18" fill="#d7e2e8" stroke="#172d40" stroke-width="2"/>
+          <g fill="#172d40" font-family="system-ui" font-size="14">
+            <text x="60" y="163" text-anchor="end">Spring</text><text x="207" y="174">Damper</text>
+            <text x="72" y="271">Moving base</text>
+            <text x="279" y="65">x(t)</text><text x="279" y="235">y(t)</text>
+          </g>
+          <path d="M264 90V44" stroke="#172d40" stroke-width="2" marker-end="url(#tutorialArrow)"/>
+          <path d="M264 254V218" stroke="#172d40" stroke-width="2" marker-end="url(#tutorialArrow)"/>
+        </svg>
+        <figcaption><strong>Conceptual schematic, not to scale.</strong> The spring and damper share the same moving base. Relative motion, rather than base acceleration alone, is what we use to compare fatigue severity.</figcaption>
+      </figure>
+      <figure>
+        <div id="tutorialTransfer" class="tutorial-plot"></div>
+        <figcaption><strong>Calculated response to a unit sine input.</strong> Q = 10 gives damping ζ = 1/(2Q) = 5%. Excitation near 100 Hz produces much more relative motion than excitation far from that resonance. Both plot axes are linear.</figcaption>
+      </figure>
+    </div>
+    <p>At excitation frequency f = fₙ, the displacement amplitude per peak g is g₀Q/(2πfₙ)². A higher Q generally means a sharper, larger resonant response. It affects both specifications; it does not simply multiply the fatigue coverage ratio by Q.</p>
+  </article>
+
+  <article class="card" id="learn-dwell">
+    <div class="step">3 / COUNT THE SINE CYCLES</div>
+    <h2>The dwell calculation can be followed by hand</h2>
+    <p>For the 1 g peak input at the 100 Hz resonance, the steady-state relative-displacement amplitude is:</p>
+    <div class="tutorial-equation">z<sub>peak</sub> = 1 × 9.80665 × 10 / (2π × 100)²<br>= <strong><span data-tut="sineMm"></span> mm</strong></div>
+    <p>The tool stops at the earlier positive time or cycle cap. Here, only the 3,000-cycle cap is active, so the dwell lasts 30 seconds and gives N = 100 × 30 = 3,000 cycles.</p>
+    <div class="tutorial-equation">I<sub>sine</sub> = N × (z<sub>peak</sub> / z<sub>ref</sub>)<sup>b</sup><br>= 3,000 × (<span data-tut="sineMm"></span> / 1)<sup>4</sup><br>= <strong><span data-tut="sineIndex"></span></strong></div>
+    <p>Here z<sub>ref</sub> = 1 mm is a fixed normalization. This is a <strong>relative damage index</strong>, not a Miner damage fraction or a percentage of life consumed. Its value becomes useful when compared with the random index calculated on the same basis.</p>
+    <p><strong>Build intuition:</strong> twice as many cycles gives twice the index. Twice the response amplitude gives 2⁴ = 16 times the index when b = 4. This is why response amplitude and the fatigue exponent deserve careful attention.</p>
+  </article>
+
+  <article class="card" id="learn-random">
+    <div class="step">4 / FILTER THE ENTIRE RANDOM PSD</div>
+    <h2>Random response contains a distribution of amplitudes</h2>
+    <p>The oscillator responds to the whole 90–110 Hz PSD, not only its value at exactly 100 Hz. At each excitation frequency, the input PSD is multiplied by the <em>squared</em> relative-displacement transfer function.</p>
+    <div class="tutorial-equation">S<sub>z</sub>(f) = S<sub>a</sub>(f) × |H(f, fₙ, Q)|²</div>
+    <figure>
+      <div id="tutorialResponse" class="tutorial-plot"></div>
+      <figcaption><strong>Calculated response PSD for the 100 Hz oscillator.</strong> Although the input PSD is flat, the response is largest near resonance. The area under this curve is <span data-tut="responseVariance"></span> mm²; its square root is <span data-tut="randomRmsMm"></span> mm RMS. Axes are linear; the input PSD is zero outside 90–110 Hz.</figcaption>
+    </figure>
+    <p>RMS tells us the response’s spread, but fatigue depends strongly on its larger cycles. Dirlik uses spectral moments—integrals that describe the response’s intensity and frequency content—to estimate fatigue over the specified exposure time. It assumes a stationary Gaussian random response.</p>
+    <div class="tutorial-equation">I<sub>random, Dirlik</sub> = <strong><span data-tut="randomIndex"></span></strong> for 30 seconds<br>Narrowband cross-check = <strong><span data-tut="narrowbandIndex"></span></strong></div>
+    <p>The two estimators are close here because the response is nearly narrowband (α = <span data-tut="alpha"></span>). Do not replace random damage with “RMS amplitude × a cycle count”: that discards the amplitude distribution.</p>
+  </article>
+
+  <article class="card" id="learn-results">
+    <div class="step">5 / ANSWER TWO DIFFERENT QUESTIONS</div>
+    <h2>Fatigue coverage and peak response need separate readings</h2>
+    <div class="tutorial-pair">
+      <div class="tutorial-answer">
+        <h3>Does the dwell cover random fatigue?</h3>
+        <span class="tutorial-value" data-tut="coverage"></span>
+        <p>R = <span data-tut="sineIndex"></span> / <span data-tut="randomIndex"></span>. With a damage target of 1, R / target is also <span data-tut="coverage"></span>. The modeled fatigue target is met at this known mode.</p>
+        <p>The modeled sine damage is about <span data-tut="damageSurplus"></span>% greater than the random damage, equivalent to <strong><span data-tut="equivalentSeconds"></span> seconds</strong> of this random exposure.</p>
+        <p>It corresponds to only <span data-tut="amplitudePercent"></span>% allowable uniform random-input amplitude increase at the same duration. A damage ratio is not an acceleration margin.</p>
+      </div>
+      <div class="tutorial-answer peak">
+        <h3>Does the selected random peak screen fit?</h3>
+        <span class="tutorial-value" data-tut="peakCoverage"></span>
+        <p>Sine peak: <span data-tut="sineMm"></span> mm.<br>Random screen: 4 × <span data-tut="randomRmsMm"></span> = <strong><span data-tut="randomPeakMm"></span> mm</strong>.</p>
+        <p>The sine peak / random screen ratio is below 1. The peak-response screen therefore has a gap even though the fatigue comparison meets its target.</p>
+        <p>The selected 4σ value is a screening assumption, not a duration-based confidence bound or proof of a particular maximum.</p>
+      </div>
+    </div>
+    <p class="hint">Displayed values are rounded; the engine calculates with full precision. “Target met” applies to this model, these inputs and the selected 100 Hz mode. It is not an absolute life prediction or automatic qualification approval. The unknown stress conversion and fatigue intercept cancel only when the two exposures share the same dynamics, stress mapping and fatigue law.</p>
+  </article>
+
+  <article class="card" id="learn-unknown">
+    <div class="step">6 / NOW LET THE RESONANCE FREQUENCY BE UNKNOWN</div>
+    <h2>A single documented dwell and a dwell-at-each-resonance assumption answer different questions</h2>
+    <p>Keep the specifications fixed and evaluate possible resonances from 90 to 110 Hz. In <strong>documented mode</strong>, every oscillator sees the same actual 100 Hz dwell. Away from 100 Hz that input is off resonance, so its damage credit falls.</p>
+    <p>In <strong>assumed mode</strong>, each oscillator instead receives its own 1 g peak dwell at its own natural frequency, with a 3,000-cycle cap and one repeat. These are separate alternatives:</p>
+    <div class="tutorial-scenarios" aria-label="Three independent hypothetical dwell scenarios">
+      <p><strong>If fₙ = 95 Hz</strong><br>Dwell only at 95 Hz<br>3,000 cycles / 95 Hz<br><span data-tut="seconds95"></span> seconds</p>
+      <p><strong>If fₙ = 100 Hz</strong><br>Dwell only at 100 Hz<br>3,000 cycles / 100 Hz<br>30 seconds</p>
+      <p><strong>If fₙ = 105 Hz</strong><br>Dwell only at 105 Hz<br>3,000 cycles / 105 Hz<br><span data-tut="seconds105"></span> seconds</p>
+    </div>
+    <p><strong>No neighboring hypothetical dwells are added.</strong> The 95 Hz case receives no credit from the hypothetical 100 or 105 Hz dwells. Each case still sees the full random PSD. Adding more bank points improves frequency sampling; it does not add exposure to an existing point.</p>
+    <figure>
+      <div id="tutorialCoverage" class="tutorial-plot"></div>
+      <figcaption><strong>Calculated fatigue coverage across possible resonance frequency.</strong> The solid documented-dwell curve drops below the target away from 100 Hz. The dashed assumed-dwell curve uses one local resonant dwell per oscillator. They meet at 100 Hz, where their dwell conditions are identical. The horizontal axis is linear; the coverage axis is logarithmic. No sweeps are included.</figcaption>
+    </figure>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Possible fₙ</th><th>Documented 100 Hz dwell: R / target</th><th>Independent resonant dwell: R / target</th></tr></thead>
+      <tbody id="tutorialModeRows"></tbody>
+    </table></div>
+    <p>The assumed case’s minimum sampled coverage is <strong><span data-tut="assumedMinimum"></span> at <span data-tut="assumedWorstHz"></span> Hz</strong>. This supports an “if a resonance existed here and the specified dwell were performed” comparison; it does not establish where the actual modes are or what historical testing achieved.</p>
+    <p>Outside the sine profile there is no assumed dwell credit. At a profile jump, choose an explicit boundary amplitude. Review the listed frequency gaps and refine the grid near a threshold; sampled range endpoints are not exact crossing frequencies.</p>
+    <div class="tutorial-actions"><button id="tutorialLoadAssumed">Load the assumed-resonance example into workspace</button></div>
+    <p class="hint">This replaces the workspace inputs, selects the full oscillator bank, retains the same sine and random specifications, and sets the common cycle cap to 3,000.</p>
+  </article>
+
+  <article class="card" id="learn-experiment">
+    <div class="step">7 / CHANGE ONE THING AND PREDICT THE RESULT</div>
+    <h2>Try the time-versus-amplitude distinction</h2>
+    <p>This local experiment stays at the 100 Hz resonance with the same Q, b and input amplitudes. Predict what happens when the dwell cycles or random duration double, then change the controls.</p>
+    <div class="fields">
+      <div><label for="tutorialCycles">Sine dwell cycles at 100 Hz</label><select id="tutorialCycles"><option value="1500">1,500 cycles · 15 seconds</option><option value="3000" selected>3,000 cycles · 30 seconds</option><option value="6000">6,000 cycles · 60 seconds</option></select></div>
+      <div><label for="tutorialRandomSeconds">Random exposure duration</label><select id="tutorialRandomSeconds"><option value="30" selected>30 seconds</option><option value="60">60 seconds</option></select></div>
+    </div>
+    <div id="tutorialExperimentResult" class="notice" aria-live="polite"></div>
+    <p>Doubling dwell cycles doubles sine damage. Doubling random duration doubles expected random damage. Doubling both preserves their ratio. Neither change alters this steady-state sine amplitude or the selected 4σ random screen; a duration-based extreme-value model would be a different calculation.</p>
+    <p class="hint">These controls affect only this experiment. The worked example, its plots, the “Load” buttons and your workspace retain their stated inputs.</p>
+  </article>
+
+  <article class="card" id="learn-your-case">
+    <div class="step">8 / TRANSFER THE PROCESS TO YOUR OWN CASE</div>
+    <h2>Use the same chain of reasoning</h2>
+    <ol>
+      <li><strong>Define the comparison.</strong> Use one axis and hardware configuration. Record the evidence and assumptions, then select a justified Q, fatigue exponent and damage target.</li>
+      <li><strong>Enter the sine specification with its actual units.</strong> Peak, RMS, peak-to-peak and double-amplitude values are different conventions. Credit sweeps only when they belong in the exposure; set traversals to 0 to exclude them.</li>
+      <li><strong>Choose the dwell question.</strong> Use a documented schedule for achieved exposure. Use independent assumed resonant dwells to screen a specification when mode locations are unknown. Enter caps and repeats; do not fabricate a combined schedule of hypothetical dwells.</li>
+      <li><strong>Enter the full random PSD and duration.</strong> Review breakpoints and level adjustments. Check the plotted inputs before interpreting the result.</li>
+      <li><strong>Choose the frequency scope and inspect the weakest points.</strong> Known modes assess only the listed frequencies; a full bank screens alternatives. Read fatigue coverage, peak response, the Q/b sensitivity matrix and warnings together.</li>
+      <li><strong>Keep an analysis record.</strong> Save the case JSON for editing, the CSV for numerical review and the HTML report for the assumptions and results. Refine near gaps before making a disposition.</li>
+    </ol>
+    <details><summary>A short glossary</summary>
+      <p><strong>fₙ:</strong> an oscillator’s natural frequency. <strong>SDOF:</strong> single degree of freedom. <strong>Q:</strong> the inverse of twice the damping ratio. <strong>b:</strong> fatigue exponent; larger b makes amplitude more influential. <strong>PSD:</strong> power spectral density, in g²/Hz here. <strong>R:</strong> heritage damage index divided by new random damage index. <strong>Coverage:</strong> R divided by the selected damage target.</p>
+    </details>
+    <details><summary>Where the example and figures come from</summary>
+      <p>The numerical example is the app’s existing 100 Hz reference case, adapted from the Irvine sine/random example described in Method &amp; interpretation. The tool’s stationary relative-displacement calculation agrees with the independent FLife check: R = 1.131908593 at 100 Hz. It is not an exact reproduction of Irvine’s finite-record acceleration rainflow calculation.</p>
+      <p>The schematic is original explanatory vector artwork. All three plots and the displayed calculations are generated locally by the current calculation engine from the fixed reference inputs. The across-frequency comparison adds independent 3,000-cycle resonant dwells using the same specification. No plot is measured test data or an AI-generated approximation of a curve.</p>
+    </details>
+  </article>
+</section>
+
       <section id="method" class="doc hidden">
         <div class="card">
           <div class="step">ENGINEERING BASIS</div>
@@ -1161,14 +1372,14 @@
       });
     </script>
     <script>
-      /* Vibration Damage Comparison 1.1.0. Original implementation; equations and scope in WHITE_PAPER.md and README.md. */
+      /* Vibration Damage Comparison 1.2.0. Original implementation; equations and scope in WHITE_PAPER.md and README.md. */
 (function (root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
   else root.VDC = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
-  const VERSION = "1.1.0",
+  const VERSION = "1.2.0",
     G = 9.80665,
     ZREF = 0.001;
   const UNITS = {
@@ -1938,9 +2149,10 @@
             document
               .querySelectorAll("nav button")
               .forEach((x) => x.classList.toggle("active", x === b));
-            ["analysis", "method"].forEach((t) =>
+            ["analysis", "tutorial", "method"].forEach((t) =>
               $(t).classList.toggle("hidden", b.dataset.tab !== t),
             );
+            if (b.dataset.tab === "tutorial") renderTutorial();
           }),
       );
       $("unitlist").innerHTML = Object.entries(VDC.UNITS)
@@ -2499,6 +2711,160 @@
         const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(c.caseName)} — vibration comparison report</title><style>${document.querySelector("style").textContent}\nbody{background:white}main{max-width:1000px}.tablewrap{max-height:none}.card{box-shadow:none}th{position:static}.charthead button{display:none}#rowTable .tablewrap{max-height:none;overflow:visible}</style></head><body><header><div class="eyebrow">ANALYSIS RECORD · ${r.version}</div><h1>${esc(c.caseName)}</h1><p>Heritage sine / random fatigue comparison · ${esc(r.generated)}</p></header><main><p>Static report. Use browser Print to save as PDF. The complete input record is below; pair it with the exported case JSON and results CSV.</p>${$("methodOverview").outerHTML}${result.innerHTML}<div class="card pagebreak"><h2>Complete input record</h2><table>${caseText}</table></div><div class="card pagebreak">${method.innerHTML}</div></main></body></html>`;
         download("vibration-comparison-report.html", html, "text/html");
       };
+      // Tutorial visual contract:
+// - SDOF schematic (tutorial.html): conceptual parallel spring/damper topology;
+//   x and y are upward motion coordinates, z = x - y. Not to scale.
+// - Transfer plot: calculated response of one fixed 100 Hz, Q=10 oscillator.
+// - Response PSD: calculated H^2 filtering; area gives displacement variance.
+// - Coverage comparison: calculated alternative natural frequencies, identical
+//   specifications, one actual dwell versus one local hypothetical dwell.
+// Provenance: REFERENCE.case.inputs and VDC, with original editable SVG output.
+// All figures use light backgrounds, readable labels, captions and text alternatives.
+// The tutorial has its own plot renderer and state; it cannot overwrite result exports.
+let tutorialData = null;
+let tutorialResizeTimer;
+
+function tutorialInputs(mode = "documented") {
+  const inputs = { ...REFERENCE.case.inputs, dwellMode: mode };
+  if (mode === "assumed") Object.assign(inputs, {
+    caseName: "Tutorial: independent assumed resonances, 90–110 Hz",
+    basis: "Educational extension of the checked 100 Hz reference case. Each possible resonance receives only its own 1 g peak, 3000-cycle dwell. No sweeps. Random: 0.03 g²/Hz over 90–110 Hz for 30 seconds.",
+    dwellText: "", assumedHours: "0", assumedCycles: "3000",
+    assumedRepeats: "1", assumedBoundary: "reject", scope: "bank", density: "192",
+  });
+  return inputs;
+}
+
+function tutorialNumbers() {
+  if (tutorialData) return tutorialData;
+  const documented = VDC.parse(tutorialInputs());
+  const assumed = VDC.parse(tutorialInputs("assumed"));
+  const reference = VDC.atMode(documented, 100);
+  const frequencies = VDC.grid(assumed);
+  const rows = frequencies.map((fn) => ({
+    fn, documented: VDC.atMode(documented, fn), assumed: VDC.atMode(assumed, fn),
+  }));
+  const minimum = rows.reduce((a, b) => a.assumed.margin < b.assumed.margin ? a : b);
+  tutorialData = { documented, assumed, reference, rows, minimum };
+  return tutorialData;
+}
+
+// Responsive, linear-frequency SVG plots with fixed, explicit scales.
+// Plot dimensions follow the visible container so mobile labels stay at 12px.
+function tutorialPlot(id, series, options) {
+  const host = $(id), W = Math.max(260, Math.floor(host.clientWidth));
+  const H = 300, L = 78, R = 16, T = 16, B = 54;
+  const { xmin, xmax, ymin, ymax, xticks, yticks, logY = false,
+    xLabel, yLabel, alt, threshold = null, marker = null } = options;
+  const X = (x) => L + (x - xmin) / (xmax - xmin) * (W - L - R);
+  const Y = (y) => H - B - (logY
+    ? Math.log(y / ymin) / Math.log(ymax / ymin)
+    : (y - ymin) / (ymax - ymin)) * (H - T - B);
+  let marks = "";
+  for (const x of xticks) {
+    marks += `<line x1="${X(x)}" y1="${T}" x2="${X(x)}" y2="${H - B}" stroke="#e1e8ed"/><text x="${X(x)}" y="${H - B + 22}" text-anchor="middle">${fmt(x, 4)}</text>`;
+  }
+  for (const y of yticks) {
+    marks += `<line x1="${L}" y1="${Y(y)}" x2="${W - R}" y2="${Y(y)}" stroke="#e1e8ed"/><text x="${L - 8}" y="${Y(y) + 4}" text-anchor="end">${Number(y.toPrecision(3))}</text>`;
+  }
+  if (threshold !== null) marks += `<line x1="${L}" x2="${W - R}" y1="${Y(threshold)}" y2="${Y(threshold)}" stroke="#a93636" stroke-width="1.5" stroke-dasharray="3 4"/><text x="${W - R - 4}" y="${Y(threshold) - 7}" text-anchor="end">Target = ${threshold}</text>`;
+  for (const s of series) {
+    const points = s.data.map(([x, y]) => `${X(x).toFixed(2)},${Y(y).toFixed(2)}`);
+    if (s.fill) marks += `<path d="M${X(s.data[0][0])},${Y(ymin)} L${points.join(" L")} L${X(s.data.at(-1)[0])},${Y(ymin)}Z" fill="${s.color}" opacity="0.08"/>`;
+    marks += `<polyline points="${points.join(" ")}" fill="none" stroke="${s.color}" stroke-width="2.5" ${s.dashed ? 'stroke-dasharray="8 5"' : ""}/>`;
+  }
+  if (marker) marks += `<circle cx="${X(marker[0])}" cy="${Y(marker[1])}" r="4" fill="#fff" stroke="#172d40" stroke-width="2"><title>100 Hz: ${fmt(marker[1], 5)}</title></circle>`;
+  marks += `<text x="${(L + W - R) / 2}" y="${H - 8}" text-anchor="middle">${esc(xLabel)}</text><text transform="translate(15,${(T + H - B) / 2}) rotate(-90)" text-anchor="middle">${esc(yLabel)}</text>`;
+  host.innerHTML = `<div class="tutorial-legend">${series.map((s) => `<span><i class="tutorial-line ${s.dashed ? "dashed" : ""}" style="border-color:${s.color}" aria-hidden="true"></i>${esc(s.label)}</span>`).join("")}</div><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" role="img" aria-labelledby="${id}Title" style="font:12px system-ui;fill:#304c5d"><title id="${id}Title">${esc(alt)}</title><rect width="${W}" height="${H}" fill="white"/>${marks}</svg>`;
+}
+
+function renderTutorial() {
+  const { documented, reference: r, rows, minimum } = tutorialNumbers();
+  const values = {
+    inputRMS: fmt(Math.sqrt(VDC.integralPSD(documented.psd)), 5),
+    sineMm: fmt(r.peakSine * 1000, 5), sineIndex: fmt(r.dwell, 6),
+    responseVariance: fmt(r.m[0] * 1e6, 5), randomRmsMm: fmt(r.sigma * 1000, 5),
+    randomIndex: fmt(r.dirlik, 6), narrowbandIndex: fmt(r.nb, 6), alpha: fmt(r.alpha, 5),
+    coverage: fmt(r.margin, 5) + "×", damageSurplus: fmt((r.ratio - 1) * 100, 3),
+    equivalentSeconds: fmt(r.eqMinutes * 60, 5),
+    amplitudePercent: fmt((r.amplitudeReserve - 1) * 100, 3),
+    peakCoverage: fmt(r.peakRatio, 4) + "×", randomPeakMm: fmt(r.peakRandom * 1000, 5),
+    seconds95: fmt(3000 / 95, 5), seconds105: fmt(3000 / 105, 5),
+    assumedMinimum: fmt(minimum.assumed.margin, 5) + "×",
+    assumedWorstHz: fmt(minimum.fn, 6),
+  };
+  document.querySelectorAll("[data-tut]").forEach((el) => {
+    el.textContent = values[el.dataset.tut];
+  });
+  const transfer = Array.from({ length: 321 }, (_, i) => {
+    const f = 60 + i / 4;
+    return [f, VDC.transfer(f, 100, documented.Q) * 1000];
+  });
+  tutorialPlot("tutorialTransfer", [{ label: "100 Hz oscillator · Q = 10", data: transfer, color: "#087f83" }], {
+    xmin: 60, xmax: 140, ymin: 0, ymax: 0.3,
+    xticks: [60, 80, 100, 120, 140], yticks: [0, 0.1, 0.2, 0.3],
+    xLabel: "Excitation frequency, Hz", yLabel: "Relative motion, mm / peak g",
+    alt: "Calculated sine transfer: a fixed 100 Hz oscillator reaches about 0.2484 millimetres per peak g near resonance, with much less response at 60 or 140 Hz.",
+    marker: [100, r.peakSine * 1000],
+  });
+  const response = Array.from({ length: 201 }, (_, i) => {
+    const f = 90 + i / 10;
+    return [f, VDC.psdAt(f, documented.psd) * VDC.transfer(f, 100, documented.Q) ** 2 * 1e6];
+  });
+  tutorialPlot("tutorialResponse", [{ label: "Displacement response PSD", data: response, color: "#087f83", fill: true }], {
+    xmin: 90, xmax: 110, ymin: 0, ymax: 0.002,
+    xticks: [90, 95, 100, 105, 110], yticks: [0, 0.0005, 0.001, 0.0015, 0.002],
+    xLabel: "Excitation frequency, Hz", yLabel: "Response PSD, mm²/Hz",
+    alt: "Calculated relative-displacement PSD peaks near 100 Hz despite a flat input PSD. Its integrated area gives 0.14337 millimetres RMS for the 100 Hz oscillator.",
+  });
+  tutorialPlot("tutorialCoverage", [
+    { label: "Documented dwell at 100 Hz", color: "#087f83", data: rows.map((x) => [x.fn, x.documented.margin]) },
+    { label: "Independent resonant dwell", color: "#172d40", dashed: true, data: rows.map((x) => [x.fn, x.assumed.margin]) },
+  ], {
+    xmin: 90, xmax: 110, ymin: 0.05, ymax: 10, logY: true,
+    xticks: [90, 95, 100, 105, 110], yticks: [0.1, 1, 10], threshold: 1,
+    xLabel: "Possible natural frequency, Hz", yLabel: "Coverage R / target · log scale",
+    alt: "Documented and independently assumed dwell coverage coincide at 1.1319 at 100 Hz. The documented dwell falls below target away from 100 Hz, while independent resonant dwells meet the target across the sampled 90–110 Hz range.",
+    marker: [100, r.margin],
+  });
+  $("tutorialModeRows").innerHTML = [95, 100, 105].map((f) => {
+    const d = VDC.atMode(documented, f), a = VDC.atMode(tutorialData.assumed, f);
+    return `<tr><td>${f} Hz</td><td>${fmt(d.margin, 5)}×</td><td>${fmt(a.margin, 5)}×</td></tr>`;
+  }).join("");
+  updateTutorialExperiment();
+}
+
+function updateTutorialExperiment() {
+  const cycles = +$("tutorialCycles").value;
+  const seconds = +$("tutorialRandomSeconds").value;
+  const c = VDC.parse({ ...tutorialInputs(), duration: seconds / 60,
+    dwellText: `100,1,0,${cycles},1` });
+  const r = VDC.atMode(c, 100);
+  $("tutorialExperimentResult").innerHTML = `<strong>100 Hz fatigue coverage: <span id="tutorialExperimentCoverage">${fmt(r.margin, 5)}×</span> — ${r.margin >= 1 ? "target met" : "below target"}.</strong><br>Sine index ${fmt(r.heritage, 6)}; random index ${fmt(r.random, 6)}.<br>Peak-screen ratio stays ${fmt(r.peakRatio, 4)}×. Sine peak ${fmt(r.peakSine * 1000, 5)} mm; random 4σ screen ${fmt(r.peakRandom * 1000, 5)} mm.`;
+}
+
+async function loadTutorialCase(mode) {
+  if (busy) return;
+  const inputs = tutorialInputs(mode);
+  for (const k of ids) $(k).value = inputs[k] ?? defaults[k];
+  $("methodSelect").value = inputs.method;
+  syncDwellMode();
+  stale();
+  example = true;
+  await run();
+}
+
+$("tutorialLoadDocumented").onclick = () => loadTutorialCase("documented");
+$("tutorialLoadAssumed").onclick = () => loadTutorialCase("assumed");
+$("tutorialCycles").addEventListener("change", updateTutorialExperiment);
+$("tutorialRandomSeconds").addEventListener("change", updateTutorialExperiment);
+window.addEventListener("resize", () => {
+  clearTimeout(tutorialResizeTimer);
+  tutorialResizeTimer = setTimeout(() => {
+    if (!$("tutorial").classList.contains("hidden")) renderTutorial();
+  }, 120);
+});
+
       // Enable Run only after all handlers and the calculation engine are ready.
       $("startup").hidden = true;
       $("run").disabled = false;

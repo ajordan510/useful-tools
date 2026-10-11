@@ -109,6 +109,7 @@
       }
       nav {
         display: flex;
+        flex-wrap: wrap;
         border-bottom: 1px solid #bccdd7;
         margin-bottom: 22px;
         gap: 10px;
@@ -378,6 +379,39 @@
       .hidden {
         display: none !important;
       }
+      #tutorial { max-width: 1100px; margin: 0 auto; }
+      #tutorial .card { padding: clamp(18px, 4vw, 38px); }
+      #tutorial h2 { margin-top: 0; font-size: 23px; }
+      #tutorial p, #tutorial li { max-width: 78ch; }
+      #tutorial .tutorial-lead { font-size: 17px; }
+      .tutorial-links { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 20px 0; }
+      .tutorial-links a { font-weight: 600; }
+      .tutorial-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; align-items: start; }
+      #tutorial figure { margin: 22px 0; min-width: 0; }
+      #tutorial figcaption { font-size: 13px; color: var(--muted); margin-top: 12px; }
+      .tutorial-schematic { display: block; width: 100%; max-width: 400px; margin: 0 auto; }
+      .tutorial-plot { min-width: 0; }
+      .tutorial-plot svg { display: block; width: 100%; }
+      .tutorial-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 12px; margin: 8px 0; }
+      .tutorial-line { display: inline-block; width: 24px; border-top: 3px solid; margin-right: 6px; vertical-align: middle; }
+      .tutorial-line.dashed { border-top-style: dashed; }
+      .tutorial-equation { overflow-wrap: anywhere; padding: 15px 0 15px 18px; border-left: 3px solid var(--teal); margin: 16px 0; font-size: 17px; }
+      .tutorial-answer { border-top: 3px solid var(--teal); padding-top: 16px; }
+      .tutorial-answer.peak { border-color: var(--red); }
+      .tutorial-value { display: block; font-size: 30px; font-weight: 750; margin: 8px 0; }
+      .tutorial-scenarios { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 20px 0; }
+      .tutorial-scenarios p { border-top: 2px solid var(--line); padding: 12px 0; margin: 0; }
+      #tutorial .tablewrap { max-height: none; }
+      #tutorial th, #tutorial td { white-space: normal; }
+      #tutorial [id^="learn-"] { scroll-margin-top: 18px; }
+      #tutorial .tutorial-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 8px; }
+      @media (max-width: 700px) {
+        .tutorial-pair, .tutorial-scenarios { grid-template-columns: 1fr; }
+        #tutorial .fields { grid-template-columns: 1fr; }
+        #tutorial h2 { font-size: 21px; }
+        #tutorial .tutorial-lead { font-size: 16px; }
+        #tutorial th, #tutorial td { padding: 8px; font-size: 12px; }
+      }
       .report-only {
         display: none;
       }
@@ -609,10 +643,11 @@
         ><button id="report" disabled>Save analysis report</button
         ><button id="demo">Load example</button
         ><button id="referenceCase">Load reference case</button
-        ><span class="tag">v1.1.0 · OFFLINE · ONE AXIS PER CASE</span>
+        ><span class="tag">v1.2.0 · OFFLINE · ONE AXIS PER CASE</span>
       </div>
       <nav aria-label="Workspace">
         <button class="active" data-tab="analysis">Comparison workspace</button
+        ><button data-tab="tutorial">Worked example &amp; tutorial</button
         ><button data-tab="method">Method &amp; interpretation</button>
       </nav>
       <div id="status" class="notice warn" role="status" aria-live="polite">
@@ -898,6 +933,7 @@
           </div>
         </div>
       </section>
+      <!--__TUTORIAL__-->
       <section id="method" class="doc hidden">
         <div class="card">
           <div class="step">ENGINEERING BASIS</div>
@@ -1263,9 +1299,10 @@
             document
               .querySelectorAll("nav button")
               .forEach((x) => x.classList.toggle("active", x === b));
-            ["analysis", "method"].forEach((t) =>
+            ["analysis", "tutorial", "method"].forEach((t) =>
               $(t).classList.toggle("hidden", b.dataset.tab !== t),
             );
+            if (b.dataset.tab === "tutorial") renderTutorial();
           }),
       );
       $("unitlist").innerHTML = Object.entries(VDC.UNITS)
@@ -1824,6 +1861,7 @@
         const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(c.caseName)} — vibration comparison report</title><style>${document.querySelector("style").textContent}\nbody{background:white}main{max-width:1000px}.tablewrap{max-height:none}.card{box-shadow:none}th{position:static}.charthead button{display:none}#rowTable .tablewrap{max-height:none;overflow:visible}</style></head><body><header><div class="eyebrow">ANALYSIS RECORD · ${r.version}</div><h1>${esc(c.caseName)}</h1><p>Heritage sine / random fatigue comparison · ${esc(r.generated)}</p></header><main><p>Static report. Use browser Print to save as PDF. The complete input record is below; pair it with the exported case JSON and results CSV.</p>${$("methodOverview").outerHTML}${result.innerHTML}<div class="card pagebreak"><h2>Complete input record</h2><table>${caseText}</table></div><div class="card pagebreak">${method.innerHTML}</div></main></body></html>`;
         download("vibration-comparison-report.html", html, "text/html");
       };
+      /*__TUTORIAL_SCRIPT__*/
       // Enable Run only after all handlers and the calculation engine are ready.
       $("startup").hidden = true;
       $("run").disabled = false;

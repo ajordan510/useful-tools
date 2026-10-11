@@ -8,6 +8,10 @@ Download `vibration_damage_comparison.html` and open it in a modern browser. No 
 
 Wait for **Calculator ready**, then choose **Run comparison**. The tool brings the results into view after calculating, including on narrow screens. Input errors appear above the inputs and are brought into view.
 
+For a first run, open **Worked example & tutorial**. The eight-step walkthrough follows the checked 100 Hz reference case from input units through oscillator response, dwell cycles, random damage, fatigue coverage and the separate peak screen. It then contrasts a documented dwell with independent assumed resonant dwells across 90–110 Hz. A local experiment demonstrates how dwell cycles and random duration change fatigue coverage. Reading and experimenting leave the workspace and its exports untouched; explicit Load buttons replace the workspace inputs and calculate either teaching case.
+
+The tutorial includes an original, accessible mass–spring–damper schematic and three responsive SVG plots: the sine transfer function, filtered response PSD, and documented-versus-assumed fatigue coverage. Captions distinguish the conceptual schematic from calculated curves, explain units and scales, and provide numerical takeaways. All plotted values come from the current engine and fixed reference inputs; no network or image downloads are required.
+
 If Run comparison is disabled and **The calculator has not started** remains visible, the file viewer may be blocking JavaScript. Download the HTML and open the saved file in a browser with JavaScript enabled; an attachment or document preview may display the form without running it. If a browser error appears, include its exact message when reporting the issue.
 
 Read `Vibration_Damage_Comparison_White_Paper.pdf` for the baseline method, equations, ground rules, assumptions, examples and references. The editable source is `WHITE_PAPER.md`. The white paper and archived technical audit describe v1.0.2's documented-schedule model; the assumed-resonance extension introduced in v1.1.0 is specified below and in the app's Method & interpretation section.
@@ -92,7 +96,7 @@ node test_engine.cjs
 python3 validate_reference.py
 ```
 
-`engine.js` contains the independent calculation engine. `app.template.html` holds the UI. Build after editing either; `vibration_damage_comparison.html` embeds the engine and is the distributable.
+`engine.js` contains the independent calculation engine. `app.template.html` holds the UI. `tutorial.html` contains the editable tutorial prose, captions, accessible schematic and layout; `tutorial.js` computes the worked values and plots and manages the isolated experiment. Build after editing any of them; `vibration_damage_comparison.html` embeds all sources and is the distributable. Tutorial plots have their own renderer so visiting the tab cannot replace the workspace plot exports.
 
 The SciPy reference check needs NumPy and SciPy. PDF generation (`python3 build_white_paper.py`) needs Matplotlib, Pillow and ReportLab. These are development dependencies only.
 
@@ -103,7 +107,7 @@ node test_browser.mjs
 # Optional: CHROMIUM_PATH=/path/to/chromium TEST_ARTIFACT_DIR=/tmp/vdc-qa node test_browser.mjs
 ```
 
-Twenty-five engine test groups cover the baseline model and assumed-dwell analytical values, grid independence, caps, scaling, optional sweeps, boundary choices, zero credit and sensitivity. The independent reference script covers 96 quadrature/PDF-integration cases; the archived audit contains 32 additional sweep/peak cases. Browser checks cover both dwell modes, plots, exports, case roundtrip and legacy imports, stale-result protection, invalid inputs, zero coverage, mobile layout and absence of network requests. This is numerical/software verification; experimental validation and engineering approval remain specific to the hardware and program.
+Twenty-five engine test groups cover the baseline model and assumed-dwell analytical values, grid independence, caps, scaling, optional sweeps, boundary choices, zero credit and sensitivity. The independent reference script covers 96 quadrature/PDF-integration cases; the archived audit contains 32 additional sweep/peak cases. Browser checks cover both dwell modes, plots, exports, case roundtrip and legacy imports, stale-result protection, invalid inputs, zero coverage, mobile layout and absence of network requests. Tutorial checks verify worked values, rendered plots, mobile label bounds, experiment scaling, workspace/export isolation and both example loaders. This is numerical/software verification; experimental validation and engineering approval remain specific to the hardware and program.
 
 ## References
 
@@ -111,4 +115,4 @@ Twenty-five engine test groups cover the baseline model and assumed-dwell analyt
 - Zorman, Slavič & Boltežar (2023), https://doi.org/10.1016/j.ymssp.2023.110149
 - NASA NESC Academy, Tom Irvine, *Using Fatigue to Compare Sine and Random Environments*: https://nescacademy.nasa.gov/video/2584e207341e411b95fa829e191d81441d
 
-Version 1.1.0, 2026-10-11. This release adds independent assumed-resonance dwells, sampled fatigue-gap ranges, per-frequency assumed-dwell exports and compatibility with existing documented cases. It retains the v1.0.2 audited reference checks and baseline calculation methods.
+Version 1.2.0, 2026-10-11. This release adds the worked-example tutorial, explanatory schematic, calculated plots, isolated duration experiment and example loaders. It retains v1.1.0's independent assumed-resonance screening and the v1.0.2 audited reference checks and baseline calculation methods.
