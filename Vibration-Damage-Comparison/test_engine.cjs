@@ -203,4 +203,100 @@ test("Importable reference case matches independent FLife response calculation",
   close(r.dirlik, ref.flife.at(-1).dirlik, 1e-8);
   close(r.nb, ref.flife.at(-1).nb, 1e-8);
 });
+const assumed = {
+  ...raw, dwellMode: "assumed", assumedHours: 8, assumedCycles: 1e6,
+  assumedRepeats: 2, assumedBoundary: "lower", passes: 0,
+  // Ignored in this mode, even if a retained schedule is invalid.
+  dwellText: "not a schedule",
+};
+test("Assumed resonances use independent analytical dwell damage and local units", () => {
+  const c = V.parse(assumed);
+  assert.equal(c.dwell.length, 0);
+  for (const fn of [10, 35, 100, 280, 500]) {
+    for (const Q of [5, 50]) for (const b of [4, 7.3]) {
+      const r = V.atMode(c, fn, Q, b), d = r.contributions[0];
+      const acceleration = V.sineAt(fn, c.sine) * c.sineScale;
+      const amp = acceleration * V.G * Q / (2 * Math.PI * fn) ** 2;
+      close(r.dwell, Math.min(8 * 3600 * fn, 1e6) * 2 * (amp / V.ZREF) ** b);
+      close(r.peakSine, amp);
+      close(d.t, Math.min(8 * 3600, 1e6 / fn));
+      assert.equal(r.contributions.length, 1);
+      assert.equal(d.f, fn);
+      assert.equal(d.limiter, fn < 1e6 / 28800 ? "time" : "cycles");
+      const manual = V.atMode(V.parse({ ...raw, passes: 0,
+        dwellText: `${fn},0,8,1000000,2` }), fn, Q, b);
+      close(r.heritage, manual.heritage);
+      close(r.random, manual.random);
+    }
+  }
+});
+test("Adding grid points or retained dwells cannot change assumed resonance credit", () => {
+  const a = V.parse({ ...assumed, density: 24, modesText: "100" });
+  const b = V.parse({ ...assumed, density: 192, modesText: "99,100,101",
+    dwellText: "99,1000,8,1000000,1000\n101,1000,8,1000000,1000" });
+  assert.ok(V.grid(b).length > V.grid(a).length);
+  const results = [a, b].map((c) => V.grid(c).map((f) => V.atMode(c, f)).find((r) => r.fn === 100));
+  assert.deepEqual(results[0], results[1]);
+});
+test("Assumed dwell repeats, multiplier and optional sweeps apply once", () => {
+  const c = V.parse(assumed), a = V.atMode(c, 100);
+  const scaled = V.atMode(V.parse({ ...assumed, sineScale: 2, assumedRepeats: 4 }), 100);
+  close(scaled.dwell / a.dwell, 2 * 2 ** c.b);
+  close(scaled.peakSine / a.peakSine, 2);
+  const swept = V.atMode(V.parse({ ...assumed, passes: 2 }), 100);
+  close(swept.dwell, a.dwell);
+  close(swept.heritage, a.dwell + swept.sweep);
+  close(swept.random, a.random);
+  close(V.atMode(V.parse({ ...assumed, assumedCycles: 0 }), 100).contributions[0].t, 28800);
+  close(V.atMode(V.parse({ ...assumed, assumedHours: 0 }), 10).contributions[0].t, 1e5);
+});
+test("Outside-profile assumed dwell has zero credit and finite convergence", () => {
+  const c = V.parse({ ...assumed, fmin: 600, fmax: 800, inspectFn: 700, modesText: "", density: 12 });
+  const r = V.analyze(c);
+  assert.equal(r.worst.margin, 0);
+  assert.ok(Number.isFinite(r.convergence));
+  assert.equal(r.gaps.length, 1);
+  assert.equal(r.gaps[0].count, r.rows.length);
+  for (const row of r.rows) {
+    assert.equal(row.contributions.length, 0);
+    assert.equal(row.dwell, 0);
+    assert.equal(row.peakSine, 0);
+    assert.equal(row.eqMinutes, 0);
+  }
+  assert.ok(r.warnings.some((s) => s.includes("zero assumed dwell")));
+  const swept = V.atMode(V.parse({ ...assumed, passes: 2 }), 700);
+  assert.equal(swept.dwell, 0);
+  assert.ok(swept.sweep > 0);
+});
+test("Assumed boundary choices are explicit and do not affect adjacent interiors", () => {
+  const input = { ...assumed, sineText: "5,100,accel_g_pk,10,10\n100,500,accel_g_pk,1,1" };
+  assert.throws(() => V.parse({ ...input, assumedBoundary: "reject" }), /Select the lower or higher/);
+  for (const boundary of ["lower", "upper"]) {
+    const c = V.parse({ ...input, assumedBoundary: boundary });
+    close(V.atMode(c, 100).contributions[0].a, boundary === "lower" ? 1 : 10);
+    close(V.atMode(c, 99).contributions[0].a, 10);
+    close(V.atMode(c, 101).contributions[0].a, 1);
+  }
+});
+test("Assumed mode validates caps and preserves legacy documented cases", () => {
+  for (const patch of [{ assumedHours: 0, assumedCycles: 0 },
+    { assumedRepeats: 1.5 }, { assumedHours: -1 }, { assumedCycles: "" },
+    { assumedRepeats: 0 }, { assumedBoundary: "guess" }, { dwellMode: "unknown" }]) {
+    assert.throws(() => V.parse({ ...assumed, ...patch }));
+  }
+  assert.equal(V.parse(raw).dwellMode, "documented");
+  assert.deepEqual(V.atMode(V.parse(raw), 100), V.atMode(V.parse({
+    ...raw, dwellMode: "documented", assumedHours: "invalid", assumedCycles: -1,
+  }), 100));
+});
+test("Assumed sensitivity and known-mode gap lists retain independent scenarios", () => {
+  const c = V.parse({ ...assumed, scope: "modes", modesText: "100,700", density: 12 });
+  const r = V.analyze(c);
+  for (const s of r.sensitivity) {
+    const expected = Math.min(...[100, 700].map((f) => V.atMode(c, f, s.Q, s.b).margin));
+    close(s.margin, expected);
+  }
+  assert.ok(r.gaps.every((g) => g.from === g.to));
+  assert.ok(r.gaps.some((g) => g.from === 700 && g.minimum === 0));
+});
 console.log(`${tests} test groups passed.`);

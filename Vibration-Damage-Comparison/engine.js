@@ -1,11 +1,11 @@
-/* Vibration Damage Comparison 1.0.2. Original implementation; equations and scope in WHITE_PAPER.md. */
+/* Vibration Damage Comparison 1.1.0. Original implementation; equations and scope in WHITE_PAPER.md and README.md. */
 (function (root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
   else root.VDC = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
-  const VERSION = "1.0.2",
+  const VERSION = "1.1.0",
     G = 9.80665,
     ZREF = 0.001;
   const UNITS = {
@@ -98,7 +98,7 @@
       y1 * Math.exp((Math.log(y2 / y1) * Math.log(f / f1)) / Math.log(f2 / f1))
     );
   }
-  function sineAt(f, segments) {
+  function sineAt(f, segments, boundary = "reject") {
     const matches = segments.filter(
       (s) => f >= s.f1 * (1 - 1e-12) && f <= s.f2 * (1 + 1e-12),
     );
@@ -106,11 +106,31 @@
       accel(f, s.unit, power(f, s.f1, s.f2, s.a1, s.a2)),
     );
     assert(
-      values.length < 2 ||
+      boundary !== "reject" ||
+        values.length < 2 ||
         Math.max(...values) / Math.min(...values) - 1 <= 1e-6,
       "Dwell at a discontinuous sine segment boundary requires an explicit peak-G override.",
     );
-    return values[0] || 0;
+    if (!values.length) return 0;
+    return boundary === "lower"
+      ? Math.min(...values)
+      : boundary === "upper" ? Math.max(...values) : values[0];
+  }
+  function dwellExposure(f, a, hours, cycleCap, repeats) {
+    const timeCap = hours > 0 ? hours * 3600 : Infinity,
+      cycleTime = cycleCap > 0 ? cycleCap / f : Infinity,
+      t = Math.min(timeCap, cycleTime);
+    return {
+      f, a, t, cycles: f * t * repeats, repeats, hours, cycleCap,
+      limiter: timeCap <= cycleTime ? "time" : "cycles",
+    };
+  }
+  // Alternative scenarios: generate only the dwell belonging to this oscillator.
+  function dwellsAtMode(c, fn) {
+    if (c.dwellMode !== "assumed") return c.dwell;
+    const rule = c.assumedDwell,
+      a = sineAt(fn, c.sine, rule.boundary) * c.sineScale;
+    return a > 0 ? [dwellExposure(fn, a, rule.hours, rule.cycleCap, rule.repeats)] : [];
   }
   // Exact stationary points for power-law acceleration times the SDOF FRF.
   // u=(f/fn)^2: (p-2)u^2+(p-1)(Q^-2-2)u+p=0.
@@ -329,7 +349,31 @@
     assert(["oct", "linear"].includes(c.sweepType), "Invalid sweep rate type.");
     assert(["dirlik", "nb"].includes(c.method), "Invalid random method.");
     assert(["bank", "modes"].includes(c.scope), "Invalid assessment scope.");
-    c.dwell = lines(raw.dwellText).map((r, i) => {
+    c.dwellMode = raw.dwellMode ?? "documented";
+    assert(["documented", "assumed"].includes(c.dwellMode), "Invalid dwell analysis mode.");
+    if (c.dwellMode === "assumed") {
+      const hours = number(raw.assumedHours, "Assumed dwell hour cap", 0, 1e7),
+        cycleCap = number(raw.assumedCycles, "Assumed dwell cycle cap", 0, 1e15),
+        repeats = number(raw.assumedRepeats, "Assumed dwell repeats", 1, 1e6),
+        boundary = raw.assumedBoundary ?? "reject";
+      assert(hours > 0 || cycleCap > 0, "Assumed dwell needs a positive time or cycle cap.");
+      assert(Number.isInteger(repeats), "Assumed dwell repeats must be an integer.");
+      assert(["reject", "lower", "upper"].includes(boundary), "Invalid assumed dwell boundary rule.");
+      c.assumedDwell = { hours, cycleCap, repeats, boundary };
+      // Boundaries are always included in the bank. Fail before a long calculation.
+      if (boundary === "reject") {
+        for (const f of c.sine.flatMap((s) => [s.f1, s.f2])) {
+          if (f >= c.fmin && f <= c.fmax) {
+            try {
+              sineAt(f, c.sine);
+            } catch {
+              throw Error(`Assumed dwell at ${f} Hz has a discontinuous sine boundary. Select the lower or higher boundary amplitude, or correct the profile.`);
+            }
+          }
+        }
+      }
+    }
+    c.dwell = (c.dwellMode === "assumed" ? [] : lines(raw.dwellText)).map((r, i) => {
       assert(
         r.length === 5,
         "Dwell row " +
@@ -372,7 +416,7 @@
     });
     assert(c.dwell.length <= 100, "Maximum 100 dwells.");
     assert(
-      c.dwell.length || c.passes > 0,
+      c.dwellMode === "assumed" || c.dwell.length || c.passes > 0,
       "Enter a dwell or at least one sweep traversal.",
     );
     c.modes = raw.modesText.trim()
@@ -431,7 +475,7 @@
       }
       peak = Math.max(peak, sinePeak(s, fn, Q, c.sineScale));
     }
-    const contributions = c.dwell.map((d) => {
+    const contributions = dwellsAtMode(c, fn).map((d) => {
       const amp = d.a * transfer(d.f, fn, Q);
       peak = Math.max(peak, amp);
       return { ...d, amp, index: d.cycles * (amp / ZREF) ** b };
@@ -464,6 +508,9 @@
       peakRandom,
       peakRatio: peak / peakRandom,
       contributions,
+      dwellStatus: c.dwellMode === "assumed"
+        ? (contributions.length ? "assumed at resonance" : "outside sine profile; no dwell credit")
+        : (contributions.length ? "documented schedule" : "no dwell credit"),
     };
   }
   function grid(c) {
@@ -490,7 +537,21 @@
       peakWorst = minBy(assessed, "peakRatio"),
       inspect = rows.find((r) => r.fn === c.inspectFn);
     const check = atMode(c, worst.fn, c.Q, c.b, 2),
-      convergence = Math.abs(check.ratio / worst.ratio - 1);
+      convergence = worst.ratio === 0
+        ? Math.abs(check.random / worst.random - 1)
+        : Math.abs(check.ratio / worst.ratio - 1);
+    const gaps = [];
+    for (let i = 0; i < assessed.length; i++) {
+      const row = assessed[i];
+      if (row.margin >= 1) continue;
+      const previous = i > 0 && assessed[i - 1].margin < 1 && c.scope === "bank"
+        ? gaps.at(-1) : null;
+      if (previous) {
+        previous.to = row.fn;
+        previous.count++;
+        previous.minimum = Math.min(previous.minimum, row.margin);
+      } else gaps.push({ from: row.fn, to: row.fn, count: 1, minimum: row.margin });
+    }
     const qs = unique([5, 10, 20, 50, c.Q]),
       bs = unique([4, 6, 8, c.b]);
     const sensitivity = [];
@@ -510,7 +571,13 @@
       warnings.push(
         "Illustrative example only: replace all inputs with controlled test and requirement records.",
       );
-    if (!c.dwell.length)
+    if (c.dwellMode === "assumed") {
+      warnings.push("Hypothetical resonance screening: each oscillator receives only its own resonant dwell plus enabled sweeps. Neighboring hypothetical dwells contribute no damage or peak credit; these scenarios are not a combined test schedule.");
+      if (rows.some((r) => !r.contributions.length))
+        warnings.push("Some bank frequencies lie outside the sine profile. They receive zero assumed dwell credit; enabled sweeps may still contribute off-resonant response.");
+      if (c.assumedDwell.boundary !== "reject")
+        warnings.push(`At shared sine boundaries the ${c.assumedDwell.boundary === "lower" ? "lower" : "higher"} peak acceleration is used by explicit assumption.`);
+    } else if (!c.dwell.length)
       warnings.push("No resonance dwell exposure is credited.");
     if (c.psd[0][0] < c.sine[0].f1 || c.psd.at(-1)[0] > c.sine.at(-1).f2)
       warnings.push(
@@ -549,7 +616,7 @@
           eps.toPrecision(3) +
           "). Transient sweep analysis is needed before crediting sweep damage or peak response.",
       );
-    if (c.dwell.some((d) => d.t < (5 * c.Q) / (Math.PI * d.f)))
+    if (rows.some((r) => r.contributions.some((d) => d.t < (5 * c.Q) / (Math.PI * d.f))))
       warnings.push(
         "At least one dwell is shorter than five resonant decay time constants. Steady-state dwell response needs a transient check.",
       );
@@ -563,7 +630,7 @@
       );
     if (convergence > 0.005)
       warnings.push(
-        "Integration refinement changed the governing damage ratio by more than 0.5%; numerical review is required.",
+        "Integration refinement changed the governing damage ratio (or random damage when coverage is zero) by more than 0.5%; numerical review is required.",
       );
     warnings.push(
       "Peak response uses your selected k-sigma factor; it is not a duration-based maximum confidence level.",
@@ -581,6 +648,7 @@
       sensitivity,
       grms: Math.sqrt(integralPSD(c.psd) * c.psdScale),
       convergence,
+      gaps,
       warnings,
       eps,
       generated: new Date().toISOString(),

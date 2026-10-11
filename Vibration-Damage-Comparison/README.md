@@ -1,6 +1,6 @@
 # Vibration Damage Comparison
 
-An offline engineering tool for comparing a documented heritage sine sweep / resonance-dwell qualification exposure with a new random vibration PSD requirement.
+An offline engineering tool for comparing a documented heritage sine sweep / resonance-dwell qualification exposure, or an independent assumed resonant dwell at each SDOF frequency, with a new random vibration PSD requirement.
 
 ## Start
 
@@ -10,7 +10,7 @@ Wait for **Calculator ready**, then choose **Run comparison**. The tool brings t
 
 If Run comparison is disabled and **The calculator has not started** remains visible, the file viewer may be blocking JavaScript. Download the HTML and open the saved file in a browser with JavaScript enabled; an attachment or document preview may display the form without running it. If a browser error appears, include its exact message when reporting the issue.
 
-Read `Vibration_Damage_Comparison_White_Paper.pdf` for the method, equations, ground rules, assumptions, examples and references. The editable source is `WHITE_PAPER.md`.
+Read `Vibration_Damage_Comparison_White_Paper.pdf` for the baseline method, equations, ground rules, assumptions, examples and references. The editable source is `WHITE_PAPER.md`. The white paper and archived technical audit describe v1.0.2's documented-schedule model; the assumed-resonance extension introduced in v1.1.0 is specified below and in the app's Method & interpretation section.
 
 ## Technical audit and reproducible reference case
 
@@ -37,6 +37,7 @@ The audit script requires NumPy, SciPy, Matplotlib and Tkinter (imported by the 
 - One axis and hardware configuration per case, with evidence notes.
 - Sine segments with independent unit conventions: double-amplitude or peak displacement, peak/RMS velocity, and peak/RMS/peak-to-peak acceleration.
 - Documented dwell frequencies, optional peak-G overrides, time/cycle caps (earlier positive limit), and repetition counts.
+- Alternatively, a shared assumed-dwell rule applied independently at each oscillator's natural frequency, using the local sine-profile amplitude.
 - Optional quasi-steady sweeps specified by one-way traversals and oct/min or Hz/min rate.
 - Positive log-log PSD breakpoints in g²/Hz, duration, repetitions and optional dB adjustment.
 - Q, fatigue exponent b, damage coverage factor, random peak screen factor and frequency scope.
@@ -47,12 +48,29 @@ Dwell row: `Hz,g_peak_override,hour_cap,cycle_cap,repeats`. A zero override uses
 
 PSD row: `Hz,g2_per_Hz`. Blank lines and trailing `# comments` are accepted. Fields may use commas, tabs, semicolons or spaces. Omit headers. See the unit-code menu in the tool.
 
+## Unknown-resonance screening
+
+Under **Resonance dwells → Dwell analysis**, select **Assumed dwell at each resonance**. This selects the full oscillator bank as the initial summary scope. Enter the hours cap, cycles cap and repeats once; the manual schedule is retained for switching back but ignored in this mode. Zero disables a cap, and at least one cap must be positive. Set sweep traversals to zero for a dwell-only comparison, or retain the specified sweep exposure.
+
+Every frequency is a separate hypothetical case: an oscillator at natural frequency `fn` receives one dwell with excitation frequency `fn`, acceleration `A(fn)` from the sine profile after the amplitude multiplier, and duration per repeat `t(fn) = min(positive hour cap × 3600, positive cycle cap / fn)`. The total cycle count is `N(fn) = fn × t(fn) × repeats`. Its dwell damage index is `N(fn) × [A(fn) × H(fn, fn, Q) / zref]^b`, using the existing relative-displacement transfer function `H` (metres per peak g) and `zref = 0.001 m`.
+
+Only this dwell contributes to that oscillator's dwell damage and peak screen. Hypothetical dwells at other frequencies contribute nothing. Enabled sweeps are included through the existing integration, and random damage continues to use the full filtered PSD. Each hypothetical case receives the complete dwell allowance; no total test time is distributed across the bank and no damage is summed across bank frequencies. Refining the grid changes sampling resolution, not exposure at an existing frequency.
+
+Outside the sine profile, assumed dwell credit is zero. Such frequencies remain in the comparison; enabled sweeps may still contribute off-resonant response. A discontinuous shared sine boundary requires an explicit choice of lower or higher peak acceleration, or a corrected continuous profile. This boundary choice affects only the shared endpoint, not adjacent segment interiors. The illustrative profile has a small jump at 80 Hz, so switching that example to assumed mode requires this choice too.
+
+The results label the analysis as **Hypothetical resonance screening**, show the local dwell's amplitude, duration, limiter, repeats and cycles at the inspected frequency, and list sampled frequencies/ranges where `heritage damage / random damage / damage target < 1`. Plot shading marks those sampled ranges; their endpoints are not exact threshold crossings. Zero-coverage points are displayed at the logarithmic plot floor and retain their true zero values in tables and CSV. Refine the frequency grid near a decision boundary. Known-modes scope remains available but assesses only those listed points.
+
+Case JSON and HTML reports retain the dwell mode and common rule. CSV includes the mode, per-frequency dwell status and each assumed dwell's frequency, amplitude, time, limiter, repeats and cycles. Older cases lacking the new fields load in documented-schedule mode. The Q/b sensitivity calculation repeats the same independent-scenario comparison.
+
+This answers whether the sine specification would provide the requested relative fatigue coverage **if a resonance existed at a given frequency and the specified dwell were performed there**. It does not establish actual resonance locations or achieved historical exposure.
+
 ## Outputs
 
 - Fatigue-damage spectra and heritage/new damage ratios: Dirlik and narrowband cross-check.
 - Separate relative-displacement peak-response comparison.
 - Equivalent random duration and required uniform amplitude/PSD scaling.
 - Explicit dwell duration and cycle accounting; per-dwell damage contributions at an inspection mode.
+- Independent assumed-resonance screening and sampled frequency ranges below the fatigue target, with zero-credit frequencies visible.
 - Q/b sensitivity matrix, normalized input plots, response PSD and assessment table.
 - Self-contained HTML analysis report, complete results CSV, editable case JSON and individual SVG plots.
 
@@ -85,7 +103,7 @@ node test_browser.mjs
 # Optional: CHROMIUM_PATH=/path/to/chromium TEST_ARTIFACT_DIR=/tmp/vdc-qa node test_browser.mjs
 ```
 
-Eighteen engine test groups, 96 independent quadrature/PDF-integration cases and 32 additional sweep/peak cases verify the calculations. Browser checks cover file-based operation, plots, exports, case import, stale-result protection, invalid inputs, mobile layout and absence of network requests. This is numerical/software verification; experimental validation and engineering approval remain specific to the hardware and program.
+Twenty-five engine test groups cover the baseline model and assumed-dwell analytical values, grid independence, caps, scaling, optional sweeps, boundary choices, zero credit and sensitivity. The independent reference script covers 96 quadrature/PDF-integration cases; the archived audit contains 32 additional sweep/peak cases. Browser checks cover both dwell modes, plots, exports, case roundtrip and legacy imports, stale-result protection, invalid inputs, zero coverage, mobile layout and absence of network requests. This is numerical/software verification; experimental validation and engineering approval remain specific to the hardware and program.
 
 ## References
 
@@ -93,4 +111,4 @@ Eighteen engine test groups, 96 independent quadrature/PDF-integration cases and
 - Zorman, Slavič & Boltežar (2023), https://doi.org/10.1016/j.ymssp.2023.110149
 - NASA NESC Academy, Tom Irvine, *Using Fatigue to Compare Sine and Random Environments*: https://nescacademy.nasa.gov/video/2584e207341e411b95fa829e191d81441d
 
-Version 1.0.2, 2026-10-11. This release adds audited reference checks, exact sweep peaks and explicit handling of ambiguous dwell boundaries; it retains the 1.0.1 startup and result-navigation fixes. See the white paper for source roles and implementation details.
+Version 1.1.0, 2026-10-11. This release adds independent assumed-resonance dwells, sampled fatigue-gap ranges, per-frequency assumed-dwell exports and compatibility with existing documented cases. It retains the v1.0.2 audited reference checks and baseline calculation methods.

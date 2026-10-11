@@ -3,7 +3,7 @@ const { chromium } = createRequire(import.meta.url)("playwright");
 import fs from "node:fs";
 import path from "node:path";
 import assert from "node:assert/strict";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 const root = path.dirname(fileURLToPath(import.meta.url));
 const out =
   process.env.TEST_ARTIFACT_DIR || path.join(root, "_paper_build", "browser");
@@ -73,6 +73,7 @@ await page.setInputFiles("#loadCase", {
   mimeType: "application/json",
   buffer: Buffer.from(saved),
 });
+await page.waitForFunction(() => document.querySelector("#status").textContent.startsWith("Case loaded."));
 assert.equal(await page.locator("#Q").inputValue(), "10");
 await page.selectOption("#scope", "modes");
 await run();
@@ -135,6 +136,67 @@ assert.equal(
   await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
   false,
 );
+// Hypothetical dwell mode: controls, boundary validation, independent credit and exports.
+await page.selectOption("#dwellMode", "assumed");
+assert.equal(await page.locator("#scope").inputValue(), "bank");
+assert.equal(await page.locator("#assumedDwellFields").isVisible(), true);
+assert.equal(await page.locator("#documentedDwellFields").isVisible(), false);
+assert.equal(await page.locator("#csv").isDisabled(), true);
+await page.fill("#passes", "0");
+await page.click("#run");
+await page.waitForFunction(() => !document.querySelector("#run").disabled);
+assert.match(await page.locator("#status").innerText(), /discontinuous sine boundary/);
+await page.selectOption("#assumedBoundary", "lower");
+await run();
+assert.match(await page.locator("#results").innerText(), /Hypothetical resonance screening/);
+assert.equal(await page.locator("#dwellExposure tbody tr").count(), 1);
+assert.match(await page.locator("#dwellExposure").innerText(), /120/);
+assert.match(await page.locator("#gapSummary").innerText(), /0×/);
+assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+await page.screenshot({ path: path.join(out, "assumed-mobile-results.png") });
+const assumedCSV = await save("#csv", "assumed-results.csv");
+assert.match(assumedCSV, /assumed_dwell_seconds_per_repeat/);
+assert.match(assumedCSV, /outside sine profile; no dwell credit/);
+const assumedReport = await save("#report", "assumed-report.html");
+assert.match(assumedReport, /Hypothetical resonance screening/);
+assert.match(assumedReport, /Assumed dwell at inspected resonance/);
+const assumedSaved = await save("#saveCase", "assumed-case.json");
+assert.equal(JSON.parse(assumedSaved).inputs.dwellMode, "assumed");
+await page.fill("#assumedHours", "0");
+await page.fill("#assumedCycles", "0");
+await page.click("#run");
+await page.waitForFunction(() => !document.querySelector("#run").disabled);
+assert.match(await page.locator("#status").innerText(), /positive time or cycle cap/);
+await page.setInputFiles("#loadCase", {
+  name: "assumed-case.json", mimeType: "application/json", buffer: Buffer.from(assumedSaved),
+});
+await page.waitForFunction(() => document.querySelector("#status").textContent.startsWith("Case loaded."));
+assert.equal(await page.locator("#assumedHours").inputValue(), "8");
+assert.equal(await page.locator("#assumedBoundary").inputValue(), "lower");
+await page.setViewportSize({ width: 1440, height: 1100 });
+await page.locator("#assumedDwellFields").screenshot({ path: path.join(out, "assumed-controls.png") });
+await run();
+await page.screenshot({ path: path.join(out, "assumed-desktop-results.png") });
+const roundtripCSV = await save("#csv", "assumed-roundtrip.csv");
+assert.equal(roundtripCSV.split("\n").filter((x) => !x.startsWith("#")).join("\n"),
+  assumedCSV.split("\n").filter((x) => !x.startsWith("#")).join("\n"));
+// Entire bank outside the sine profile: zero coverage must remain visible and exportable.
+await page.fill("#fmin", "600");
+await page.fill("#fmax", "800");
+await page.fill("#inspectFn", "700");
+await page.fill("#modesText", "");
+await run();
+assert.match(await page.locator("#dwellExposure").innerText(), /Outside sine profile/);
+assert.ok(await page.locator("#ratioPlot circle").count() > 0);
+assert.ok(!(await page.locator("#ratioPlot svg").evaluate((el) => el.outerHTML)).includes("NaN"));
+await page.screenshot({ path: path.join(out, "assumed-zero-results.png") });
+// Import a pre-feature case after assumed mode. It must restore documented behavior.
+await page.setInputFiles("#loadCase", path.join(root, "example-case.json"));
+await page.waitForFunction(() => document.querySelector("#status").textContent.startsWith("Case loaded."));
+assert.equal(await page.locator("#dwellMode").inputValue(), "documented");
+assert.equal(await page.locator("#documentedDwellFields").isVisible(), true);
+await run();
+assert.equal(await page.locator("#dwellExposure tbody tr").count(), 3);
 await page.click("#referenceCase");
 await page.waitForFunction(() => !document.querySelector("#run").disabled);
 assert.equal(await page.locator("#csv").isEnabled(), true);
@@ -145,7 +207,7 @@ const referenceReport = await save("#report", "analysis-report.html");
 assert.ok(referenceReport.includes("Reference example: 100 Hz"));
 assert.ok(!referenceReport.includes("<button"));
 await page.goto(
-  new URL("file://" + path.join(out, "analysis-report.html")).href,
+  pathToFileURL(path.join(out, "analysis-report.html")).href,
 );
 assert.equal(await page.locator("svg").count(), 6);
 await page.setViewportSize({ width: 1100, height: 1000 });
@@ -186,5 +248,5 @@ assert.ok(
 await brokenPage.close();
 await browser.close();
 console.log(
-  "PASS browser: file:// calculation, 6 plots, CSV/SVG/case/report exports, case roundtrip, stale-result protection, known modes, alternate method/rate, validation errors, mobile result navigation, method-tab run, blocked scripts, startup failure diagnostics, saved report and zero network requests.",
+  "PASS browser: file:// calculation, 6 plots, CSV/SVG/case/report exports, documented and assumed case roundtrip, legacy imports, assumed boundary/cap validation, zero coverage, stale-result protection, known modes, alternate method/rate, mobile layout, blocked scripts, startup failure diagnostics, saved report and zero network requests.",
 );
