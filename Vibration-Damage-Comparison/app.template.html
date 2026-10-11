@@ -555,6 +555,40 @@
       </p>
     </header>
     <main>
+      <section
+        id="methodOverview"
+        class="card"
+        aria-labelledby="methodOverviewTitle"
+      >
+        <h2 id="methodOverviewTitle">Methodology overview</h2>
+        <p>
+          <b>Primary equation reference:</b> Zorman, Slavič &amp; Boltežar
+          (2023),
+          <a href="https://doi.org/10.1016/j.ymssp.2023.110149"
+            >Vibration fatigue by spectral methods—A review with open-source
+            support</a
+          >, Section 3.2, equations 29–32 (Dirlik method).
+        </p>
+        <p>
+          Both environments are passed through the same bank of linear
+          single-degree-of-freedom oscillators to compare relative-displacement
+          fatigue severity. Heritage exposure accumulates cycles from the
+          specified sine dwells and optional quasi-steady sweeps. Random
+          exposure uses expected damage from a stationary Gaussian response:
+          Dirlik is the default, with narrowband/Rayleigh available as a
+          cross-check or governing method. The heritage/random damage ratio
+          supports an exposure-coverage assessment when the dynamics and
+          displacement-to-stress relationship are unchanged.
+        </p>
+        <p class="hint">
+          The cited paper supplies the random-fatigue formulation; the sine-test
+          reconstruction and SDOF comparison workflow are this tool's
+          implementation. FLife provides numerical verification. Irvine's
+          example is a separate comparison, not the governing equation source.
+          Review the separate peak screen and the assumptions under Method &amp;
+          interpretation before making a qualification determination.
+        </p>
+      </section>
       <div id="startup" class="notice warn" role="alert">
         <strong>The calculator has not started.</strong> If this message stays
         visible, this viewer may be blocking JavaScript. Download this HTML file
@@ -1703,7 +1737,7 @@
               `<tr><td>${esc(k)}</td><td style="white-space:pre-wrap">${esc(v)}</td></tr>`,
           )
           .join("");
-        const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(c.caseName)} — vibration comparison report</title><style>${document.querySelector("style").textContent}\nbody{background:white}main{max-width:1000px}.tablewrap{max-height:none}.card{box-shadow:none}th{position:static}.charthead button{display:none}#rowTable .tablewrap{max-height:none;overflow:visible}</style></head><body><header><div class="eyebrow">ANALYSIS RECORD · ${r.version}</div><h1>${esc(c.caseName)}</h1><p>Heritage sine / random fatigue comparison · ${esc(r.generated)}</p></header><main><p>Static report. Use browser Print to save as PDF. The complete input record is below; pair it with the exported case JSON and results CSV.</p>${result.innerHTML}<div class="card pagebreak"><h2>Complete input record</h2><table>${caseText}</table></div><div class="card pagebreak">${method.innerHTML}</div></main></body></html>`;
+        const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(c.caseName)} — vibration comparison report</title><style>${document.querySelector("style").textContent}\nbody{background:white}main{max-width:1000px}.tablewrap{max-height:none}.card{box-shadow:none}th{position:static}.charthead button{display:none}#rowTable .tablewrap{max-height:none;overflow:visible}</style></head><body><header><div class="eyebrow">ANALYSIS RECORD · ${r.version}</div><h1>${esc(c.caseName)}</h1><p>Heritage sine / random fatigue comparison · ${esc(r.generated)}</p></header><main><p>Static report. Use browser Print to save as PDF. The complete input record is below; pair it with the exported case JSON and results CSV.</p>${$("methodOverview").outerHTML}${result.innerHTML}<div class="card pagebreak"><h2>Complete input record</h2><table>${caseText}</table></div><div class="card pagebreak">${method.innerHTML}</div></main></body></html>`;
         download("vibration-comparison-report.html", html, "text/html");
       };
       // Enable Run only after all handlers and the calculation engine are ready.

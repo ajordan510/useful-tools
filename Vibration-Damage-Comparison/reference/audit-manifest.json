@@ -3,16 +3,17 @@
   "date": "2026-10-11",
   "files_sha256": {
     "engine.js": "abd84b54b60a70cc46bd54ce8f6a4e26790c3010d81cbf15a595cec6760ce0f3",
-    "app.template.html": "4265722b1c46db9b2f8def2f155db66a5a4a19c126a3c639c7539e9845fccb18",
+    "app.template.html": "c1d422d9a0c017b3dcf0e574e7b2b3f6a374b165d11552b144bc989dd9c02c04",
     "build.mjs": "e43346c30a2c67c72b80f064c631949c53c8dd83162842f544312ca5c018f358",
-    "vibration_damage_comparison.html": "837d808adf03590ba3113fb603576f276f7ed50df215b666741e9ff56b48898e",
+    "vibration_damage_comparison.html": "cbc676a47e9e3e79a13a509ed16c1f903dc67e2cd36e184e928132e6710467d3",
     "verify_audit.py": "66b5d7fda8af69bed0e73a569dce457c7cbdd938c565d6e7abb014598591e993",
     "validate_reference.py": "000b424e35177b7793c0e9625d85922b28cfc50395a644bb60669c7e4e52e88b",
     "test_engine.cjs": "93641f80b22cc0ec4a39088297f968631c33499eea5b5833852c42f35c47f118",
     "test_browser.mjs": "df0fdfd41fa4788b60481a86afa4d7ba82c86f4b1a48808e453fa023884290ef",
     "reference/benchmark-results.json": "00b165ac3af44a02f52a8b49f218e4e9e84b38ca72467a7d82f078e60f7533f7",
     "reference/irvine-2011-case.json": "f8e025c3f8189da9f2dc711a2452fd4131c86dabc84edd830347c22d51eb1a3e",
-    "reference/analysis-report.html": "a755a670fb45bb99baa2eea9644e04672c7a4d1feefa812d59ceaeef1dc10cd2",
+    "reference/analysis-report.html": "1bf1e8f42840cfbd5801aeee26a465167e7a8f0bdccbd329d9e20e5cdd9f3e22",
     "reference/analysis-results.csv": "902c69fbe7a1870f88e5be790da18599b5e5d932849a8ca4946677752f7ea6bc"
-  }
+  },
+  "presentation_update": "Added primary-reference attribution and methodology overview to the tool and saved report. Calculation engine and benchmark results unchanged from audit commit d80c5b5b1557beff92e2f4d1295f4dc00d135dd9."
 }
