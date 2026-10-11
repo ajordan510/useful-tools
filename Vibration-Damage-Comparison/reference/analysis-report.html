@@ -1,0 +1,793 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Reference example: 100 Hz sine dwell / 90-110 Hz random — vibration comparison report</title><style>
+      :root {
+        --ink: #172d40;
+        --muted: #536b7a;
+        --navy: #12344c;
+        --teal: #087f83;
+        --orange: #c86327;
+        --line: #d7e2e8;
+        --bg: #eff4f7;
+        --paper: #fff;
+        --red: #a93636;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font:
+          14px/1.5 system-ui,
+          -apple-system,
+          Segoe UI,
+          sans-serif;
+      }
+      header {
+        background: var(--navy);
+        color: white;
+        padding: 27px 4vw 24px;
+      }
+      header .eyebrow {
+        font-size: 11px;
+        letter-spacing: 2px;
+        color: #9edbe0;
+        font-weight: 700;
+      }
+      h1 {
+        font-size: 30px;
+        line-height: 1.2;
+        margin: 8px 0;
+      }
+      header p {
+        color: #c6dce7;
+        margin: 8px 0 0;
+        max-width: 850px;
+      }
+      main {
+        max-width: 1660px;
+        margin: 0 auto;
+        padding: 24px 3vw;
+      }
+      h2 {
+        font-size: 19px;
+        margin: 0 0 6px;
+      }
+      h3 {
+        font-size: 15px;
+        margin: 0 0 10px;
+      }
+      p {
+        margin: 7px 0 13px;
+      }
+      .toolbar {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-bottom: 18px;
+      }
+      button,
+      .filelabel {
+        border: 1px solid #bbcbd6;
+        background: white;
+        color: var(--ink);
+        font: 600 13px system-ui;
+        padding: 10px 14px;
+        border-radius: 7px;
+        cursor: pointer;
+      }
+      button:hover,
+      .filelabel:hover {
+        background: #e8f4f4;
+      }
+      button.primary {
+        background: var(--teal);
+        color: white;
+        border-color: var(--teal);
+      }
+      button:disabled {
+        opacity: 0.4;
+        cursor: default;
+      }
+      .tag {
+        font-size: 11px;
+        border-radius: 20px;
+        padding: 4px 9px;
+        background: #e0eef4;
+        color: #214c66;
+        font-weight: 650;
+      }
+      .toolbar .tag {
+        margin-left: auto;
+      }
+      nav {
+        display: flex;
+        border-bottom: 1px solid #bccdd7;
+        margin-bottom: 22px;
+        gap: 10px;
+      }
+      nav button {
+        background: none;
+        border: 0;
+        border-bottom: 3px solid transparent;
+        border-radius: 0;
+        padding: 12px 17px;
+      }
+      nav button.active {
+        border-bottom-color: var(--teal);
+        color: var(--teal);
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(350px, 430px) minmax(0, 1fr);
+        gap: 22px;
+        align-items: start;
+      }
+      .card {
+        background: white;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 21px;
+        margin-bottom: 18px;
+        box-shadow: 0 2px 5px #18364b05;
+      }
+      .step {
+        font-size: 11px;
+        font-weight: 750;
+        letter-spacing: 1.5px;
+        color: var(--teal);
+        margin-bottom: 6px;
+      }
+      .hint {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      label {
+        display: block;
+        font-size: 12px;
+        font-weight: 650;
+        color: #304c5d;
+        margin-bottom: 5px;
+      }
+      input,
+      select,
+      textarea {
+        width: 100%;
+        border: 1px solid #bccdd7;
+        background: #fff;
+        color: var(--ink);
+        border-radius: 6px;
+        padding: 9px 10px;
+        font: 13px system-ui;
+      }
+      textarea {
+        font:
+          12px/1.65 ui-monospace,
+          Consolas,
+          monospace;
+        resize: vertical;
+        min-height: 98px;
+        white-space: pre;
+      }
+      input:focus,
+      select:focus,
+      textarea:focus {
+        outline: 2px solid #9bd3d5;
+        outline-offset: 1px;
+      }
+      .fields {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin: 13px 0;
+      }
+      .full {
+        grid-column: 1/-1;
+      }
+      details {
+        margin: 12px 0;
+      }
+      summary {
+        cursor: pointer;
+        color: var(--teal);
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .format {
+        font:
+          11px/1.5 ui-monospace,
+          Consolas,
+          monospace;
+        color: var(--muted);
+        margin: 8px 0;
+      }
+      .notice {
+        padding: 14px 17px;
+        border: 1px solid #d8dfe4;
+        border-left: 4px solid var(--teal);
+        background: #f6fbfb;
+        border-radius: 7px;
+        margin-bottom: 18px;
+      }
+      .notice.warn {
+        background: #fff9ee;
+        border-color: #e8d5b2;
+        border-left-color: #b78124;
+      }
+      .notice.error {
+        background: #fff1f0;
+        border-color: #ecc7c4;
+        border-left-color: var(--red);
+      }
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+      .metric {
+        border: 1px solid var(--line);
+        background: white;
+        border-radius: 11px;
+        padding: 17px;
+      }
+      .metric .value {
+        font-size: 28px;
+        letter-spacing: -1px;
+        font-weight: 750;
+        color: var(--navy);
+        line-height: 1.25;
+        margin: 7px 0;
+      }
+      .metric small {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .bad {
+        color: var(--red) !important;
+      }
+      .good {
+        color: var(--teal) !important;
+      }
+      .chart {
+        position: relative;
+      }
+      .chart svg {
+        display: block;
+        width: 100%;
+        height: auto;
+        background: white;
+      }
+      .chart .tip {
+        font-size: 12px;
+        min-height: 21px;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+      }
+      .legend {
+        display: flex;
+        gap: 18px;
+        flex-wrap: wrap;
+        font-size: 12px;
+        margin-bottom: 5px;
+      }
+      .dot {
+        display: inline-block;
+        width: 15px;
+        height: 3px;
+        vertical-align: middle;
+        margin-right: 6px;
+      }
+      .charthead {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .charthead button {
+        font-size: 11px;
+        padding: 5px 8px;
+      }
+      .two {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+      }
+      .tablewrap {
+        max-height: 390px;
+        overflow: auto;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+      }
+      th,
+      td {
+        padding: 9px 10px;
+        text-align: right;
+        border-bottom: 1px solid #e4ebef;
+        white-space: nowrap;
+      }
+      th:first-child,
+      td:first-child {
+        text-align: left;
+      }
+      th {
+        background: #edf4f7;
+        position: sticky;
+        top: 0;
+        font-weight: 650;
+      }
+      tr:nth-child(even) {
+        background: #f8fafb;
+      }
+      td.gap {
+        background: #fff0ee;
+        color: var(--red);
+      }
+      .sensitivity td {
+        text-align: center;
+      }
+      .sensitivity td strong {
+        display: block;
+      }
+      .sensitivity small {
+        font-size: 10px;
+      }
+      .doc {
+        max-width: 1020px;
+      }
+      .doc h2 {
+        margin-top: 28px;
+      }
+      .doc .equation {
+        padding: 15px 19px;
+        background: #edf4f7;
+        border-left: 3px solid var(--teal);
+        font:
+          16px/1.7 Georgia,
+          serif;
+        overflow: auto;
+      }
+      .doc li {
+        margin: 8px 0;
+      }
+      .doc a {
+        color: var(--teal);
+      }
+      .doc table {
+        font-size: 13px;
+      }
+      .doc td,
+      .doc th {
+        white-space: normal;
+        text-align: left;
+      }
+      .hidden {
+        display: none !important;
+      }
+      .report-only {
+        display: none;
+      }
+      .foot {
+        color: var(--muted);
+        font-size: 11px;
+        text-align: center;
+        padding: 18px;
+      }
+      .unitlist {
+        columns: 1;
+        font:
+          11px/1.8 ui-monospace,
+          Consolas,
+          monospace;
+      }
+      .checklist {
+        font-size: 13px;
+      }
+      .checklist label {
+        font-weight: 400;
+        font-size: 13px;
+        margin: 9px 0;
+      }
+      .checklist input {
+        width: auto;
+        margin-right: 8px;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      @media (max-width: 1000px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+        .inputs {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+        }
+        .inputs .card {
+          margin: 0;
+        }
+        .inputs .card:last-child {
+          grid-column: 1/-1;
+        }
+        .two {
+          grid-template-columns: 1fr;
+        }
+      }
+      @media (max-width: 620px) {
+        main {
+          padding: 15px;
+        }
+        header {
+          padding: 24px 20px;
+        }
+        h1 {
+          font-size: 25px;
+        }
+        .inputs {
+          display: block;
+        }
+        .inputs .card {
+          margin-bottom: 16px;
+        }
+        .metrics {
+          grid-template-columns: 1fr;
+        }
+        .metric .value {
+          font-size: 26px;
+        }
+        .two {
+          display: block;
+        }
+        .toolbar .tag {
+          margin-left: 0;
+        }
+        .fields {
+          gap: 9px;
+        }
+        nav {
+          overflow: auto;
+        }
+        .card {
+          padding: 16px;
+        }
+      }
+      @media print {
+        body {
+          background: white;
+          font-size: 10pt;
+        }
+        header {
+          background: white;
+          color: #12344c;
+          padding: 10px 0;
+        }
+        header p {
+          color: #334;
+        }
+        main {
+          padding: 0;
+          max-width: none;
+        }
+        .toolbar,
+        nav,
+        .inputs,
+        .charthead button,
+        .no-print {
+          display: none !important;
+        }
+        .layout {
+          display: block;
+        }
+        .card {
+          break-inside: avoid;
+          border: 1px solid #ccc;
+          box-shadow: none;
+          margin-bottom: 12px;
+          padding: 12px;
+        }
+        .metrics {
+          grid-template-columns: repeat(3, 1fr);
+        }
+        .tablewrap {
+          overflow: visible;
+          max-height: none;
+        }
+        #rowTable .tablewrap {
+          max-height: 300px;
+          overflow: hidden;
+        }
+        .chart svg {
+          max-height: 280px;
+        }
+        .report-only {
+          display: block;
+        }
+        .hidden {
+          display: none !important;
+        }
+        h2,
+        h3 {
+          break-after: avoid;
+        }
+        .pagebreak {
+          break-before: page;
+        }
+        a {
+          color: #12344c;
+        }
+        .tip {
+          display: none;
+        }
+        .foot {
+          padding: 4px;
+        }
+      }
+      .layout > *,
+      .inputs > *,
+      .fields > *,
+      .two > * {
+        min-width: 0;
+      }
+    
+body{background:white}main{max-width:1000px}.tablewrap{max-height:none}.card{box-shadow:none}th{position:static}.charthead button{display:none}#rowTable .tablewrap{max-height:none;overflow:visible}</style></head><body><header><div class="eyebrow">ANALYSIS RECORD · 1.0.2</div><h1>Reference example: 100 Hz sine dwell / 90-110 Hz random</h1><p>Heritage sine / random fatigue comparison · 2026-10-11T19:03:11.811Z</p></header><main><p>Static report. Use browser Print to save as PDF. The complete input record is below; pair it with the exported case JSON and results CSV.</p><section
+        id="methodOverview"
+        class="card"
+        aria-labelledby="methodOverviewTitle"
+      >
+        <h2 id="methodOverviewTitle">Methodology overview</h2>
+        <p>
+          <b>Primary equation reference:</b> Zorman, Slavič &amp; Boltežar
+          (2023),
+          <a href="https://doi.org/10.1016/j.ymssp.2023.110149"
+            >Vibration fatigue by spectral methods—A review with open-source
+            support</a
+          >, Section 3.2, equations 29–32 (Dirlik method).
+        </p>
+        <p>
+          Both environments are passed through the same bank of linear
+          single-degree-of-freedom oscillators to compare relative-displacement
+          fatigue severity. Heritage exposure accumulates cycles from the
+          specified sine dwells and optional quasi-steady sweeps. Random
+          exposure uses expected damage from a stationary Gaussian response:
+          Dirlik is the default, with narrowband/Rayleigh available as a
+          cross-check or governing method. The heritage/random damage ratio
+          supports an exposure-coverage assessment when the dynamics and
+          displacement-to-stress relationship are unchanged.
+        </p>
+        <p class="hint">
+          The cited paper supplies the random-fatigue formulation; the sine-test
+          reconstruction and SDOF comparison workflow are this tool's
+          implementation. FLife provides numerical verification. Irvine's
+          example is a separate comparison, not the governing equation source.
+          Review the separate peak screen and the assumptions under Method &amp;
+          interpretation before making a qualification determination.
+        </p>
+      </section><div class="notice warn"><b>EXAMPLE · Modeled fatigue target met within the listed modes.</b><br>Reference example: 100 Hz sine dwell / 90-110 Hz random · Q = 10, b = 4 · Dirlik · damage target 1. The peak-response screen also has a gap. These are analytical comparisons, not qualification approval.</div><div class="metrics"><div class="metric"><small>MINIMUM FATIGUE COVERAGE</small><div class="value ">1.13×</div><small>R / target at 100 Hz</small></div><div class="metric"><small>EQUAL-DAMAGE RANDOM EXPOSURE</small><div class="value ">0.566 min</div><small>At the fatigue-governing mode; new exposure 0.5 min</small></div><div class="metric"><small>MINIMUM PEAK COVERAGE</small><div class="value bad">0.433×</div><small>At 100 Hz · selected 4σ screen</small></div></div><div class="card"><div class="charthead"><h3>Fatigue coverage across frequency</h3></div><p class="hint">Heritage / new random damage. Both estimators are shown; the selected method governs the summary. The red line is your requested damage ratio.</p><div class="chart" id="ratioPlot"><div class="legend"><span><i class="dot" style="background:#087f83"></i>Dirlik ratio</span><span><i class="dot" style="background:#c86327"></i>Narrowband ratio</span></div><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 320" role="img" aria-label="Heritage / random damage" style="font-family:system-ui,sans-serif"><rect width="780" height="320" fill="white"></rect><line x1="437.87821520142586" y1="14" x2="437.87821520142586" y2="268" stroke="#e5ecef"></line><text x="437.87821520142586" y="289" text-anchor="middle" font-size="11" fill="#536b7a">100</text><line x1="84" y1="268" x2="758" y2="268" stroke="#e5ecef"></line><text x="75" y="272" text-anchor="end" font-size="11" fill="#536b7a">0.1</text><line x1="84" y1="141" x2="758" y2="141" stroke="#e5ecef"></line><text x="75" y="145" text-anchor="end" font-size="11" fill="#536b7a">1</text><line x1="84" y1="14" x2="758" y2="14" stroke="#e5ecef"></line><text x="75" y="18" text-anchor="end" font-size="11" fill="#536b7a">10</text><line x1="84" y1="141" x2="758" y2="141" stroke="#a93636" stroke-dasharray="6 4"></line><text x="753" y="136" text-anchor="end" font-size="11" fill="#a93636">target 1</text><path d="M84.00,267.44 L132.14,261.51 L180.29,247.75 L228.43,227.06 L276.57,201.45 L324.71,173.99 L372.86,149.68 L421.00,135.53 L437.88,134.17 L469.14,137.02 L517.29,152.95 L565.43,176.64 L613.57,201.32 L661.71,222.45 L709.86,237.24 L758.00,244.49 L758.00,244.49 " fill="none" stroke="#087f83" stroke-width="2.2"></path><path d="M84.00,267.62 L132.14,261.68 L180.29,247.91 L228.43,227.22 L276.57,201.61 L324.71,174.15 L372.86,149.84 L421.00,135.70 L437.88,134.33 L469.14,137.18 L517.29,153.11 L565.43,176.80 L613.57,201.49 L661.71,222.61 L709.86,237.41 L758.00,244.66 L758.00,244.66 " fill="none" stroke="#c86327" stroke-width="2.2" stroke-dasharray="5 4"></path><text x="421" y="312" font-size="12" text-anchor="middle" fill="#304c5d">Natural frequency, Hz</text><text transform="translate(15,141) rotate(-90)" text-anchor="middle" font-size="12" fill="#304c5d">Heritage / random damage</text></svg><div class="tip">Move over the plot to inspect values. Full-resolution data is in the CSV.</div></div></div><div class="card"><div class="charthead"><h3>Fatigue-damage spectra</h3></div><p class="hint">Normalized indices use zref = 1 mm. Compare curves only for the same b and Q; never sum across oscillator frequency.</p><div class="chart" id="damagePlot"><div class="legend"><span><i class="dot" style="background:#087f83"></i>Heritage total</span><span><i class="dot" style="background:#c86327"></i>Random Dirlik</span><span><i class="dot" style="background:#6673a0"></i>Heritage dwells</span><span><i class="dot" style="background:#b276a0"></i>Heritage sweeps</span></div><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 320" role="img" aria-label="Normalized damage index" style="font-family:system-ui,sans-serif"><rect width="780" height="320" fill="white"></rect><line x1="437.87821520142586" y1="14" x2="437.87821520142586" y2="268" stroke="#e5ecef"></line><text x="437.87821520142586" y="289" text-anchor="middle" font-size="11" fill="#536b7a">100</text><line x1="84" y1="268" x2="758" y2="268" stroke="#e5ecef"></line><text x="75" y="272" text-anchor="end" font-size="11" fill="#536b7a">0.1</text><line x1="84" y1="183.33333333333331" x2="758" y2="183.33333333333331" stroke="#e5ecef"></line><text x="75" y="187.33333333333331" text-anchor="end" font-size="11" fill="#536b7a">1</text><line x1="84" y1="98.66666666666664" x2="758" y2="98.66666666666664" stroke="#e5ecef"></line><text x="75" y="102.66666666666664" text-anchor="end" font-size="11" fill="#536b7a">10</text><line x1="84" y1="14" x2="758" y2="14" stroke="#e5ecef"></line><text x="75" y="18" text-anchor="end" font-size="11" fill="#536b7a">100</text><path d="M84.00,203.07 L132.14,188.06 L180.29,171.56 L228.43,153.66 L276.57,134.81 L324.71,116.36 L372.86,101.20 L421.00,93.78 L437.88,93.78 L469.14,97.65 L517.29,112.09 L565.43,132.87 L613.57,155.87 L661.71,178.75 L709.86,200.47 L758.00,220.73 L758.00,220.73 " fill="none" stroke="#087f83" stroke-width="2.2"></path><path d="M84.00,118.77 L132.14,107.71 L180.29,100.40 L228.43,96.29 L276.57,94.51 L324.71,94.37 L372.86,95.42 L421.00,97.42 L437.88,98.33 L469.14,100.30 L517.29,104.13 L565.43,109.11 L613.57,115.66 L661.71,124.45 L709.86,136.31 L758.00,151.74 L758.00,151.74 " fill="none" stroke="#c86327" stroke-width="2.2"></path><path d="M84.00,203.07 L132.14,188.06 L180.29,171.56 L228.43,153.66 L276.57,134.81 L324.71,116.36 L372.86,101.20 L421.00,93.78 L437.88,93.78 L469.14,97.65 L517.29,112.09 L565.43,132.87 L613.57,155.87 L661.71,178.75 L709.86,200.47 L758.00,220.73 L758.00,220.73 " fill="none" stroke="#6673a0" stroke-width="2.2" stroke-dasharray="5 4"></path><path d="" fill="none" stroke="#b276a0" stroke-width="2.2" stroke-dasharray="5 4"></path><text x="421" y="312" font-size="12" text-anchor="middle" fill="#304c5d">Natural frequency, Hz</text><text transform="translate(15,141) rotate(-90)" text-anchor="middle" font-size="12" fill="#304c5d">Normalized damage index</text></svg><div class="tip">Move over the plot to inspect values. Full-resolution data is in the CSV.</div></div></div><div class="card"><div class="charthead"><h3>Independent peak-response screen</h3></div><p class="hint">Relative displacement amplitude. Sine peak is the largest modeled sweep or dwell response. Random peak = selected k × response RMS.</p><div class="chart" id="peakPlot"><div class="legend"><span><i class="dot" style="background:#087f83"></i>Heritage peak</span><span><i class="dot" style="background:#c86327"></i>Random 4σ</span></div><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 320" role="img" aria-label="Relative displacement, mm" style="font-family:system-ui,sans-serif"><rect width="780" height="320" fill="white"></rect><line x1="437.87821520142586" y1="14" x2="437.87821520142586" y2="268" stroke="#e5ecef"></line><text x="437.87821520142586" y="289" text-anchor="middle" font-size="11" fill="#536b7a">100</text><line x1="84" y1="268" x2="758" y2="268" stroke="#e5ecef"></line><text x="75" y="272" text-anchor="end" font-size="11" fill="#536b7a">0.1</text><line x1="84" y1="14" x2="758" y2="14" stroke="#e5ecef"></line><text x="75" y="18" text-anchor="end" font-size="11" fill="#536b7a">1</text><path d="M84.00,249.60 L132.14,238.34 L180.29,225.97 L228.43,212.54 L276.57,198.41 L324.71,184.57 L372.86,173.20 L421.00,167.63 L437.88,167.63 L469.14,170.54 L517.29,181.37 L565.43,196.95 L613.57,214.20 L661.71,231.36 L709.86,247.65 L758.00,262.85 L758.00,262.85 " fill="none" stroke="#087f83" stroke-width="2.2"></path><path d="M84.00,89.28 L132.14,81.05 L180.29,75.68 L228.43,72.78 L276.57,71.65 L324.71,71.78 L372.86,72.81 L421.00,74.57 L437.88,75.34 L469.14,76.98 L517.29,80.09 L565.43,84.06 L613.57,89.18 L661.71,95.95 L709.86,104.96 L758.00,116.59 L758.00,116.59 " fill="none" stroke="#c86327" stroke-width="2.2"></path><text x="421" y="312" font-size="12" text-anchor="middle" fill="#304c5d">Natural frequency, Hz</text><text transform="translate(15,141) rotate(-90)" text-anchor="middle" font-size="12" fill="#304c5d">Relative displacement, mm</text></svg><div class="tip">Move over the plot to inspect values. Full-resolution data is in the CSV.</div></div></div><div class="two"><div class="card"><div class="charthead"><h3>Normalized sine profile</h3></div><p class="hint">Peak acceleration after unit conversion and the sine multiplier.</p><div class="chart" id="sinePlot"><div class="legend"><span><i class="dot" style="background:#087f83"></i>Sine base peak</span></div><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 320" role="img" aria-label="Acceleration, g peak" style="font-family:system-ui,sans-serif"><rect width="780" height="320" fill="white"></rect><line x1="437.87821520142586" y1="14" x2="437.87821520142586" y2="268" stroke="#e5ecef"></line><text x="437.87821520142586" y="289" text-anchor="middle" font-size="11" fill="#536b7a">100</text><line x1="84" y1="268" x2="758" y2="268" stroke="#e5ecef"></line><text x="75" y="272" text-anchor="end" font-size="11" fill="#536b7a">1</text><line x1="84" y1="14" x2="758" y2="14" stroke="#e5ecef"></line><text x="75" y="18" text-anchor="end" font-size="11" fill="#536b7a">10</text><path d="M84.00,268.00 L106.47,268.00 L128.93,268.00 L151.40,268.00 L173.87,268.00 L196.33,268.00 L218.80,268.00 L241.27,268.00 L263.73,268.00 L286.20,268.00 L308.67,268.00 L331.13,268.00 L353.60,268.00 L376.07,268.00 L398.53,268.00 L421.00,268.00 L443.47,268.00 L465.93,268.00 L488.40,268.00 L510.87,268.00 L533.33,268.00 L555.80,268.00 L578.27,268.00 L600.73,268.00 L623.20,268.00 L645.67,268.00 L668.13,268.00 L690.60,268.00 L713.07,268.00 L735.53,268.00 L758.00,268.00 " fill="none" stroke="#087f83" stroke-width="2.2"></path><text x="421" y="312" font-size="12" text-anchor="middle" fill="#304c5d">Excitation frequency, Hz</text><text transform="translate(15,141) rotate(-90)" text-anchor="middle" font-size="12" fill="#304c5d">Acceleration, g peak</text></svg><div class="tip">Move over the plot to inspect values. Full-resolution data is in the CSV.</div></div></div><div class="card"><div class="charthead"><h3>Random input PSD</h3></div><p class="hint">0.7746 gRMS over 90–110 Hz; level adjustment 0 dB.</p><div class="chart" id="psdPlot"><div class="legend"><span><i class="dot" style="background:#c86327"></i>Random input</span></div><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 320" role="img" aria-label="PSD, g²/Hz" style="font-family:system-ui,sans-serif"><rect width="780" height="320" fill="white"></rect><line x1="437.87821520142586" y1="14" x2="437.87821520142586" y2="268" stroke="#e5ecef"></line><text x="437.87821520142586" y="289" text-anchor="middle" font-size="11" fill="#536b7a">100</text><line x1="84" y1="268" x2="758" y2="268" stroke="#e5ecef"></line><text x="75" y="272" text-anchor="end" font-size="11" fill="#536b7a">0.01</text><line x1="84" y1="14" x2="758" y2="14" stroke="#e5ecef"></line><text x="75" y="18" text-anchor="end" font-size="11" fill="#536b7a">0.1</text><path d="M84.00,146.81 L758.00,146.81 " fill="none" stroke="#c86327" stroke-width="2.2"></path><text x="421" y="312" font-size="12" text-anchor="middle" fill="#304c5d">Excitation frequency, Hz</text><text transform="translate(15,141) rotate(-90)" text-anchor="middle" font-size="12" fill="#304c5d">PSD, g²/Hz</text></svg><div class="tip">Move over the plot to inspect values. Full-resolution data is in the CSV.</div></div></div></div><div class="card"><h3>Dwell exposure actually credited</h3><div class="tablewrap"><table><thead><tr><th>Frequency, Hz</th><th>Peak g</th><th>Minutes / dwell</th><th>Limiter</th><th>Repeats</th><th>Total cycles</th></tr></thead><tbody><tr><td>100</td><td>1</td><td>0.5</td><td>cycles</td><td>1</td><td>3,000</td></tr></tbody></table></div><p class="hint">Caps apply to each repeat. At 1,000,000 cycles and 8 hours, the crossover is 34.722 Hz. Above that frequency the cycle cap stops the dwell sooner.</p></div><div class="card"><h3>Q and fatigue-slope sensitivity</h3><p class="hint">Each cell is the minimum coverage ratio R / target within the selected listed modes. The smaller text identifies its governing frequency. These are analyst scenarios, not confidence bounds.</p><div class="tablewrap"><table class="sensitivity"><thead><tr><th>Q / damping</th><th>b = 4</th><th>b = 6</th><th>b = 8</th></tr></thead><tbody><tr><td>Q 5 / 10%</td><td class="gap"><strong>0.561×</strong><small>100 Hz</small></td><td class="gap"><strong>0.198×</strong><small>100 Hz</small></td><td class="gap"><strong>0.0523×</strong><small>100 Hz</small></td></tr><tr><td>Q 10 / 5%</td><td class=""><strong>1.13×</strong><small>100 Hz</small></td><td class="gap"><strong>0.567×</strong><small>100 Hz</small></td><td class="gap"><strong>0.213×</strong><small>100 Hz</small></td></tr><tr><td>Q 20 / 2.5%</td><td class=""><strong>3.16×</strong><small>100 Hz</small></td><td class=""><strong>2.65×</strong><small>100 Hz</small></td><td class=""><strong>1.66×</strong><small>100 Hz</small></td></tr><tr><td>Q 50 / 1%</td><td class=""><strong>16×</strong><small>100 Hz</small></td><td class=""><strong>30.3×</strong><small>100 Hz</small></td><td class=""><strong>42.9×</strong><small>100 Hz</small></td></tr></tbody></table></div></div><div class="card"><h3>Mode detail · 100 Hz</h3><p>Damage ratio <b>1.1319×</b> · response RMS <b>0.14337 mm</b> · bandwidth α <b>0.99598</b> · ν₀ <b>99.819 Hz</b></p><div class="tablewrap"><table><thead><tr><th>Heritage contribution</th><th>Damage index</th><th>Share</th></tr></thead><tbody><tr><td>All sweeps</td><td>0</td><td>0%</td></tr><tr><td>Dwell 1: 100 Hz</td><td>11.4226</td><td>100%</td></tr></tbody></table></div><p class="hint">Dirlik index 10.0915 · narrowband index 10.1213 · spectral method used: Dirlik.</p></div><div class="card"><div class="charthead"><h3>Response PSD at 100 Hz</h3></div><p class="hint">Relative-displacement PSD of the selected oscillator; the response bandwidth controls the random fatigue statistics.</p><div class="chart" id="responsePlot"><div class="legend"><span><i class="dot" style="background:#087f83"></i>Response PSD</span></div><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 320" role="img" aria-label="Relative-displacement PSD, mm²/Hz" style="font-family:system-ui,sans-serif"><rect width="780" height="320" fill="white"></rect><line x1="437.9184401155952" y1="14" x2="437.9184401155952" y2="268" stroke="#e5ecef"></line><text x="437.9184401155952" y="289" text-anchor="middle" font-size="11" fill="#536b7a">100</text><line x1="84" y1="268" x2="758" y2="268" stroke="#e5ecef"></line><text x="75" y="272" text-anchor="end" font-size="11" fill="#536b7a">1.00e-4</text><line x1="84" y1="141" x2="758" y2="141" stroke="#e5ecef"></line><text x="75" y="145" text-anchor="end" font-size="11" fill="#536b7a">0.001</text><line x1="84" y1="14" x2="758" y2="14" stroke="#e5ecef"></line><text x="75" y="18" text-anchor="end" font-size="11" fill="#536b7a">0.01</text><path d="M150.08,172.58 L181.29,164.46 L120.98,179.73 L210.39,156.49 L97.92,185.12 L233.45,149.94 L84.00,188.26 L247.37,145.91 L256.15,143.35 L258.57,142.64 L253.89,144.01 L260.84,141.98 L252.09,144.53 L262.63,141.45 L251.01,144.85 L263.71,141.14 L299.94,130.59 L316.10,126.04 L284.87,134.94 L331.16,121.98 L272.93,138.43 L343.11,118.96 L265.72,140.55 L350.31,117.24 L380.16,111.21 L392.78,109.34 L368.39,113.35 L404.55,108.04 L359.06,115.27 L413.88,107.35 L353.43,116.52 L419.51,107.08 L427.83,106.90 L430.96,106.90 L424.92,106.94 L433.88,106.93 L422.61,106.98 L436.19,106.98 L421.22,107.02 L437.58,107.02 L472.11,110.34 L487.47,113.17 L457.78,108.43 L501.79,116.43 L446.43,107.45 L513.14,119.39 L439.58,107.09 L519.99,121.32 L549.97,130.67 L562.69,134.97 L538.11,126.82 L574.55,139.09 L528.71,123.89 L583.95,142.41 L523.03,122.20 L589.63,144.42 L596.06,146.72 L598.32,147.53 L593.94,145.96 L600.44,148.28 L592.26,145.36 L602.12,148.88 L591.25,145.00 L603.13,149.25 L667.78,172.10 L696.72,181.87 L640.80,162.68 L723.71,190.65 L619.41,155.08 L745.09,197.36 L606.51,150.46 L758.00,201.31 " fill="none" stroke="#087f83" stroke-width="2.2"></path><text x="421" y="312" font-size="12" text-anchor="middle" fill="#304c5d">Excitation frequency, Hz</text><text transform="translate(15,141) rotate(-90)" text-anchor="middle" font-size="12" fill="#304c5d">Relative-displacement PSD, mm²/Hz</text></svg><div class="tip">Move over the plot to inspect values. Full-resolution data is in the CSV.</div></div></div><div class="card" id="rowTable"><h3>Assessment data · 1 frequencies</h3><p class="hint">The full CSV includes every bank frequency, assessment-scope flags, spectral moments, sweep/dwell indices, equivalent duration and amplitude/PSD scales.</p><div class="tablewrap"><table><thead><tr><th>fₙ, Hz</th><th>Damage R</th><th>R / target</th><th>Equal min</th><th>Peak ratio</th><th>α</th></tr></thead><tbody><tr><td>100</td><td>1.1319</td><td class="">1.1319</td><td>0.56595</td><td class="gap">0.43316</td><td>0.996</td></tr></tbody></table></div></div><div class="card"><h3>Review notes and numerical checks</h3><ul class="hint"><li>Illustrative example only: replace all inputs with controlled test and requirement records.</li><li>Only the listed modes govern the summary; omitted modes are not assessed.</li><li>Peak response uses your selected k-sigma factor; it is not a duration-based maximum confidence level.</li><li>This is relative exposure severity, not an absolute Miner fraction, failure probability, remaining-life estimate or qualification approval.</li></ul><p class="hint">Governing-point integration refinement: 1.399e-12% change in damage ratio. Frequency grid: 48 points/octave plus explicit modes, inspection frequency, dwells and profile boundaries. Refine the bank separately to resolve narrow minima.</p><p class="hint">Generated 2026-10-11T19:03:11.811Z · engine 1.0.2. Case basis: Irvine (2011), random_sine_rainflow.pdf, second method: 1 g peak at 100 Hz for 30 s; 0.03 g^2/Hz from 90 to 110 Hz for 30 s; Q=10, b=4. The tool uses relative displacement and stationary spectral expected damage. Compare like-for-like with FLife; the published acceleration rainflow sample is not an exact target.</p></div><div class="card pagebreak"><h2>Complete input record</h2><table><tr><td>caseName</td><td style="white-space:pre-wrap">Reference example: 100 Hz sine dwell / 90-110 Hz random</td></tr><tr><td>basis</td><td style="white-space:pre-wrap">Irvine (2011), random_sine_rainflow.pdf, second method: 1 g peak at 100 Hz for 30 s; 0.03 g^2/Hz from 90 to 110 Hz for 30 s; Q=10, b=4. The tool uses relative displacement and stationary spectral expected damage. Compare like-for-like with FLife; the published acceleration rainflow sample is not an exact target.</td></tr><tr><td>sineText</td><td style="white-space:pre-wrap">90,110,accel_g_pk,1,1</td></tr><tr><td>dwellText</td><td style="white-space:pre-wrap">100,1,0,3000,1</td></tr><tr><td>psdText</td><td style="white-space:pre-wrap">90,0.03
+110,0.03</td></tr><tr><td>Q</td><td style="white-space:pre-wrap">10</td></tr><tr><td>b</td><td style="white-space:pre-wrap">4</td></tr><tr><td>damageFactor</td><td style="white-space:pre-wrap">1</td></tr><tr><td>passes</td><td style="white-space:pre-wrap">0</td></tr><tr><td>sweepType</td><td style="white-space:pre-wrap">oct</td></tr><tr><td>sweepRate</td><td style="white-space:pre-wrap">1</td></tr><tr><td>sineScale</td><td style="white-space:pre-wrap">1</td></tr><tr><td>duration</td><td style="white-space:pre-wrap">0.5</td></tr><tr><td>randomRepeats</td><td style="white-space:pre-wrap">1</td></tr><tr><td>psdDb</td><td style="white-space:pre-wrap">0</td></tr><tr><td>peakFactor</td><td style="white-space:pre-wrap">4</td></tr><tr><td>fmin</td><td style="white-space:pre-wrap">90</td></tr><tr><td>fmax</td><td style="white-space:pre-wrap">110</td></tr><tr><td>density</td><td style="white-space:pre-wrap">48</td></tr><tr><td>scope</td><td style="white-space:pre-wrap">modes</td></tr><tr><td>modesText</td><td style="white-space:pre-wrap">100</td></tr><tr><td>inspectFn</td><td style="white-space:pre-wrap">100</td></tr><tr><td>method</td><td style="white-space:pre-wrap">dirlik</td></tr><tr><td>example</td><td style="white-space:pre-wrap">true</td></tr></table></div><div class="card pagebreak">
+          <div class="step">ENGINEERING BASIS</div>
+          <h2>What this tool answers</h2>
+          <p>
+            For the specified Q, fatigue exponent, axis, exposure and modal
+            scope: is the modeled heritage fatigue severity at least as large as
+            the modeled new random severity? A separate comparison asks whether
+            the selected random peak-response screen exceeds the heritage
+            response.
+          </p>
+          <p>
+            A ratio above the requested target is evidence of modeled exposure
+            coverage. A ratio below it identifies a coverage gap to investigate.
+            Neither result alone establishes hardware qualification.
+          </p>
+          <h2>Available comparison methods</h2>
+          <table>
+            <tbody><tr>
+              <th>Method</th>
+              <th>Appropriate use</th>
+              <th>In this release</th>
+            </tr>
+            <tr>
+              <td>Fatigue-damage spectrum (FDS)</td>
+              <td>
+                Compare unlike base excitations with limited component response
+                data.
+              </td>
+              <td>Implemented with relative-displacement SDOF oscillators.</td>
+            </tr>
+            <tr>
+              <td>Measured / FEM stress response</td>
+              <td>
+                Known critical locations, correlated transfer functions and
+                fatigue data.
+              </td>
+              <td>
+                Recommended follow-on; stress FRF import is not implemented.
+              </td>
+            </tr>
+            <tr>
+              <td>Time histories + rainflow + Miner</td>
+              <td>
+                Measured stress, transient sweeps or cases needing direct cycle
+                counting.
+              </td>
+              <td>
+                Follow-on method; simulation and rainflow are not implemented.
+              </td>
+            </tr>
+            <tr>
+              <td>gRMS / equal energy / peak matching</td>
+              <td>Input and peak sanity checks.</td>
+              <td>Not accepted as fatigue equivalence.</td>
+            </tr>
+          </tbody></table>
+          <h2>1. Normalize the heritage profile</h2>
+          <div class="equation">
+            x<sub>peak</sub> = DA / 2<br>a<sub>peak</sub> = (2πf)² x<sub>peak</sub>
+            = 2πf v<sub>peak</sub><br>a<sub>peak</sub> = √2 a<sub>RMS</sub>
+            &nbsp; (sine only); &nbsp; g<sub>0</sub> = 9.80665 m/s²
+          </div>
+          <p>
+            All calculations use sine peak amplitude. A PSD ordinate is density,
+            not a sinusoidal G amplitude. Velocity peak/RMS and acceleration
+            peak/RMS/peak-to-peak must be identified explicitly.
+          </p>
+          <h2>2. Filter through the same oscillator</h2>
+          <div class="equation">
+            |H<sub>z/a</sub>| = 1 / √[(ω<sub>n</sub>² − ω²)² +
+            (2ζω<sub>n</sub>ω)²]<br>S<sub>z</sub>(f) = g<sub>0</sub>²
+            |H<sub>z/a</sub>|² S<sub>a</sub>(f); &nbsp; ζ = 1/(2Q)
+          </div>
+          <p>
+            Relative displacement z is a fatigue stress proxy. The unknown
+            stress-per-displacement coefficient cancels only when the same mode,
+            stress relationship and fatigue law apply to both cases. Bank points
+            are independent hypothetical oscillators; their damage must not be
+            summed across frequency.
+          </p>
+          <h2>3. Accumulate cycles consistently</h2>
+          <div class="equation">
+            I = Σ n<sub>i</sub>(z<sub>peak,i</sub> /
+            z<sub>ref</sub>)<sup>b</sup>, &nbsp; z<sub>ref</sub> = 1 mm<br>t<sub>dwell</sub>
+            = min(t<sub>cap</sub>, N<sub>cap</sub>/f<sub>dwell</sub>)<br>I<sub>sweep</sub>
+            = ∫ f [z<sub>peak</sub>(f)/z<sub>ref</sub>]<sup>b</sup> (dt/df) df
+          </div>
+          <p>
+            I is a normalized damage index. It is not an absolute Miner
+            fraction. The 1 mm reference is numerical normalization, not an
+            allowable. Heritage index is the sum of separate sequential sweeps
+            and dwells. A stationary random response uses spectral moments m<sub>j</sub>
+            = ∫ f<sup>j</sup>S<sub>z</sub>(f) df with frequency in Hz.
+          </p>
+          <h2>4. Estimate random fatigue</h2>
+          <div class="equation">
+            ν<sub>0</sub> = √(m<sub>2</sub>/m<sub>0</sub>), &nbsp; ν<sub>p</sub>
+            = √(m<sub>4</sub>/m<sub>2</sub>)<br>I<sub>NB</sub> =
+            Tν<sub>0</sub>(√(2m<sub>0</sub>)/z<sub>ref</sub>)<sup>b</sup>
+            Γ(1+b/2)
+          </div>
+          <p>
+            Dirlik estimates rainflow-amplitude statistics from m₀, m₁, m₂ and
+            m₄ and is the default. The narrowband formula provides a transparent
+            cross-check. Their spread is method sensitivity, not a confidence
+            interval. The complete Dirlik equations are in the white paper. Both
+            assume stationary, Gaussian random response and linear, elastic
+            dynamics.
+          </p>
+          <h2>5. Read the outputs</h2>
+          <ul>
+            <li>
+              <b>Damage ratio R = I<sub>heritage</sub>/I<sub>random</sub>.</b>
+              Coverage ratio = R / requested damage factor. At least 1 means the
+              modeled target is met at that oscillator.
+            </li>
+            <li>
+              <b>Equivalent duration = total random duration × R.</b> This is
+              the random exposure giving the same modeled damage, with the same
+              PSD shape and level. It is not remaining life.
+            </li>
+            <li>
+              <b>Allowable amplitude scale = (R / target)<sup>1/b</sup>.</b> The
+              corresponding PSD scale is its square; exported per mode.
+            </li>
+            <li>
+              <b>Peak ratio = maximum modeled heritage relative displacement /
+                (k × random RMS relative displacement).</b>
+              This independently screens for peak severity. k is user-selected,
+              not a stated probability or duration-based maximum.
+            </li>
+            <li>
+              <b>Sensitivity matrix.</b> The worst coverage ratio within the
+              chosen scope is recalculated for each Q and b, using the same
+              assumptions on both sides.
+            </li>
+          </ul>
+          <h2>Ground rules before a determination</h2>
+          <ol>
+            <li>
+              Verify the actual test article passed the heritage exposure;
+              confirm records, axis, control points, dwell tracking, notches,
+              tolerances and achieved levels.
+            </li>
+            <li>
+              Establish configuration and mounting equivalence. Added mass,
+              changed fasteners or boundary conditions can invalidate resonance
+              and stress mapping.
+            </li>
+            <li>
+              Use representative Q and fatigue slopes, then resolve sensitivity
+              and modal-frequency uncertainty. Defaults are illustrative, not
+              material allowables.
+            </li>
+            <li>
+              Evaluate critical stresses or measured response when modal
+              coupling, multiple hot spots, nonlinear joints, clearances,
+              contact, fretting, solder fatigue, mean-stress shifts or
+              multiaxial loading govern.
+            </li>
+            <li>
+              Separate design qualification from the life of an already-tested
+              article. Consumed life and future life add; qualification exposure
+              is not a bank of remaining capacity.
+            </li>
+            <li>
+              Document the peak check, numerical convergence, all coverage gaps,
+              and the governing program's acceptance basis. This tool does not
+              declare compliance with a standard.
+            </li>
+          </ol>
+          <h2>Published reference check</h2>
+          <p>
+            The same spectral engine can reproduce FLife's published regression
+            from its measured stress-record moments: Dirlik life 1595.031603 s
+            and narrowband life 1064.200649 s, with b = 6 and C = 1.8 × 10¹⁹.
+            This checks the random-fatigue kernel, not the base-input transfer
+            model or a hardware qualification. The benchmark
+            stress-to-displacement mapping is numerical only and is not an
+            engineering stress calibration.
+          </p>
+          
+          <p id="referenceStatus" role="status" aria-live="polite">PASS: Dirlik 1595.031603 s; narrowband 1064.200649 s. Absolute tolerance: 0.000001 s against the published values.</p>
+          <p>
+            <b>Load reference case</b> uses Irvine's 2011 input example: 100 Hz,
+            Q = 10, b = 4, a 1 g peak dwell for 30 s and 0.03 g²/Hz over 90–110
+            Hz for 30 s. The independently checked relative-displacement
+            heritage/random ratio is 1.131908593. It is not an exact
+            reproduction of Irvine's finite-record acceleration rainflow result.
+            See the audit and saved example in the repository's reference folder
+            for the distinction.
+          </p>
+          <p>
+            <a href="https://github.com/ladisk/FLife/blob/f39ba53d608b3338b16c9ebb5bd52c86635898b0/tests/test_basic.py">Pinned FLife published regression</a>
+          </p>
+          <h2>References</h2>
+          <ol>
+            <li>
+              T. Dirlik and D. Benasciutti (2021),
+              <a href="https://doi.org/10.3390/met11091333">Dirlik and Tovo-Benasciutti Spectral Methods in Vibration
+                Fatigue</a>, Metals 11(9), 1333.
+            </li>
+            <li>
+              A. Zorman, J. Slavič and M. Boltežar (2023),
+              <a href="https://doi.org/10.1016/j.ymssp.2023.110149">Vibration fatigue by spectral methods: a review with
+                open-source support</a>, MSSP 190, 110149, especially equations 30–32.
+            </li>
+            <li>
+              T. Irvine,
+              <a href="https://nescacademy.nasa.gov/video/2584e207341e411b95fa829e191d81441d">NASA NESC Academy, Using Fatigue to Compare Sine and Random
+                Environments</a>, training resource.
+            </li>
+          </ol>
+          <p class="hint">
+            The white paper accompanies this file in the repository. No
+            standard, source or vendor is represented as approving this
+            implementation.
+          </p>
+        </div></main></body></html>
