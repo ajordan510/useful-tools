@@ -22,10 +22,10 @@ Read `Vibration_Damage_Comparison_White_Paper.pdf` for the baseline method, equa
 2. Run the comparison. The primary plot shows **coverage R / target**, so the target is always **1**. The separate peak plot uses the same threshold convention. Known-mode assessments use dots with faint connecting context curves. The alternate fatigue estimator is optional. Detailed spectra and sensitivity are grouped below the main results.
 3. **Duplicate case** to reuse a common specification without linking cases, or **Add case** for a new pair. Switch cases with the active-case selector. Names can be edited in the case inputs. Each case retains its own inputs and calculated results during the session. Removing a case can be undone.
 4. In **Case collection & reporting**, include the desired cases and choose **Run all included cases**. Any missing, invalid or changed result blocks collective exports until recalculated or excluded. Common coverage axes use the included cases; this affects presentation only, not the calculation.
-5. **Export PowerPoint** produces a 16:9 summary and two slides per case (inputs, then results). For seven typical cases this is 15 slides. Titles, specification tables and takeaway text are editable; charts are high-resolution PNG images. Exact input records, full analyst interpretation, warnings, revision and calculation time are preserved in slide notes. Optional appendices add peak plots, sensitivity tables and review records. Individual plots can also be saved as labeled SVG or high-resolution PNG.
+5. **Export PowerPoint** produces a 16:9 summary and four slides per case (inputs, sine unit check, fatigue pair, peak pair). For seven typical cases this is 29 slides. Titles, specification tables and takeaway text are editable; charts are high-resolution PNG images. Exact input records, full analyst interpretation, warnings, revision and calculation time are preserved in slide notes. Optional appendices add peak plots, sensitivity tables and review records. Individual plots can also be saved as labeled SVG or high-resolution PNG.
 6. **Save collection JSON** before closing. Reopening restores independent inputs, inclusion choices and case revisions; results must be recalculated with the current engine. Data stays in memory unless explicitly downloaded. Up to 30 cases can be collected. Existing single-case JSON files still open into the active case.
 
-Compact HTML reports include the takeaway, input summaries, four essential plots and review notes per case. The detailed input/frequency appendix is optional. The summary CSV is useful for a report index; the individual results CSV retains full numerical data. Downloaded case files include the case ID, name and revision. Analyst interpretation is labeled separately from the calculated findings.
+Compact HTML reports include the takeaway, input summaries, seven essential plots and review notes per case. The detailed input/frequency appendix is optional. The summary CSV is useful for a report index; the individual results CSV retains full numerical data. Downloaded case files include the case ID, name and revision. Analyst interpretation is labeled separately from the calculated findings.
 
 **Focus on results** expands the results to the full workspace width. Changing a case input disables all of its result and plot exports until recalculation. No engineering equations were changed for v2.0.
 
@@ -42,6 +42,7 @@ To regenerate the external checks, clone `https://github.com/ladisk/FLife`, chec
 python3 verify_audit.py --flife-root /path/to/FLife
 node build.mjs
 node test_engine.cjs
+node test_reporting.cjs
 python3 validate_reference.py
 python3 build_white_paper.py
 python3 build_white_paper.py --source TECHNICAL_AUDIT.md --output Vibration_Damage_Comparison_Technical_Audit.pdf --audit
@@ -106,6 +107,7 @@ The same Q and b apply to both exposures. Different configurations, stress FRFs,
 ```sh
 node build.mjs
 node test_engine.cjs
+node test_reporting.cjs
 python3 validate_reference.py
 ```
 
@@ -136,4 +138,15 @@ Version 2.0.0, 2026-10-11. Adds independent case collections, table/paste inputs
 
 `reporting.js` owns shared report summaries and figures; `collection.js` owns case snapshots and report selection; `input-editor.js` owns input editing and plot downloads; `presentation-export.js` builds presentations using the vendored PptxGenJS 4.0.1 runtime. See `vendor/README.md` for provenance and licenses. Build after editing any source. The collection tests additionally require JSZip to inspect generated packages; all production export dependencies are embedded in the standalone HTML.
 
-The seven-case browser test checks independent duplication, switching, common axes, stale/invalid export blocking, save/load, include/exclude, remove/undo, table/paste input, SVG/PNG/HTML/CSV export and a 15-slide PPTX with editable tables and source notes. PowerPoint desktop was used to open and render the generated deck during this release's layout review.
+The seven-case browser test checks independent duplication, switching, common axes, stale/invalid export blocking, save/load, include/exclude, remove/undo, table/paste input, SVG/PNG/HTML/CSV export and a 29-slide PPTX with editable tables and source notes. PowerPoint desktop was used to open and render the generated deck during this release's layout review.
+
+
+## Plot interpretation updates (v2.1.0, 2026-10-12)
+
+- **Fatigue coverage** keeps the existing values: coverage = R / F, where R = sine damage / random damage and F is the required damage factor. It equals R only when F = 1. Removing “(log)” from the axis label does not change the logarithmic scale or transform the underlying values. The source plot on the left uses sine damage and F × random damage, so dividing its two curves gives the coverage exactly.
+- **Peak coverage** is sine peak / (selected k × random RMS). The left plot now shows those peak curves together with the RMS vibration response spectrum (VRS). Every curve uses relative displacement and the same Q. These are not absolute-acceleration response spectra.
+- Guidance beside k and in the method tab distinguishes an RMS VRS, a fixed-k peak screen and a duration-dependent extreme response spectrum. The default k = 4 is an assumption, not a recommendation for every exposure. A case-specific leading narrowband estimate, sqrt[2 ln(ν₀T)], is shown for the inspected oscillator as guidance only; it neither changes k nor assigns a confidence level. T includes all random exposures. A probability-based ERS/URS needs an explicit statistical model and per-mode/non-joint probability interpretation; this release retains the selected-k peak calculation.
+- Sine input is also plotted in **inches double amplitude (peak-to-peak)** using DA = 2 × peak g × 9.80665 / [(2πf)² × 0.0254]. It includes the sine multiplier; dwell overrides remain separate.
+- Shared figure formatting uses scientific notation below 0.001 and at or above 10,000, with additional axis clearance. UI, SVG/PNG, HTML and PowerPoint use the same figure definitions. Each coverage pair shares frequency limits, including common axes across cases.
+
+Primary references for the new peak guidance: [VRS definition](https://www.vibrationdata.com/VRS.htm), [Irvine, Peak Response to Random Vibration, Rev H (2020)](https://www.vibrationdata.com/tutorials2/peak_response_random_revisionH.pdf), and [Rayleigh peak distribution](https://www.vibrationdata.com/tutorials_alt/RayD.pdf). The calculation equations and selected-k outputs are unchanged.

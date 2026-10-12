@@ -38,7 +38,19 @@ async function run() {
   );
 }
 await run();
-assert.equal(await page.locator(".chart svg").count(), 6);
+assert.equal(await page.locator(".chart svg").count(), 9);
+// Paired source curves precede the ratios and retain readable axis ticks.
+assert.equal(await page.locator('.comparison-pair').count(),2);
+assert.deepEqual(await page.locator('.comparison-pair .chart').evaluateAll(els=>els.map(el=>el.id)),['fatigueComparePlot','ratioPlot','peakResponsePlot','peakPlot']);
+await page.locator('#advancedResults').evaluate(el=>el.open=true);
+const axisOverlaps=await page.locator('.chart svg').evaluateAll(svgs=>svgs.flatMap(svg=>{const title=svg.querySelector('text[transform]'),a=title.getBoundingClientRect();return [...svg.querySelectorAll('text[text-anchor="end"]')].filter(t=>{const b=t.getBoundingClientRect();return a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;}).map(t=>svg.closest('.chart').id+': '+t.textContent);}));
+assert.deepEqual(axisOverlaps,[]);
+assert.match(await page.locator('#sineDisplacementPlot').innerText(),/inches DA/);
+assert.match(await page.locator('#peakResponsePlot').innerText(),/Random RMS/);
+assert.match(await page.locator('#ratioPlot').innerText(),/R = sine damage/);
+await page.locator('#advancedResults').evaluate(el=>el.open=false);
+await page.check('#resultsOnly');await page.screenshot({path:path.join(out,'paired-coverage.png')});await page.uncheck('#resultsOnly');
+
 assert.equal(await page.locator("#csv").isEnabled(), true);
 assert.equal(
   await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
@@ -276,7 +288,7 @@ assert.equal(await page.evaluate(() => last.r.rows.every((r) =>
 await page.goto(
   pathToFileURL(path.join(out, "analysis-report.html")).href,
 );
-assert.equal(await page.locator("svg").count(), 4);
+assert.equal(await page.locator("svg").count(), 7);
 await page.setViewportSize({ width: 1100, height: 1000 });
 await page.screenshot({ path: path.join(out, "report.png") });
 assert.deepEqual(errors, []);
@@ -315,5 +327,5 @@ assert.ok(
 await brokenPage.close();
 await browser.close();
 console.log(
-  "PASS browser: file:// calculation, 6 plots, CSV/SVG/case/report exports, documented and assumed case roundtrip, legacy imports, validation, zero coverage, stale-result protection, mobile layout, tutorial calculations/plots/experiment/isolation/example loaders, blocked scripts, startup failure diagnostics, saved report and zero network requests.",
+  "PASS browser: file:// calculation, 9 plots, CSV/SVG/case/report exports, documented and assumed case roundtrip, legacy imports, validation, zero coverage, stale-result protection, mobile layout, tutorial calculations/plots/experiment/isolation/example loaders, blocked scripts, startup failure diagnostics, saved report and zero network requests.",
 );

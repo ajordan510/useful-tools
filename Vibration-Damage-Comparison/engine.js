@@ -1,11 +1,11 @@
-/* Vibration Damage Comparison 2.0.0. Original implementation; equations and scope in WHITE_PAPER.md and README.md. */
+/* Vibration Damage Comparison 2.1.0. Original implementation; equations and scope in WHITE_PAPER.md and README.md. */
 (function (root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
   else root.VDC = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
-  const VERSION = "2.0.0",
+  const VERSION = "2.1.0",
     G = 9.80665,
     ZREF = 0.001;
   const UNITS = {

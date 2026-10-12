@@ -11,7 +11,7 @@ async function exportPowerPoint(){
     const txt=(slide,text,x,y,w,h,size=16,opts={})=>slide.addText(String(text),{x,y,w,h,fontFace:"Arial",fontSize:size,color:navy,margin:0,breakLine:false,valign:"top",...opts});
     const slide=(heading,sub)=>{const s=deck.addSlide();s.background={color:"FFFFFF"};s.addShape(deck.ShapeType.rect,{x:0,y:0,w:13.333,h:.12,line:{color:teal},fill:{color:teal}});txt(s,heading,.4,.3,12.5,.75,heading.length>90?22:24,{bold:true,fit:"shrink"});txt(s,sub,.4,1.05,12.5,.36,12,{color:muted,fit:"shrink"});txt(s,`Vibration comparison · engine ${VDC.VERSION} · analytical comparison, not qualification approval`,.4,7.1,11.8,.2,9,{color:muted});txt(s,++page,12.4,7.07,.5,.25,10,{align:"right"});return s;};
     const table=(s,rows,x,y,w,colW,fontSize=13)=>s.addTable(rows.map((row,i)=>row.map(text=>({text:String(text??""),options:{bold:i===0,color:i===0?"FFFFFF":navy,fill:i===0?navy:(i%2?"F0F5F7":"FFFFFF")}}))),{x,y,w,colW,fontFace:"Arial",fontSize,border:{type:"solid",pt:.5,color:"D7E2E8"},margin:.08,autoPage:false,rowH:.43,verbose:false});
-    const note=(s,e)=>s.addNotes(`Case ${e.id}, revision ${e.revision}\nEngine ${e.result.r.version}; calculated ${e.result.r.generated}\n\nExact input record\n${JSON.stringify(e.result.inputs,null,2)}\n\nCalculated interpretation\n${JSON.stringify(VDCReport.summary(e.result.c,e.result.r),null,2)}\n\nReview notes\n${e.result.r.warnings.join("\n")}\n\nNumerical refinement: ${e.result.r.convergence*100}% relative change. Refine frequency grid separately.\n\nAnalyst interpretation\n${e.result.c.analystNotes||"Not supplied."}`);
+    const note=(s,e)=>s.addNotes(`Case ${e.id}, revision ${e.revision}\nEngine ${e.result.r.version}; calculated ${e.result.r.generated}\n\nExact input record\n${JSON.stringify(e.result.inputs,null,2)}\n\nPeak-factor guidance\n${VDCReport.peakBasis(e.result.c,e.result.r)}\nVRS: https://www.vibrationdata.com/VRS.htm\nPeak response: https://www.vibrationdata.com/tutorials2/peak_response_random_revisionH.pdf\n\nCalculated interpretation\n${JSON.stringify(VDCReport.summary(e.result.c,e.result.r),null,2)}\n\nReview notes\n${e.result.r.warnings.join("\n")}\n\nNumerical refinement: ${e.result.r.convergence*100}% relative change. Refine frequency grid separately.\n\nAnalyst interpretation\n${e.result.c.analystNotes||"Not supplied."}`);
     const short=(v,n)=>String(v).length>n?String(v).slice(0,n-1)+"…":String(v);
     const chunks=(lines,size)=>Array.from({length:Math.ceil(lines.length/size)},(_,i)=>lines.slice(i*size,(i+1)*size));
     for(const group of chunks(entries,7)){
@@ -23,19 +23,24 @@ async function exportPowerPoint(){
     for(const e of entries){
       $("collectionMessage").textContent=`Preparing PowerPoint: ${e.id}…`;
       const {c,r}=e.result,summary=VDCReport.summary(c,r),figs=VDCReport.figures(c,r,settings);
-      const images={};for(const f of figs.slice(0,4))images[f.id]=await svgPNG(VDCReport.svg(f),2);
+      const images={};for(const f of figs.filter(f=>!["damagePlot","responsePlot"].includes(f.id)))images[f.id]=await svgPNG(VDCReport.svg(f),2);
       const input=slide(`${e.id} · ${c.caseName}`,`Inputs · ${c.example?"EXAMPLE · ":""}${summary.dwell}`);
       table(input,[["Sine specification / exposure","Random specification / exposure","Shared model / assessment"],[`${VDCReport.wrap(c.sineName||"Not identified",40).join("\n")}\n${c.passes} traversals; ${c.sweepRate} ${c.sweepType==="oct"?"oct/min":"Hz/min"}; scale ${c.sineScale}×`,`${VDCReport.wrap(c.randomName||"Not identified",40).join("\n")}\n${VDCReport.num(c.T/60)} min total; ${c.psdDb} dB; ${VDCReport.num(r.grms)} gRMS`,`Q ${c.Q}; b ${c.b}; ${c.method}; target ${c.damageFactor}\n${c.scope==="bank"?`${c.fmin}–${c.fmax} Hz bank`:"Listed modes (see slide notes)"}; peak ${c.peakFactor}σ`]],.4,1.6,12.5,[4.2,4.2,4.1],13);
       const chartTop=Math.max(3.05,2.6+Math.max(VDCReport.wrap(c.sineName||"",40).length,VDCReport.wrap(c.randomName||"",40).length)*.22),chartH=7-chartTop,chartW=chartH/0.62;
       input.addImage({data:images.sinePlot,x:.25+(6.4-chartW)/2,y:chartTop,w:chartW,h:chartH,altText:"Sine input profile with units and specification label"});input.addImage({data:images.psdPlot,x:6.68+(6.4-chartW)/2,y:chartTop,w:chartW,h:chartH,altText:"Random input PSD with exposure and gRMS"});note(input,e);
-      const result=slide(`${e.id} · ${c.caseName}`,`Results · ${c.scope==="modes"?"Assessed modes only; curves between modes are context":`${c.fmin}–${c.fmax} Hz oscillator bank`} · ${settings.coverageLimits?"Common coverage axes":"Per-case coverage axes"}`);
-      result.addImage({data:images.ratioPlot,x:.15,y:1.5,w:8.6,h:5.332,altText:summary.fatigue});
-      result.addShape(deck.ShapeType.rect,{x:8.95,y:1.6,w:3.95,h:1.35,line:{color:r.worst.margin>=1?teal:red},fill:{color:"F0F5F7"}});
-      txt(result,summary.fatigue,9.12,1.77,3.6,1,19,{bold:true,color:r.worst.margin>=1?teal:red,fit:"shrink"});
-      txt(result,summary.peak,9.12,3.1,3.6,.8,17,{bold:true,color:r.peakWorst.peakRatio>=1?teal:red,fit:"shrink"});
-      txt(result,"Analyst interpretation",9.12,4.1,3.6,.3,14,{bold:true});
-      txt(result,(c.analystNotes||"Not supplied.").slice(0,250)+(c.analystNotes?.length>250?"… (full text in notes)":""),9.12,4.5,3.6,1.6,13,{fit:"shrink"});
-      txt(result,`${r.warnings.length} review note(s); full record in slide notes. ${summary.noDwell?`${summary.noDwell} frequencies without assumed dwell credit.`:""}`,9.12,6.15,3.6,.6,11,{color:muted,fit:"shrink"});note(result,e);
+      const pairSlide=(heading,left,right,takeaway,definition)=>{
+        const s=slide(`${e.id} · ${c.caseName}`,heading);
+        s.addImage({data:images[left],x:.25,y:1.6,w:6.4,h:3.968,altText:figs.find(f=>f.id===left).title});
+        s.addImage({data:images[right],x:6.68,y:1.6,w:6.4,h:3.968,altText:figs.find(f=>f.id===right).title});
+        txt(s,takeaway,.4,5.75,12.4,.48,19,{bold:true,fit:"shrink"});
+        txt(s,definition,.4,6.27,12.4,.62,13,{fit:"shrink"});note(s,e);return s;
+      };
+      pairSlide("Sine source check · the same base input in two unit conventions", "sinePlot", "sineDisplacementPlot",
+        `Double amplitude = peak-to-peak displacement; sine scale = ${c.sineScale}×`,"DA inches = 2 × g peak × 9.80665 / [(2πf)² × 0.0254]. These are base-input profiles; dwell overrides remain separate.");
+      pairSlide(`Fatigue · ${c.scope==="modes"?"listed modes only":"oscillator bank"} · ${settings.coverageLimits?"common coverage axes":"per-case coverage axes"}`, "fatigueComparePlot", "ratioPlot", summary.fatigue,
+        `R = sine damage / random damage. Fatigue coverage = R / F, with F = ${c.damageFactor}. The left random curve includes F. Target = 1. Analyst interpretation: ${short(c.analystNotes||"Not supplied.",180)}`);
+      pairSlide("Peak comparison · same relative-displacement response and Q on both sides", "peakResponsePlot", "peakPlot", summary.peak,
+        `Peak coverage = sine peak / random peak estimate. The RMS VRS is context, not a peak. Selected k = ${c.peakFactor}; this fixed factor is not a duration-based confidence level. ${r.warnings.length} review note(s) in slide notes.`);
       if(appendix){
         const detail=slide(`${e.id} · sensitivity and peak screen`,"Sensitivity scenarios are not confidence bounds. Peak screening does not establish fatigue coverage.");
         detail.addImage({data:images.peakPlot,x:.2,y:1.6,w:7.9,h:4.898,altText:summary.peak});

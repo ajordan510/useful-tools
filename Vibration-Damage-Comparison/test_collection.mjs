@@ -32,11 +32,11 @@ const limits=await page.evaluate(()=>readyCases().map(e=>VDCReport.figures(e.res
 await page.screenshot({path:path.join(out,'collection.png'),fullPage:true});
 const filename=await save('#saveStudy','study.json');assert.match(filename,/seven-case.*collection.json/i);
 const saved=JSON.parse(fs.readFileSync(path.join(out,'study.json'),'utf8'));assert.equal(saved.cases.length,7);assert.ok(saved.cases.every(e=>!('result'in e)));
-await save('#exportStudyReport','study.html');const html=fs.readFileSync(path.join(out,'study.html'),'utf8');assert.equal((html.match(/<svg /g)||[]).length,28);assert.ok(!html.includes('Complete input record'));assert.ok(!html.includes('NaN'));
+await save('#exportStudyReport','study.html');const html=fs.readFileSync(path.join(out,'study.html'),'utf8');assert.equal((html.match(/<svg /g)||[]).length,49);assert.ok(!html.includes('Complete input record'));assert.ok(!html.includes('NaN'));
 await save('#exportStudyCSV','summary.csv');
 await save('#exportPptx','seven-cases.pptx');await settle();
-const zip=await JSZip.loadAsync(fs.readFileSync(path.join(out,'seven-cases.pptx')));const slides=Object.keys(zip.files).filter(x=>/^ppt\/slides\/slide\d+\.xml$/.test(x));assert.equal(slides.length,15);const notes=Object.keys(zip.files).filter(x=>/^ppt\/notesSlides\/notesSlide\d+\.xml$/.test(x));assert.equal(notes.length,15);
-const xml=(await Promise.all(slides.map(x=>zip.file(x).async('string')))).join('\n');assert.match(xml,/Bracket X/);assert.match(xml,/&lt;|Fatigue/);assert.ok(xml.includes('<a:tbl>'));assert.equal((xml.match(/<p:pic>/g)||[]).length,21);
+const zip=await JSZip.loadAsync(fs.readFileSync(path.join(out,'seven-cases.pptx')));const slides=Object.keys(zip.files).filter(x=>/^ppt\/slides\/slide\d+\.xml$/.test(x));assert.equal(slides.length,29);const notes=Object.keys(zip.files).filter(x=>/^ppt\/notesSlides\/notesSlide\d+\.xml$/.test(x));assert.equal(notes.length,29);
+const xml=(await Promise.all(slides.map(x=>zip.file(x).async('string')))).join('\n');assert.match(xml,/Bracket X/);assert.match(xml,/&lt;|Fatigue/);assert.ok(xml.includes('<a:tbl>'));assert.equal((xml.match(/<p:pic>/g)||[]).length,56);
 const noteXML=(await Promise.all(notes.map(x=>zip.file(x).async('string')))).join('\n');assert.match(noteXML,/Exact input record/);assert.match(noteXML,/analystNotes/);assert.match(noteXML,/sineText/);
 // Appendix, plot downloads, and exported SVG text bounds.
 for(const box of await page.locator('[data-include]').all())await box.uncheck();await page.locator('[data-include="C01"]').check();await page.check('#includeAppendix');await save('#exportPptx','appendix.pptx');await settle();
@@ -58,4 +58,4 @@ await page.setInputFiles('#loadStudy',path.join(out,'study.json'));await page.wa
 // One invalid selected case blocks collective exports; excluding it permits export of the others.
 await tab('analysis');await page.fill('#Q','0');await tab('study');await page.click('#runAllCases');await settle();assert.match(await page.locator('#collectionMessage').innerText(),/C01:/);assert.equal(await page.locator('#exportPptx').isDisabled(),true);await page.locator('[data-include="C01"]').uncheck();assert.equal(await page.locator('#exportPptx').isEnabled(),true);
 await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.screenshot({path:path.join(out,'collection-mobile.png')});
-assert.deepEqual(errors,[]);assert.deepEqual(network,[]);await browser.close();console.log('PASS collection: seven mixed cases, independent snapshots, reruns, stale protection, include/exclude, common axes, JSON roundtrip/atomic validation, table/paste editor, SVG/PNG/HTML/CSV/PPTX export, 15-slide editable deck with source notes, appendix, mobile, zero network.');
+assert.deepEqual(errors,[]);assert.deepEqual(network,[]);await browser.close();console.log('PASS collection: seven mixed cases, independent snapshots, reruns, stale protection, include/exclude, common axes, JSON roundtrip/atomic validation, table/paste editor, SVG/PNG/HTML/CSV/PPTX export, 29-slide editable deck with source notes, appendix, mobile, zero network.');
