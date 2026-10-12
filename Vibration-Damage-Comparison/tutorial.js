@@ -131,7 +131,7 @@ function updateTutorialExperiment() {
 }
 
 async function loadTutorialCase(mode) {
-  if (busy) return;
+  if (busy || exportBusy) return;
   const inputs = tutorialInputs(mode);
   for (const k of ids) $(k).value = inputs[k] ?? defaults[k];
   $("methodSelect").value = inputs.method;

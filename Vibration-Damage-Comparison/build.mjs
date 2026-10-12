@@ -4,6 +4,10 @@ const template = fs.readFileSync(new URL("app.template.html", root), "utf8");
 const engine = fs.readFileSync(new URL("engine.js", root), "utf8");
 const tutorial = fs.readFileSync(new URL("tutorial.html", root), "utf8");
 const tutorialScript = fs.readFileSync(new URL("tutorial.js", root), "utf8");
+const modules = ["reporting.js", "collection.js", "input-editor.js", "presentation-export.js"];
+const browserModules = modules.map((name) => fs.readFileSync(new URL(name, root), "utf8")).join("\n");
+// Vendored browser runtime keeps the downloadable application fully offline.
+const pptxRuntime = fs.readFileSync(new URL("vendor/pptxgen.bundle.js", root), "utf8").replace(/\/\/# sourceMappingURL=.*$/gm, "");
 const reference = {
   case: JSON.parse(
     fs.readFileSync(new URL("reference/irvine-2011-case.json", root), "utf8"),
@@ -16,6 +20,8 @@ fs.writeFileSync(
   new URL("vibration_damage_comparison.html", root),
   template
     .replace("/*__ENGINE__*/", () => engine)
+    .replace("/*__APP_MODULES__*/", () => browserModules)
+    .replace("/*__PPTX_RUNTIME__*/", () => pptxRuntime)
     .replace("/*__REFERENCE__*/ null", () => JSON.stringify(reference))
     .replace("<!--__TUTORIAL__-->", () => tutorial)
     .replace("/*__TUTORIAL_SCRIPT__*/", () => tutorialScript),

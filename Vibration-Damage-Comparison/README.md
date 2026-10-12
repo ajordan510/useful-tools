@@ -16,6 +16,19 @@ If Run comparison is disabled and **The calculator has not started** remains vis
 
 Read `Vibration_Damage_Comparison_White_Paper.pdf` for the baseline method, equations, ground rules, assumptions, examples and references. The editable source is `WHITE_PAPER.md`. The white paper and archived technical audit describe v1.0.2's documented-schedule model; the assumed-resonance extension introduced in v1.1.0 is specified below and in the app's Method & interpretation section.
 
+## Multiple comparisons and PowerPoint reporting (v2.0)
+
+1. Name the case, identify both specifications/revisions, and record evidence and assumptions. Use the text areas or expandable row editors for sine segments, dwells and PSD points; tab-separated spreadsheet paste is accepted. Expand the input preview to check shapes and units.
+2. Run the comparison. The primary plot shows **coverage R / target**, so the target is always **1**. The separate peak plot uses the same threshold convention. Known-mode assessments use dots with faint connecting context curves. The alternate fatigue estimator is optional. Detailed spectra and sensitivity are grouped below the main results.
+3. **Duplicate case** to reuse a common specification without linking cases, or **Add case** for a new pair. Switch cases with the active-case selector. Names can be edited in the case inputs. Each case retains its own inputs and calculated results during the session. Removing a case can be undone.
+4. In **Case collection & reporting**, include the desired cases and choose **Run all included cases**. Any missing, invalid or changed result blocks collective exports until recalculated or excluded. Common coverage axes use the included cases; this affects presentation only, not the calculation.
+5. **Export PowerPoint** produces a 16:9 summary and two slides per case (inputs, then results). For seven typical cases this is 15 slides. Titles, specification tables and takeaway text are editable; charts are high-resolution PNG images. Exact input records, full analyst interpretation, warnings, revision and calculation time are preserved in slide notes. Optional appendices add peak plots, sensitivity tables and review records. Individual plots can also be saved as labeled SVG or high-resolution PNG.
+6. **Save collection JSON** before closing. Reopening restores independent inputs, inclusion choices and case revisions; results must be recalculated with the current engine. Data stays in memory unless explicitly downloaded. Up to 30 cases can be collected. Existing single-case JSON files still open into the active case.
+
+Compact HTML reports include the takeaway, input summaries, four essential plots and review notes per case. The detailed input/frequency appendix is optional. The summary CSV is useful for a report index; the individual results CSV retains full numerical data. Downloaded case files include the case ID, name and revision. Analyst interpretation is labeled separately from the calculated findings.
+
+**Focus on results** expands the results to the full workspace width. Changing a case input disables all of its result and plot exports until recalculation. No engineering equations were changed for v2.0.
+
 ## Technical audit and reproducible reference case
 
 - [Audit findings and equation traceability](TECHNICAL_AUDIT.md) and [audit PDF](Vibration_Damage_Comparison_Technical_Audit.pdf).
@@ -104,7 +117,11 @@ Browser smoke tests require Playwright and Chromium:
 
 ```sh
 node test_browser.mjs
+node test_collection.mjs
+# Windows with PowerPoint installed: powershell -File test_powerpoint.ps1
 # Optional: CHROMIUM_PATH=/path/to/chromium TEST_ARTIFACT_DIR=/tmp/vdc-qa node test_browser.mjs
+node test_collection.mjs
+# Windows with PowerPoint installed: powershell -File test_powerpoint.ps1
 ```
 
 Twenty-five engine test groups cover the baseline model and assumed-dwell analytical values, grid independence, caps, scaling, optional sweeps, boundary choices, zero credit and sensitivity. The independent reference script covers 96 quadrature/PDF-integration cases; the archived audit contains 32 additional sweep/peak cases. Browser checks cover both dwell modes, plots, exports, case roundtrip and legacy imports, stale-result protection, invalid inputs, zero coverage, mobile layout and absence of network requests. Tutorial checks verify worked values, rendered plots, mobile label bounds, experiment scaling, workspace/export isolation and both example loaders. This is numerical/software verification; experimental validation and engineering approval remain specific to the hardware and program.
@@ -115,4 +132,8 @@ Twenty-five engine test groups cover the baseline model and assumed-dwell analyt
 - Zorman, Slavič & Boltežar (2023), https://doi.org/10.1016/j.ymssp.2023.110149
 - NASA NESC Academy, Tom Irvine, *Using Fatigue to Compare Sine and Random Environments*: https://nescacademy.nasa.gov/video/2584e207341e411b95fa829e191d81441d
 
-Version 1.2.0, 2026-10-11. This release adds the worked-example tutorial, explanatory schematic, calculated plots, isolated duration experiment and example loaders. It retains v1.1.0's independent assumed-resonance screening and the v1.0.2 audited reference checks and baseline calculation methods.
+Version 2.0.0, 2026-10-11. Adds independent case collections, table/paste inputs and previews, normalized reporting plots, SVG/PNG downloads, compact reports and offline PowerPoint export. Retains the tutorial, independent assumed-resonance screening and audited baseline calculation methods.
+
+`reporting.js` owns shared report summaries and figures; `collection.js` owns case snapshots and report selection; `input-editor.js` owns input editing and plot downloads; `presentation-export.js` builds presentations using the vendored PptxGenJS 4.0.1 runtime. See `vendor/README.md` for provenance and licenses. Build after editing any source. The collection tests additionally require JSZip to inspect generated packages; all production export dependencies are embedded in the standalone HTML.
+
+The seven-case browser test checks independent duplication, switching, common axes, stale/invalid export blocking, save/load, include/exclude, remove/undo, table/paste input, SVG/PNG/HTML/CSV export and a 15-slide PPTX with editable tables and source notes. PowerPoint desktop was used to open and render the generated deck during this release's layout review.

@@ -61,6 +61,7 @@ assert.ok(csv.includes("Dirlik_D1"));
 assert.ok(csv.split("\n").length > 420);
 const svg = await save('[data-svg="ratioPlot"]', "ratio.svg");
 assert.ok(svg.includes("<svg"));
+await page.evaluate(() => document.querySelector("#includeAppendix").checked = true);
 const report = await save("#report", "report.html");
 assert.ok(report.includes("Complete input record"));
 assert.ok(report.includes("35,0,8,1000000,1"));
@@ -78,7 +79,7 @@ assert.equal(await page.locator("#Q").inputValue(), "10");
 await page.selectOption("#scope", "modes");
 await run();
 assert.ok(
-  (await page.locator("#rowTable h3").innerText()).includes("3 frequencies"),
+  (await page.locator("#rowTable h3").textContent()).includes("3 frequencies"),
 );
 assert.ok(
   (await page.locator("#results").innerText()).includes(
@@ -150,7 +151,7 @@ await page.selectOption("#assumedBoundary", "lower");
 await run();
 assert.match(await page.locator("#results").innerText(), /Hypothetical resonance screening/);
 assert.equal(await page.locator("#dwellExposure tbody tr").count(), 1);
-assert.match(await page.locator("#dwellExposure").innerText(), /120/);
+assert.match(await page.locator("#dwellExposure").textContent(), /120/);
 assert.match(await page.locator("#gapSummary").innerText(), /0×/);
 assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
 await page.screenshot({ path: path.join(out, "assumed-mobile-results.png") });
@@ -158,8 +159,8 @@ const assumedCSV = await save("#csv", "assumed-results.csv");
 assert.match(assumedCSV, /assumed_dwell_seconds_per_repeat/);
 assert.match(assumedCSV, /outside sine profile; no dwell credit/);
 const assumedReport = await save("#report", "assumed-report.html");
-assert.match(assumedReport, /Hypothetical resonance screening/);
-assert.match(assumedReport, /Assumed dwell at inspected resonance/);
+assert.match(assumedReport, /Independent assumed dwell/);
+assert.match(assumedReport, /assumedHours/);
 const assumedSaved = await save("#saveCase", "assumed-case.json");
 assert.equal(JSON.parse(assumedSaved).inputs.dwellMode, "assumed");
 await page.fill("#assumedHours", "0");
@@ -186,7 +187,7 @@ await page.fill("#fmax", "800");
 await page.fill("#inspectFn", "700");
 await page.fill("#modesText", "");
 await run();
-assert.match(await page.locator("#dwellExposure").innerText(), /Outside sine profile/);
+assert.match(await page.locator("#dwellExposure").textContent(), /Outside sine profile/);
 assert.ok(await page.locator("#ratioPlot circle").count() > 0);
 assert.ok(!(await page.locator("#ratioPlot svg").evaluate((el) => el.outerHTML)).includes("NaN"));
 await page.screenshot({ path: path.join(out, "assumed-zero-results.png") });
@@ -275,7 +276,7 @@ assert.equal(await page.evaluate(() => last.r.rows.every((r) =>
 await page.goto(
   pathToFileURL(path.join(out, "analysis-report.html")).href,
 );
-assert.equal(await page.locator("svg").count(), 6);
+assert.equal(await page.locator("svg").count(), 4);
 await page.setViewportSize({ width: 1100, height: 1000 });
 await page.screenshot({ path: path.join(out, "report.png") });
 assert.deepEqual(errors, []);

@@ -577,6 +577,7 @@
       .two > * {
         min-width: 0;
       }
+      .check{display:flex;align-items:center;gap:8px;margin:0}.check input{width:auto}.results-only{grid-template-columns:1fr!important}.results-only .inputs{display:none}#activeCase{max-width:480px}.input-editor td{padding:3px}.input-editor input,.input-editor select{min-width:75px;padding:6px}.input-editor th{font-size:11px}.input-preview svg{width:100%;height:auto}.input-preview{font-size:12px}.toolbar label{margin:0}.tablewrap button{text-align:left}#studyTable input{width:auto}#studyTable td{white-space:normal;min-width:100px}
     </style>
   </head>
   <body>
@@ -643,18 +644,20 @@
         ><button id="report" disabled>Save analysis report</button
         ><button id="demo">Load example</button
         ><button id="referenceCase">Load reference case</button
-        ><span class="tag">v1.2.0 · OFFLINE · ONE AXIS PER CASE</span>
+        ><span class="tag">v2.0.0 · OFFLINE · ONE AXIS PER CASE</span>
       </div>
+      <div class="toolbar"><label for="activeCase">Active case</label><select id="activeCase"></select><button id="newCase">Add case</button><button id="duplicateCase">Duplicate case</button><button id="removeCase">Remove case</button><button id="undoRemove" disabled>Undo remove</button></div>
       <nav aria-label="Workspace">
         <button class="active" data-tab="analysis">Comparison workspace</button
-        ><button data-tab="tutorial">Worked example &amp; tutorial</button
+        ><button data-tab="study">Case collection &amp; reporting</button><button data-tab="tutorial">Worked example &amp; tutorial</button
         ><button data-tab="method">Method &amp; interpretation</button>
       </nav>
       <div id="status" class="notice warn" role="status" aria-live="polite">
         Example inputs are loaded. Run the comparison to explore the tool, then
         replace them with your test records.
       </div>
-      <section id="analysis">
+      <section id="study" class="hidden"><div class="card"><h2>Case collection &amp; reporting</h2><p>Each case holds its own specifications, assumptions and results. Duplicate a case to reuse a common specification, then edit its copy.</p><label for="studyTitle">Report title</label><input id="studyTitle" maxlength="120" value="Vibration comparison study"><div class="toolbar"><button id="runAllCases">Run all included cases</button><button id="saveStudy">Save collection JSON</button><label class="filelabel" for="loadStudy">Open collection<input id="loadStudy" type="file" accept=".json" hidden></label></div><p id="collectionStatus" role="status"></p><p id="collectionMessage" role="status" style="white-space:pre-wrap"></p><div class="tablewrap"><table><thead><tr><th>Include</th><th>Case</th><th>Specifications</th><th>Dwell basis</th><th>Fatigue</th><th>Peak screen</th></tr></thead><tbody id="studyTable"></tbody></table></div><div class="toolbar"><button class="primary" id="exportPptx" disabled>Export PowerPoint</button><button id="exportStudyReport" disabled>Save collection report</button><button id="exportStudyCSV" disabled>Export summary CSV</button></div><label class="check"><input id="includeAppendix" type="checkbox"> Include detailed appendix in reports and PowerPoint</label><p class="hint">PowerPoint includes a summary and two slides per case, with editable text and tables and high-resolution plot images. Exact inputs and review notes are included in slide notes. Save collection JSON to retain editable cases between sessions.</p></div></section>
+      <section id="analysis"><div class="toolbar"><label class="check"><input type="checkbox" id="resultsOnly"> Focus on results</label><label class="check"><input type="checkbox" id="showCrosscheck"> Show alternate fatigue estimator</label><label class="check"><input type="checkbox" id="commonAxes" checked> Use common coverage axes across included cases</label></div>
         <div class="layout">
           <aside class="inputs">
             <div class="card">
@@ -665,7 +668,7 @@
                 time.
               </p>
               <label for="caseName">Case / component / axis</label
-              ><input id="caseName" value="Illustrative component · X axis" />
+              ><input id="caseName" maxlength="120" value="Illustrative component · X axis" />
               <div class="fields">
                 <div>
                   <label for="Q">Quality factor Q</label
@@ -712,7 +715,7 @@
                 The required ratio is a damage factor, not an acceleration
                 factor.
               </p>
-              <label for="basis">Evidence and assumptions</label
+              <label for="sineName">Sine specification / revision</label><input id="sineName" maxlength="120" value="Illustrative sine"><label for="randomName">Random specification / revision</label><input id="randomName" maxlength="120" value="Illustrative random"><label for="analystNotes">Analyst interpretation (for report)</label><textarea id="analystNotes" maxlength="4000" placeholder="Your conclusion, limitations and recommended next steps. Separate from calculated findings."></textarea><label for="basis">Evidence and assumptions</label
               ><textarea
                 id="basis"
                 placeholder="Test report, dates, hardware configuration, mounting, axis, tolerances, notches, observed resonances, and rationale for Q and b."
@@ -1179,7 +1182,7 @@
         </div>
       </section>
       <div class="foot">
-        Vibration Damage Comparison · 1.0.2 · No network requests. Input data
+        Vibration Damage Comparison · 2.0.0 · No network requests. Input data
         stays in your browser.
       </div>
     </main>
@@ -1199,12 +1202,13 @@
     <script>
       /*__ENGINE__*/
     </script>
+    <script>/*__PPTX_RUNTIME__*/</script>
     <script>
       "use strict";
       const REFERENCE = /*__REFERENCE__*/ null;
       const $ = (id) => document.getElementById(id),
         ids = [
-          "caseName",
+          "caseName", "sineName", "randomName", "analystNotes",
           "basis",
           "sineText",
           "dwellText",
@@ -1274,6 +1278,7 @@
       $("dwellMode").addEventListener("change", () => {
         if ($("dwellMode").value === "assumed") $("scope").value = "bank";
         syncDwellMode();
+        if(collectionReady)invalidateCase();
       });
       function raw() {
         const r = Object.fromEntries(ids.map((k) => [k, $(k).value]));
@@ -1290,6 +1295,9 @@
         $("status").textContent =
           "Inputs changed. Run comparison to refresh plots and exports.";
         $("results").style.opacity = ".45";
+        chartRegistry = {};
+        document.querySelectorAll("[data-svg],[data-png]").forEach(b=>b.disabled=true);
+        invalidateCase();
       }
       ids.forEach((k) => $(k).addEventListener("input", stale));
       $("methodSelect").addEventListener("change", stale);
@@ -1299,7 +1307,7 @@
             document
               .querySelectorAll("nav button")
               .forEach((x) => x.classList.toggle("active", x === b));
-            ["analysis", "tutorial", "method"].forEach((t) =>
+            ["analysis", "study", "tutorial", "method"].forEach((t) =>
               $(t).classList.toggle("hidden", b.dataset.tab !== t),
             );
             if (b.dataset.tab === "tutorial") renderTutorial();
@@ -1325,7 +1333,7 @@
       }
       $("saveCase").onclick = () =>
         download(
-          "vibration-comparison-case.json",
+          caseFilename("case", "json"),
           caseJSON(),
           "application/json",
         );
@@ -1338,11 +1346,15 @@
           if (x.schema !== "vdc-case-1")
             throw Error("Expected a vdc-case-1 JSON file.");
           VDC.parse(x.inputs);
+          for(const key of ["caseName","sineName","randomName"])if(String(x.inputs[key]??"").length>120)throw Error(`${key} must be 120 characters or fewer.`);
+          if(String(x.inputs.analystNotes??"").length>4000)throw Error("Analyst interpretation must be 4000 characters or fewer.");
           for (const k of ids) $(k).value = x.inputs[k] ?? defaults[k];
+          for(const k of ["sineName","randomName","analystNotes"])$(k).value=x.inputs[k]??"";
           syncDwellMode();
           $("methodSelect").value = x.inputs.method;
           stale();
           example = !!x.inputs.example;
+          activeCase().inputs = raw(); refreshInputEditors(); scheduleInputPreview();
           $("status").textContent =
             "Case loaded. Run comparison to calculate this case.";
         } catch (err) {
@@ -1391,146 +1403,7 @@
         return `<div class="metric"><small>${label}</small><div class="value ${bad ? "bad" : ""}">${value}</div><small>${sub}</small></div>`;
       }
       function chartCard(id, title, description) {
-        return `<div class="card"><div class="charthead"><h3>${title}</h3><button data-svg="${id}">Save SVG</button></div><p class="hint">${description}</p><div class="chart" id="${id}"></div></div>`;
-      }
-      function plot(
-        id,
-        series,
-        yLabel,
-        {
-          logY = true,
-          threshold = null,
-          xLabel = "Natural frequency, Hz",
-          yMin = null,
-          yMax = null,
-          gapBands = [],
-          showZeros = false,
-        } = {},
-      ) {
-        const W = 780,
-          H = 320,
-          L = 84,
-          R = 22,
-          T = 14,
-          B = 52,
-          colors = ["#087f83", "#c86327", "#6673a0", "#b276a0"];
-        const all = series
-          .flatMap((s) => s.data)
-          .filter(
-            (p) => p[0] > 0 && Number.isFinite(p[1]) && (!logY || p[1] > 0 || (showZeros && p[1] === 0)),
-          );
-        if (!all.length) {
-          $(id).textContent = "No positive values to plot.";
-          return;
-        }
-        let xmin = Math.min(...all.map((p) => p[0])),
-          xmax = Math.max(...all.map((p) => p[0])),
-          lo = yMin ?? Math.min(...all.filter((p) => !logY || p[1] > 0).map((p) => p[1])),
-          hi = yMax ?? Math.max(...all.map((p) => p[1]));
-        if (!Number.isFinite(lo)) lo = threshold ? threshold / 10 : 0.1;
-        if (hi <= 0) hi = threshold || 1;
-        if (threshold !== null) {
-          lo = Math.min(lo, threshold);
-          hi = Math.max(hi, threshold);
-        }
-        const hasZeros = showZeros && all.some((p) => p[1] === 0);
-        if (hasZeros && threshold !== null) lo = Math.min(lo, threshold / 10);
-        if (logY) {
-          lo = 10 ** Math.floor(Math.log10(lo));
-          hi = 10 ** Math.ceil(Math.log10(hi));
-          if (lo === hi) hi *= 10;
-        } else {
-          lo = Math.min(0, lo);
-          hi *= 1.1;
-        }
-        const X = (x) =>
-            L + (Math.log(x / xmin) / Math.log(xmax / xmin)) * (W - L - R),
-          Y = (y) =>
-            T +
-            (1 -
-              (logY
-                ? Math.log(y / lo) / Math.log(hi / lo)
-                : (y - lo) / (hi - lo))) *
-              (H - T - B);
-        let body = "";
-        if (hasZeros) body += `<text x="${W - R - 5}" y="${H - B - 7}" text-anchor="end" font-size="11" fill="#536b7a">Zero values shown at floor</text>`;
-        for (const band of gapBands) {
-          const left = X(band.from), right = X(band.to);
-          body += `<rect x="${Math.max(L, left - (left === right ? 1 : 0))}" y="${T}" width="${Math.max(2, right - left)}" height="${H - T - B}" fill="#a93636" opacity="0.1"><title>Sampled fatigue gap: ${fmt(band.from, 6)}–${fmt(band.to, 6)} Hz</title></rect>`;
-        }
-        const xt = [];
-        for (
-          let k = Math.floor(Math.log10(xmin));
-          k <= Math.ceil(Math.log10(xmax));
-          k++
-        )
-          for (const a of [1, 2, 5]) {
-            const x = a * 10 ** k;
-            if (x >= xmin && x <= xmax) xt.push(x);
-          }
-        if (xt.length < 2) {
-          xt.length = 0;
-          xt.push(xmin, Math.sqrt(xmin * xmax), xmax);
-        }
-        for (const x of xt)
-          body += `<line x1="${X(x)}" y1="${T}" x2="${X(x)}" y2="${H - B}" stroke="#e5ecef"/><text x="${X(x)}" y="${H - B + 21}" text-anchor="middle" font-size="11" fill="#536b7a">${fmt(x)}</text>`;
-        const yt = logY
-          ? Array.from(
-              { length: Math.min(30, Math.round(Math.log10(hi / lo)) + 1) },
-              (_, i) =>
-                lo *
-                10 ** (i * Math.max(1, Math.ceil(Math.log10(hi / lo) / 12))),
-            )
-          : Array.from({ length: 6 }, (_, i) => lo + ((hi - lo) * i) / 5);
-        for (const y of yt) {
-          if (y > hi * 1.001) continue;
-          body += `<line x1="${L}" y1="${Y(y)}" x2="${W - R}" y2="${Y(y)}" stroke="#e5ecef"/><text x="${L - 9}" y="${Y(y) + 4}" text-anchor="end" font-size="11" fill="#536b7a">${fmt(y)}</text>`;
-        }
-        if (threshold !== null)
-          body += `<line x1="${L}" y1="${Y(threshold)}" x2="${W - R}" y2="${Y(threshold)}" stroke="#a93636" stroke-dasharray="6 4"/><text x="${W - R - 5}" y="${Y(threshold) - 5}" text-anchor="end" font-size="11" fill="#a93636">target ${fmt(threshold)}</text>`;
-        series.forEach((s, i) => {
-          let pen = false,
-            d = "";
-          for (const [x, y] of s.data) {
-            if (!Number.isFinite(y) || x <= 0 || (logY && y <= 0)) {
-              pen = false;
-              continue;
-            }
-            d +=
-              (pen ? "L" : "M") + X(x).toFixed(2) + "," + Y(y).toFixed(2) + " ";
-            pen = true;
-          }
-          body += `<path d="${d}" fill="none" stroke="${s.color || colors[i % colors.length]}" stroke-width="2.2" ${s.dashed ? 'stroke-dasharray="5 4"' : ""}/>`;
-          if (showZeros) for (const [x, y] of s.data) {
-            if (y === 0) body += `<circle cx="${X(x)}" cy="${H - B}" r="2.5" fill="${s.color || colors[i % colors.length]}"><title>Zero coverage at ${fmt(x, 6)} Hz (shown at plot floor)</title></circle>`;
-          }
-        });
-        body += `<text x="${(L + W - R) / 2}" y="${H - 8}" font-size="12" text-anchor="middle" fill="#304c5d">${esc(xLabel)}</text><text transform="translate(15,${(T + H - B) / 2}) rotate(-90)" text-anchor="middle" font-size="12" fill="#304c5d">${esc(yLabel)}</text>`;
-        const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(yLabel)}" style="font-family:system-ui,sans-serif"><rect width="${W}" height="${H}" fill="white"/>${body}</svg>`;
-        chartRegistry[id] = { svg, series };
-        $(id).innerHTML =
-          `<div class="legend">${series.map((s, i) => `<span><i class="dot" style="background:${s.color || colors[i % colors.length]}"></i>${esc(s.name)}</span>`).join("")}</div>${svg}<div class="tip">Move over the plot to inspect values. Full-resolution data is in the CSV.</div>`;
-        const node = $(id).querySelector("svg");
-        node.onpointermove = (e) => {
-          const box = node.getBoundingClientRect(),
-            px = ((e.clientX - box.left) / box.width) * W,
-            f =
-              xmin *
-              Math.exp(
-                Math.max(0, Math.min(1, (px - L) / (W - L - R))) *
-                  Math.log(xmax / xmin),
-              );
-          $(id).querySelector(".tip").textContent = series
-            .map((s) => {
-              const p = s.data.reduce((a, b) =>
-                Math.abs(Math.log(a[0] / f)) < Math.abs(Math.log(b[0] / f))
-                  ? a
-                  : b,
-              );
-              return `${s.name}: ${fmt(p[1], 4)} at ${fmt(p[0], 4)} Hz`;
-            })
-            .join(" | ");
-        };
+        return `<div class="card"><div class="charthead"><h3>${title}</h3><span><button data-svg="${id}">Save SVG</button> <button data-png="${id}">Save PNG</button></span></div><p class="hint">${description}</p><div class="chart" id="${id}"></div></div>`;
       }
       function dwellTable(c, r) {
         const assumed = c.dwellMode === "assumed";
@@ -1556,18 +1429,19 @@
           chartCard(
             "ratioPlot",
             "Fatigue coverage across frequency",
-            "Heritage / new random damage. Both estimators are shown; the selected method governs the summary. The red line is your requested damage ratio.",
-          ) +
-          gapSummary(c, r) +
-          chartCard(
-            "damagePlot",
-            "Fatigue-damage spectra",
-            "Normalized indices use zref = 1 mm. Compare curves only for the same b and Q; never sum across oscillator frequency.",
+            "Coverage = heritage / random damage / required factor. Target = 1. The selected method governs; the alternate estimator is optional.",
           ) +
           chartCard(
             "peakPlot",
             "Independent peak-response screen",
-            "Relative displacement amplitude. Sine peak is the largest modeled sweep or dwell response. Random peak = selected k × response RMS.",
+            "Sine peak / (selected k × random response RMS). Target = 1. This peak screen is separate from fatigue coverage.",
+          ) +
+          gapSummary(c, r) +
+          `<details id="advancedResults"><summary>Inspect input plots, exposure details, spectra and sensitivity</summary>` +
+          chartCard(
+            "damagePlot",
+            "Fatigue-damage spectra",
+            "Normalized indices use zref = 1 mm. Compare curves only for the same b and Q; never sum across oscillator frequency.",
           ) +
           `<div class="two">${chartCard("sinePlot", "Normalized sine profile", "Peak acceleration after unit conversion and the sine multiplier.")}${chartCard("psdPlot", "Random input PSD", `${fmt(r.grms, 4)} gRMS over ${fmt(c.psd[0][0])}–${fmt(c.psd.at(-1)[0])} Hz; level adjustment ${fmt(c.psdDb)} dB.`)}</div>` +
           dwellTable(c, r) +
@@ -1592,116 +1466,12 @@
             "Relative-displacement PSD of the selected oscillator; the response bandwidth controls the random fatigue statistics.",
           ) +
           `<div class="card" id="rowTable"><h3>Assessment data · ${r.assessed.length} frequencies</h3><p class="hint">The full CSV includes every bank frequency, assessment-scope flags, spectral moments, sweep/dwell indices, equivalent duration and amplitude/PSD scales.</p><div class="tablewrap"><table><thead><tr><th>fₙ, Hz</th><th>Damage R</th><th>R / target</th><th>Equal min</th><th>Peak ratio</th><th>α</th></tr></thead><tbody>${r.assessed.map((x) => `<tr><td>${fmt(x.fn, 6)}</td><td>${fmt(x.ratio, 5)}</td><td class="${x.margin < 1 ? "gap" : ""}">${fmt(x.margin, 5)}</td><td>${fmt(x.eqMinutes, 5)}</td><td class="${x.peakRatio < 1 ? "gap" : ""}">${fmt(x.peakRatio, 5)}</td><td>${fmt(x.alpha, 4)}</td></tr>`).join("")}</tbody></table></div></div>` +
-          `<div class="card"><h3>Review notes and numerical checks</h3><ul class="hint">${r.warnings.map((s) => `<li>${esc(s)}</li>`).join("")}</ul><p class="hint">Governing-point integration refinement (random damage if coverage is zero): ${fmt(r.convergence * 100, 4)}% relative change. Frequency grid: ${c.density} points/octave plus explicit modes, inspection frequency, dwells and profile boundaries. Refine the bank separately to resolve narrow minima.</p><p class="hint">Generated ${esc(r.generated)} · engine ${r.version}. Case basis: ${esc(c.basis || "No evidence notes supplied.")}</p></div>`;
-        const xy = (k) => r.rows.map((x) => [x.fn, x[k]]);
-        plot(
-          "ratioPlot",
-          [
-            {
-              name: "Dirlik ratio",
-              data: r.rows.map((x) => [x.fn, x.heritage / x.dirlik]),
-            },
-            {
-              name: "Narrowband ratio",
-              data: r.rows.map((x) => [x.fn, x.heritage / x.nb]),
-              dashed: true,
-            },
-          ],
-          "Heritage / random damage",
-          { threshold: c.damageFactor, gapBands: r.gaps, showZeros: true },
-        );
-        plot(
-          "damagePlot",
-          [
-            { name: "Heritage total", data: xy("heritage") },
-            {
-              name:
-                "Random " + (c.method === "dirlik" ? "Dirlik" : "narrowband"),
-              data: xy("random"),
-            },
-            { name: c.dwellMode === "assumed" ? "Independent resonant dwell" : "Heritage dwells", data: xy("dwell"), dashed: true },
-            { name: "Heritage sweeps", data: xy("sweep"), dashed: true },
-          ],
-          "Normalized damage index",
-        );
-        plot(
-          "peakPlot",
-          [
-            {
-              name: "Heritage peak",
-              data: r.rows.map((x) => [x.fn, x.peakSine * 1000]),
-            },
-            {
-              name: `Random ${c.peakFactor}σ`,
-              data: r.rows.map((x) => [x.fn, x.peakRandom * 1000]),
-            },
-          ],
-          "Relative displacement, mm",
-        );
-        const sp = [];
-        for (const s of c.sine)
-          for (let j = 0; j <= 30; j++) {
-            const f = s.f1 * (s.f2 / s.f1) ** (j / 30),
-              v = s.a1 * (s.a2 / s.a1) ** (j / 30);
-            sp.push([f, VDC.accel(f, s.unit, v) * c.sineScale]);
-          }
-        plot(
-          "sinePlot",
-          [{ name: "Sine base peak", data: sp }],
-          "Acceleration, g peak",
-          { xLabel: "Excitation frequency, Hz" },
-        );
-        plot(
-          "psdPlot",
-          [
-            {
-              name: "Random input",
-              data: c.psd.map(([f, p]) => [f, p * c.psdScale]),
-              color: "#c86327",
-            },
-          ],
-          "PSD, g²/Hz",
-          { xLabel: "Excitation frequency, Hz" },
-        );
-        const pq = VDC.quadrature(
-          c.psd[0][0],
-          c.psd.at(-1)[0],
-          c.inspectFn,
-          c.Q,
-          c.psd.map((x) => x[0]),
-        );
-        plot(
-          "responsePlot",
-          [
-            {
-              name: "Response PSD",
-              data: pq.map(([f]) => [
-                f,
-                VDC.psdAt(f, c.psd) *
-                  c.psdScale *
-                  VDC.transfer(f, c.inspectFn, c.Q) ** 2 *
-                  1e6,
-              ]),
-            },
-          ],
-          "Relative-displacement PSD, mm²/Hz",
-          { xLabel: "Excitation frequency, Hz" },
-        );
-        document
-          .querySelectorAll("[data-svg]")
-          .forEach(
-            (b) =>
-              (b.onclick = () =>
-                download(
-                  b.dataset.svg + ".svg",
-                  chartRegistry[b.dataset.svg].svg,
-                  "image/svg+xml",
-                )),
-          );
+          `</details><div class="card"><h3>Review notes and numerical checks</h3><ul class="hint">${r.warnings.map((s) => `<li>${esc(s)}</li>`).join("")}</ul><p class="hint">Governing-point integration refinement (random damage if coverage is zero): ${fmt(r.convergence * 100, 4)}% relative change. Frequency grid: ${c.density} points/octave plus explicit modes, inspection frequency, dwells and profile boundaries. Refine the bank separately to resolve narrow minima.</p><p class="hint">Generated ${esc(r.generated)} · engine ${r.version}. Case basis: ${esc(c.basis || "No evidence notes supplied.")}</p></div>`;
+        mountReportFigures(c, r);
       }
       async function run() {
-        if (busy) return;
-        busy = true;
+        if (busy || exportBusy) return;
+        busy = true; refreshCollection();
         $("run").disabled = true;
         $("run").textContent = "Calculating…";
         $("results").setAttribute("aria-busy", "true");
@@ -1715,8 +1485,8 @@
           const inputs = raw(),
             c = VDC.parse(inputs),
             r = VDC.analyze(c);
-          render(c, r);
           last = { inputs, c, r };
+          recordCase(last); render(c, r); refreshInputEditors(); scheduleInputPreview();
           $("results").style.opacity = "1";
           $("status").className = "notice" + (example ? " warn" : "");
           $("status").textContent = example
@@ -1733,7 +1503,7 @@
           $("status").scrollIntoView({ block: "center" });
           console.error(e);
         } finally {
-          busy = false;
+          busy = false; refreshCollection();
           $("run").disabled = false;
           $("run").textContent = "Run comparison";
           $("results").setAttribute("aria-busy", "false");
@@ -1843,24 +1613,10 @@
       }
       $("csv").onclick = () => {
         if (last)
-          download("vibration-comparison-results.csv", csvText(), "text/csv");
+          download(caseFilename("results", "csv"), csvText(), "text/csv");
       };
-      $("report").onclick = () => {
-        if (!last) return;
-        const { inputs, c, r } = last;
-        const result = $("results").cloneNode(true);
-        result.querySelectorAll("button").forEach((x) => x.remove());
-        const method = $("method").firstElementChild.cloneNode(true);
-        method.querySelectorAll("button").forEach((x) => x.remove());
-        const caseText = Object.entries(inputs)
-          .map(
-            ([k, v]) =>
-              `<tr><td>${esc(k)}</td><td style="white-space:pre-wrap">${esc(v)}</td></tr>`,
-          )
-          .join("");
-        const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(c.caseName)} — vibration comparison report</title><style>${document.querySelector("style").textContent}\nbody{background:white}main{max-width:1000px}.tablewrap{max-height:none}.card{box-shadow:none}th{position:static}.charthead button{display:none}#rowTable .tablewrap{max-height:none;overflow:visible}</style></head><body><header><div class="eyebrow">ANALYSIS RECORD · ${r.version}</div><h1>${esc(c.caseName)}</h1><p>Heritage sine / random fatigue comparison · ${esc(r.generated)}</p></header><main><p>Static report. Use browser Print to save as PDF. The complete input record is below; pair it with the exported case JSON and results CSV.</p>${$("methodOverview").outerHTML}${result.innerHTML}<div class="card pagebreak"><h2>Complete input record</h2><table>${caseText}</table></div><div class="card pagebreak">${method.innerHTML}</div></main></body></html>`;
-        download("vibration-comparison-report.html", html, "text/html");
-      };
+      /*__APP_MODULES__*/
+      initCollection(); initInputEditors();
       /*__TUTORIAL_SCRIPT__*/
       // Enable Run only after all handlers and the calculation engine are ready.
       $("startup").hidden = true;
