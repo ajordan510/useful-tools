@@ -1,0 +1,1238 @@
+{
+  "source": "https://www.jstage.jst.go.jp/article/tjsass/54/184/54_184_120/_article",
+  "pdfUrl": "https://www.jstage.jst.go.jp/article/tjsass/54/184/54_184_120/_pdf",
+  "title": "Fukuda et al. (2011), An Acoustic Impedance Model for Evaluating the Ground Effect of Static-Firing Tests on a Rocket Motor",
+  "page": "Printed 128 / PDF 9; Figures 17 and 18",
+  "sourceSha256": "d2e7486d8fb016ddeccd7543d928b77879dfa3e4e4c07c987a29c698d0091b97",
+  "dataType": "Measured spectra plus author model-based ground corrections; not predicted SPL curves",
+  "readingPrecisionDb": 0.5,
+  "bandConvention": "Nominal third-octave bands paired with workbench base-10 exact centers by band index. Original band implementation is unspecified; no measured-energy rebinning.",
+  "cases": [
+    {
+      "receiver": "M1",
+      "figure": 17,
+      "calibration": {
+        "framePDF": [
+          73.5459976196289,
+          78.37701416015625,
+          285.9739990234375,
+          163.6409912109375
+        ],
+        "topDb": 138,
+        "bottomDb": 102
+      },
+      "samples": [
+        {
+          "nominalHz": 125,
+          "frequency": 125.89254117941672,
+          "measured": 123.322,
+          "corrected5000": 117.703,
+          "corrected200000": 117.463
+        },
+        {
+          "nominalHz": 160,
+          "frequency": 158.48931924611134,
+          "measured": 123.132,
+          "corrected5000": 117.741,
+          "corrected200000": 117.374
+        },
+        {
+          "nominalHz": 200,
+          "frequency": 199.526231496888,
+          "measured": 125.7,
+          "corrected5000": 120.601,
+          "corrected200000": 120.082
+        },
+        {
+          "nominalHz": 250,
+          "frequency": 251.188643150958,
+          "measured": 130.408,
+          "corrected5000": 125.65,
+          "corrected200000": 125.017
+        },
+        {
+          "nominalHz": 315,
+          "frequency": 316.22776601683796,
+          "measured": 128.067,
+          "corrected5000": 123.815,
+          "corrected200000": 123.031
+        },
+        {
+          "nominalHz": 400,
+          "frequency": 398.1071705534972,
+          "measured": 127.561,
+          "corrected5000": 124.245,
+          "corrected200000": 123.119
+        },
+        {
+          "nominalHz": 500,
+          "frequency": 501.18723362727224,
+          "measured": 127.94,
+          "corrected5000": 125.523,
+          "corrected200000": 124.397
+        },
+        {
+          "nominalHz": 630,
+          "frequency": 630.9573444801932,
+          "measured": 126.827,
+          "corrected5000": 126.068,
+          "corrected200000": 124.714
+        },
+        {
+          "nominalHz": 800,
+          "frequency": 794.3282347242815,
+          "measured": 125.916,
+          "corrected5000": 127.421,
+          "corrected200000": 125.966
+        },
+        {
+          "nominalHz": 1000,
+          "frequency": 1000.0,
+          "measured": 123.55,
+          "corrected5000": 126.257,
+          "corrected200000": 125.169
+        },
+        {
+          "nominalHz": 1250,
+          "frequency": 1258.9254117941673,
+          "measured": 127.472,
+          "corrected5000": 128.573,
+          "corrected200000": 127.535
+        },
+        {
+          "nominalHz": 1600,
+          "frequency": 1584.8931924611136,
+          "measured": 126.586,
+          "corrected5000": 125.422,
+          "corrected200000": 123.904
+        },
+        {
+          "nominalHz": 2000,
+          "frequency": 1995.2623149688795,
+          "measured": 128.118,
+          "corrected5000": 126.574,
+          "corrected200000": 124.676
+        },
+        {
+          "nominalHz": 2500,
+          "frequency": 2511.8864315095802,
+          "measured": 126.574,
+          "corrected5000": 125.802,
+          "corrected200000": 123.625
+        },
+        {
+          "nominalHz": 3150,
+          "frequency": 3162.2776601683795,
+          "measured": 122.815,
+          "corrected5000": 121.689,
+          "corrected200000": 119.349
+        },
+        {
+          "nominalHz": 4000,
+          "frequency": 3981.0717055349724,
+          "measured": 121.234,
+          "corrected5000": 120.689,
+          "corrected200000": 118.589
+        },
+        {
+          "nominalHz": 5000,
+          "frequency": 5011.872336272722,
+          "measured": 120.538,
+          "corrected5000": 120.082,
+          "corrected200000": 118.108
+        },
+        {
+          "nominalHz": 6300,
+          "frequency": 6309.573444801933,
+          "measured": 122.271,
+          "corrected5000": 121.626,
+          "corrected200000": 119.399
+        },
+        {
+          "nominalHz": 8000,
+          "frequency": 7943.282347242815,
+          "measured": 120.854,
+          "corrected5000": 120.55,
+          "corrected200000": 118.716
+        }
+      ],
+      "vectorProvenance": {
+        "measured": [
+          {
+            "markerDrawing": 32,
+            "polylineDrawing": 31,
+            "pointPDF": [
+              75.823,
+              113.142
+            ]
+          },
+          {
+            "markerDrawing": 33,
+            "polylineDrawing": 31,
+            "pointPDF": [
+              88.291,
+              113.592
+            ]
+          },
+          {
+            "markerDrawing": 34,
+            "polylineDrawing": 31,
+            "pointPDF": [
+              99.56,
+              107.508
+            ]
+          },
+          {
+            "markerDrawing": 35,
+            "polylineDrawing": 31,
+            "pointPDF": [
+              110.858,
+              96.359
+            ]
+          },
+          {
+            "markerDrawing": 36,
+            "polylineDrawing": 31,
+            "pointPDF": [
+              122.517,
+              101.903
+            ]
+          },
+          {
+            "markerDrawing": 37,
+            "polylineDrawing": 31,
+            "pointPDF": [
+              134.595,
+              103.102
+            ]
+          },
+          {
+            "markerDrawing": 38,
+            "polylineDrawing": 31,
+            "pointPDF": [
+              145.864,
+              102.203
+            ]
+          },
+          {
+            "markerDrawing": 39,
+            "polylineDrawing": 31,
+            "pointPDF": [
+              157.552,
+              104.84
+            ]
+          },
+          {
+            "markerDrawing": 40,
+            "polylineDrawing": 31,
+            "pointPDF": [
+              169.631,
+              106.998
+            ]
+          },
+          {
+            "markerDrawing": 41,
+            "polylineDrawing": 31,
+            "pointPDF": [
+              180.898,
+              112.602
+            ]
+          },
+          {
+            "markerDrawing": 42,
+            "polylineDrawing": 31,
+            "pointPDF": [
+              192.168,
+              103.312
+            ]
+          },
+          {
+            "markerDrawing": 43,
+            "polylineDrawing": 31,
+            "pointPDF": [
+              204.665,
+              105.41
+            ]
+          },
+          {
+            "markerDrawing": 44,
+            "polylineDrawing": 31,
+            "pointPDF": [
+              215.933,
+              101.783
+            ]
+          },
+          {
+            "markerDrawing": 45,
+            "polylineDrawing": 31,
+            "pointPDF": [
+              227.202,
+              105.44
+            ]
+          },
+          {
+            "markerDrawing": 46,
+            "polylineDrawing": 31,
+            "pointPDF": [
+              238.891,
+              114.341
+            ]
+          },
+          {
+            "markerDrawing": 47,
+            "polylineDrawing": 31,
+            "pointPDF": [
+              250.969,
+              118.087
+            ]
+          },
+          {
+            "markerDrawing": 48,
+            "polylineDrawing": 31,
+            "pointPDF": [
+              262.237,
+              119.735
+            ]
+          },
+          {
+            "markerDrawing": 49,
+            "polylineDrawing": 31,
+            "pointPDF": [
+              273.897,
+              115.63
+            ]
+          },
+          {
+            "markerDrawing": 50,
+            "polylineDrawing": 31,
+            "pointPDF": [
+              285.974,
+              118.986
+            ]
+          }
+        ],
+        "corrected5000": [
+          {
+            "markerDrawing": 52,
+            "polylineDrawing": 51,
+            "pointPDF": [
+              75.823,
+              126.449
+            ]
+          },
+          {
+            "markerDrawing": 53,
+            "polylineDrawing": 51,
+            "pointPDF": [
+              88.291,
+              126.359
+            ]
+          },
+          {
+            "markerDrawing": 54,
+            "polylineDrawing": 51,
+            "pointPDF": [
+              99.56,
+              119.586
+            ]
+          },
+          {
+            "markerDrawing": 55,
+            "polylineDrawing": 51,
+            "pointPDF": [
+              110.858,
+              107.627
+            ]
+          },
+          {
+            "markerDrawing": 56,
+            "polylineDrawing": 51,
+            "pointPDF": [
+              122.517,
+              111.973
+            ]
+          },
+          {
+            "markerDrawing": 57,
+            "polylineDrawing": 51,
+            "pointPDF": [
+              134.595,
+              110.954
+            ]
+          },
+          {
+            "markerDrawing": 58,
+            "polylineDrawing": 51,
+            "pointPDF": [
+              145.864,
+              107.927
+            ]
+          },
+          {
+            "markerDrawing": 59,
+            "polylineDrawing": 51,
+            "pointPDF": [
+              157.552,
+              106.638
+            ]
+          },
+          {
+            "markerDrawing": 60,
+            "polylineDrawing": 51,
+            "pointPDF": [
+              169.631,
+              103.432
+            ]
+          },
+          {
+            "markerDrawing": 61,
+            "polylineDrawing": 51,
+            "pointPDF": [
+              180.898,
+              106.189
+            ]
+          },
+          {
+            "markerDrawing": 62,
+            "polylineDrawing": 51,
+            "pointPDF": [
+              192.168,
+              100.705
+            ]
+          },
+          {
+            "markerDrawing": 63,
+            "polylineDrawing": 51,
+            "pointPDF": [
+              204.665,
+              108.167
+            ]
+          },
+          {
+            "markerDrawing": 64,
+            "polylineDrawing": 51,
+            "pointPDF": [
+              215.933,
+              105.44
+            ]
+          },
+          {
+            "markerDrawing": 65,
+            "polylineDrawing": 51,
+            "pointPDF": [
+              227.202,
+              107.268
+            ]
+          },
+          {
+            "markerDrawing": 66,
+            "polylineDrawing": 51,
+            "pointPDF": [
+              238.891,
+              117.008
+            ]
+          },
+          {
+            "markerDrawing": 67,
+            "polylineDrawing": 51,
+            "pointPDF": [
+              250.969,
+              119.376
+            ]
+          },
+          {
+            "markerDrawing": 68,
+            "polylineDrawing": 51,
+            "pointPDF": [
+              262.237,
+              120.815
+            ]
+          },
+          {
+            "markerDrawing": 69,
+            "polylineDrawing": 51,
+            "pointPDF": [
+              273.897,
+              117.158
+            ]
+          },
+          {
+            "markerDrawing": 70,
+            "polylineDrawing": 51,
+            "pointPDF": [
+              285.974,
+              119.706
+            ]
+          }
+        ],
+        "corrected200000": [
+          {
+            "markerDrawing": 72,
+            "polylineDrawing": 71,
+            "pointPDF": [
+              75.823,
+              127.018
+            ]
+          },
+          {
+            "markerDrawing": 73,
+            "polylineDrawing": 71,
+            "pointPDF": [
+              88.291,
+              127.228
+            ]
+          },
+          {
+            "markerDrawing": 74,
+            "polylineDrawing": 71,
+            "pointPDF": [
+              99.56,
+              120.815
+            ]
+          },
+          {
+            "markerDrawing": 75,
+            "polylineDrawing": 71,
+            "pointPDF": [
+              110.858,
+              109.126
+            ]
+          },
+          {
+            "markerDrawing": 76,
+            "polylineDrawing": 71,
+            "pointPDF": [
+              122.517,
+              113.831
+            ]
+          },
+          {
+            "markerDrawing": 77,
+            "polylineDrawing": 71,
+            "pointPDF": [
+              134.595,
+              113.621
+            ]
+          },
+          {
+            "markerDrawing": 78,
+            "polylineDrawing": 71,
+            "pointPDF": [
+              145.864,
+              110.594
+            ]
+          },
+          {
+            "markerDrawing": 79,
+            "polylineDrawing": 71,
+            "pointPDF": [
+              157.552,
+              109.845
+            ]
+          },
+          {
+            "markerDrawing": 80,
+            "polylineDrawing": 71,
+            "pointPDF": [
+              169.631,
+              106.878
+            ]
+          },
+          {
+            "markerDrawing": 81,
+            "polylineDrawing": 71,
+            "pointPDF": [
+              180.898,
+              108.766
+            ]
+          },
+          {
+            "markerDrawing": 82,
+            "polylineDrawing": 71,
+            "pointPDF": [
+              192.168,
+              103.162
+            ]
+          },
+          {
+            "markerDrawing": 83,
+            "polylineDrawing": 71,
+            "pointPDF": [
+              204.665,
+              111.763
+            ]
+          },
+          {
+            "markerDrawing": 84,
+            "polylineDrawing": 71,
+            "pointPDF": [
+              215.933,
+              109.935
+            ]
+          },
+          {
+            "markerDrawing": 85,
+            "polylineDrawing": 71,
+            "pointPDF": [
+              227.202,
+              112.423
+            ]
+          },
+          {
+            "markerDrawing": 86,
+            "polylineDrawing": 71,
+            "pointPDF": [
+              238.891,
+              122.552
+            ]
+          },
+          {
+            "markerDrawing": 87,
+            "polylineDrawing": 71,
+            "pointPDF": [
+              250.969,
+              124.351
+            ]
+          },
+          {
+            "markerDrawing": 88,
+            "polylineDrawing": 71,
+            "pointPDF": [
+              262.237,
+              125.49
+            ]
+          },
+          {
+            "markerDrawing": 89,
+            "polylineDrawing": 71,
+            "pointPDF": [
+              273.897,
+              122.433
+            ]
+          },
+          {
+            "markerDrawing": 90,
+            "polylineDrawing": 71,
+            "pointPDF": [
+              285.974,
+              124.051
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "receiver": "M8",
+      "figure": 18,
+      "calibration": {
+        "framePDF": [
+          330.0799865722656,
+          78.7969970703125,
+          542.510009765625,
+          163.73297119140625
+        ],
+        "topDb": 150,
+        "bottomDb": 114
+      },
+      "samples": [
+        {
+          "nominalHz": 125,
+          "frequency": 125.89254117941672,
+          "measured": 134.464,
+          "corrected5000": 128.583,
+          "corrected200000": 128.456
+        },
+        {
+          "nominalHz": 160,
+          "frequency": 158.48931924611134,
+          "measured": 135.785,
+          "corrected5000": 129.942,
+          "corrected200000": 129.777
+        },
+        {
+          "nominalHz": 200,
+          "frequency": 199.526231496888,
+          "measured": 142.404,
+          "corrected5000": 136.598,
+          "corrected200000": 136.408
+        },
+        {
+          "nominalHz": 250,
+          "frequency": 251.188643150958,
+          "measured": 141.794,
+          "corrected5000": 136.09,
+          "corrected200000": 135.811
+        },
+        {
+          "nominalHz": 315,
+          "frequency": 316.22776601683796,
+          "measured": 142.988,
+          "corrected5000": 137.373,
+          "corrected200000": 137.03
+        },
+        {
+          "nominalHz": 400,
+          "frequency": 398.1071705534972,
+          "measured": 144.106,
+          "corrected5000": 138.657,
+          "corrected200000": 138.174
+        },
+        {
+          "nominalHz": 500,
+          "frequency": 501.18723362727224,
+          "measured": 143.763,
+          "corrected5000": 138.529,
+          "corrected200000": 137.869
+        },
+        {
+          "nominalHz": 630,
+          "frequency": 630.9573444801932,
+          "measured": 142.023,
+          "corrected5000": 136.84,
+          "corrected200000": 136.192
+        },
+        {
+          "nominalHz": 800,
+          "frequency": 794.3282347242815,
+          "measured": 141.184,
+          "corrected5000": 136.281,
+          "corrected200000": 135.455
+        },
+        {
+          "nominalHz": 1000,
+          "frequency": 1000.0,
+          "measured": 140.524,
+          "corrected5000": 135.989,
+          "corrected200000": 134.985
+        },
+        {
+          "nominalHz": 1250,
+          "frequency": 1258.9254117941673,
+          "measured": 138.555,
+          "corrected5000": 134.49,
+          "corrected200000": 133.308
+        },
+        {
+          "nominalHz": 1600,
+          "frequency": 1584.8931924611136,
+          "measured": 138.606,
+          "corrected5000": 135.214,
+          "corrected200000": 133.867
+        },
+        {
+          "nominalHz": 2000,
+          "frequency": 1995.2623149688795,
+          "measured": 135.836,
+          "corrected5000": 133.296,
+          "corrected200000": 131.835
+        },
+        {
+          "nominalHz": 2500,
+          "frequency": 2511.8864315095802,
+          "measured": 135.036,
+          "corrected5000": 133.677,
+          "corrected200000": 132.216
+        },
+        {
+          "nominalHz": 3150,
+          "frequency": 3162.2776601683795,
+          "measured": 134.642,
+          "corrected5000": 134.985,
+          "corrected200000": 133.778
+        },
+        {
+          "nominalHz": 4000,
+          "frequency": 3981.0717055349724,
+          "measured": 132.966,
+          "corrected5000": 135.163,
+          "corrected200000": 134.782
+        },
+        {
+          "nominalHz": 5000,
+          "frequency": 5011.872336272722,
+          "measured": 133.473,
+          "corrected5000": 135.748,
+          "corrected200000": 135.71
+        },
+        {
+          "nominalHz": 6300,
+          "frequency": 6309.573444801933,
+          "measured": 134.096,
+          "corrected5000": 134.388,
+          "corrected200000": 133.346
+        },
+        {
+          "nominalHz": 8000,
+          "frequency": 7943.282347242815,
+          "measured": 133.283,
+          "corrected5000": 132.0,
+          "corrected200000": 130.425
+        }
+      ],
+      "vectorProvenance": {
+        "measured": [
+          {
+            "markerDrawing": 131,
+            "polylineDrawing": 130,
+            "pointPDF": [
+              332.357,
+              115.451
+            ]
+          },
+          {
+            "markerDrawing": 132,
+            "polylineDrawing": 130,
+            "pointPDF": [
+              344.825,
+              112.334
+            ]
+          },
+          {
+            "markerDrawing": 133,
+            "polylineDrawing": 130,
+            "pointPDF": [
+              356.094,
+              96.719
+            ]
+          },
+          {
+            "markerDrawing": 134,
+            "polylineDrawing": 130,
+            "pointPDF": [
+              367.393,
+              98.158
+            ]
+          },
+          {
+            "markerDrawing": 135,
+            "polylineDrawing": 130,
+            "pointPDF": [
+              379.051,
+              95.34
+            ]
+          },
+          {
+            "markerDrawing": 136,
+            "polylineDrawing": 130,
+            "pointPDF": [
+              391.13,
+              92.703
+            ]
+          },
+          {
+            "markerDrawing": 137,
+            "polylineDrawing": 130,
+            "pointPDF": [
+              402.398,
+              93.512
+            ]
+          },
+          {
+            "markerDrawing": 138,
+            "polylineDrawing": 130,
+            "pointPDF": [
+              414.087,
+              97.618
+            ]
+          },
+          {
+            "markerDrawing": 139,
+            "polylineDrawing": 130,
+            "pointPDF": [
+              426.165,
+              99.596
+            ]
+          },
+          {
+            "markerDrawing": 140,
+            "polylineDrawing": 130,
+            "pointPDF": [
+              437.434,
+              101.155
+            ]
+          },
+          {
+            "markerDrawing": 141,
+            "polylineDrawing": 130,
+            "pointPDF": [
+              448.703,
+              105.8
+            ]
+          },
+          {
+            "markerDrawing": 142,
+            "polylineDrawing": 130,
+            "pointPDF": [
+              461.201,
+              105.68
+            ]
+          },
+          {
+            "markerDrawing": 143,
+            "polylineDrawing": 130,
+            "pointPDF": [
+              472.47,
+              112.214
+            ]
+          },
+          {
+            "markerDrawing": 144,
+            "polylineDrawing": 130,
+            "pointPDF": [
+              483.739,
+              114.102
+            ]
+          },
+          {
+            "markerDrawing": 145,
+            "polylineDrawing": 130,
+            "pointPDF": [
+              495.427,
+              115.031
+            ]
+          },
+          {
+            "markerDrawing": 146,
+            "polylineDrawing": 130,
+            "pointPDF": [
+              507.505,
+              118.987
+            ]
+          },
+          {
+            "markerDrawing": 147,
+            "polylineDrawing": 130,
+            "pointPDF": [
+              518.775,
+              117.789
+            ]
+          },
+          {
+            "markerDrawing": 148,
+            "polylineDrawing": 130,
+            "pointPDF": [
+              530.432,
+              116.32
+            ]
+          },
+          {
+            "markerDrawing": 149,
+            "polylineDrawing": 130,
+            "pointPDF": [
+              542.51,
+              118.238
+            ]
+          }
+        ],
+        "corrected5000": [
+          {
+            "markerDrawing": 151,
+            "polylineDrawing": 150,
+            "pointPDF": [
+              332.357,
+              129.327
+            ]
+          },
+          {
+            "markerDrawing": 152,
+            "polylineDrawing": 150,
+            "pointPDF": [
+              344.825,
+              126.12
+            ]
+          },
+          {
+            "markerDrawing": 153,
+            "polylineDrawing": 150,
+            "pointPDF": [
+              356.094,
+              110.416
+            ]
+          },
+          {
+            "markerDrawing": 154,
+            "polylineDrawing": 150,
+            "pointPDF": [
+              367.393,
+              111.615
+            ]
+          },
+          {
+            "markerDrawing": 155,
+            "polylineDrawing": 150,
+            "pointPDF": [
+              379.051,
+              108.588
+            ]
+          },
+          {
+            "markerDrawing": 156,
+            "polylineDrawing": 150,
+            "pointPDF": [
+              391.13,
+              105.56
+            ]
+          },
+          {
+            "markerDrawing": 157,
+            "polylineDrawing": 150,
+            "pointPDF": [
+              402.398,
+              105.86
+            ]
+          },
+          {
+            "markerDrawing": 158,
+            "polylineDrawing": 150,
+            "pointPDF": [
+              414.087,
+              109.846
+            ]
+          },
+          {
+            "markerDrawing": 159,
+            "polylineDrawing": 150,
+            "pointPDF": [
+              426.165,
+              111.165
+            ]
+          },
+          {
+            "markerDrawing": 160,
+            "polylineDrawing": 150,
+            "pointPDF": [
+              437.434,
+              111.854
+            ]
+          },
+          {
+            "markerDrawing": 161,
+            "polylineDrawing": 150,
+            "pointPDF": [
+              448.703,
+              115.391
+            ]
+          },
+          {
+            "markerDrawing": 162,
+            "polylineDrawing": 150,
+            "pointPDF": [
+              461.201,
+              113.682
+            ]
+          },
+          {
+            "markerDrawing": 163,
+            "polylineDrawing": 150,
+            "pointPDF": [
+              472.47,
+              118.208
+            ]
+          },
+          {
+            "markerDrawing": 164,
+            "polylineDrawing": 150,
+            "pointPDF": [
+              483.739,
+              117.309
+            ]
+          },
+          {
+            "markerDrawing": 165,
+            "polylineDrawing": 150,
+            "pointPDF": [
+              495.427,
+              114.222
+            ]
+          },
+          {
+            "markerDrawing": 166,
+            "polylineDrawing": 150,
+            "pointPDF": [
+              507.505,
+              113.802
+            ]
+          },
+          {
+            "markerDrawing": 167,
+            "polylineDrawing": 150,
+            "pointPDF": [
+              518.775,
+              112.423
+            ]
+          },
+          {
+            "markerDrawing": 168,
+            "polylineDrawing": 150,
+            "pointPDF": [
+              530.432,
+              115.63
+            ]
+          },
+          {
+            "markerDrawing": 169,
+            "polylineDrawing": 150,
+            "pointPDF": [
+              542.51,
+              121.265
+            ]
+          }
+        ],
+        "corrected200000": [
+          {
+            "markerDrawing": 171,
+            "polylineDrawing": 170,
+            "pointPDF": [
+              332.357,
+              129.626
+            ]
+          },
+          {
+            "markerDrawing": 172,
+            "polylineDrawing": 170,
+            "pointPDF": [
+              344.825,
+              126.51
+            ]
+          },
+          {
+            "markerDrawing": 173,
+            "polylineDrawing": 170,
+            "pointPDF": [
+              356.094,
+              110.865
+            ]
+          },
+          {
+            "markerDrawing": 174,
+            "polylineDrawing": 170,
+            "pointPDF": [
+              367.393,
+              112.274
+            ]
+          },
+          {
+            "markerDrawing": 175,
+            "polylineDrawing": 170,
+            "pointPDF": [
+              379.051,
+              109.397
+            ]
+          },
+          {
+            "markerDrawing": 176,
+            "polylineDrawing": 170,
+            "pointPDF": [
+              391.13,
+              106.699
+            ]
+          },
+          {
+            "markerDrawing": 177,
+            "polylineDrawing": 170,
+            "pointPDF": [
+              402.398,
+              107.419
+            ]
+          },
+          {
+            "markerDrawing": 178,
+            "polylineDrawing": 170,
+            "pointPDF": [
+              414.087,
+              111.375
+            ]
+          },
+          {
+            "markerDrawing": 179,
+            "polylineDrawing": 170,
+            "pointPDF": [
+              426.165,
+              113.113
+            ]
+          },
+          {
+            "markerDrawing": 180,
+            "polylineDrawing": 170,
+            "pointPDF": [
+              437.434,
+              114.222
+            ]
+          },
+          {
+            "markerDrawing": 181,
+            "polylineDrawing": 170,
+            "pointPDF": [
+              448.703,
+              118.178
+            ]
+          },
+          {
+            "markerDrawing": 182,
+            "polylineDrawing": 170,
+            "pointPDF": [
+              461.201,
+              116.859
+            ]
+          },
+          {
+            "markerDrawing": 183,
+            "polylineDrawing": 170,
+            "pointPDF": [
+              472.47,
+              121.655
+            ]
+          },
+          {
+            "markerDrawing": 184,
+            "polylineDrawing": 170,
+            "pointPDF": [
+              483.739,
+              120.755
+            ]
+          },
+          {
+            "markerDrawing": 185,
+            "polylineDrawing": 170,
+            "pointPDF": [
+              495.427,
+              117.069
+            ]
+          },
+          {
+            "markerDrawing": 186,
+            "polylineDrawing": 170,
+            "pointPDF": [
+              507.505,
+              114.701
+            ]
+          },
+          {
+            "markerDrawing": 187,
+            "polylineDrawing": 170,
+            "pointPDF": [
+              518.775,
+              112.513
+            ]
+          },
+          {
+            "markerDrawing": 188,
+            "polylineDrawing": 170,
+            "pointPDF": [
+              530.432,
+              118.089
+            ]
+          },
+          {
+            "markerDrawing": 189,
+            "polylineDrawing": 170,
+            "pointPDF": [
+              542.51,
+              124.981
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

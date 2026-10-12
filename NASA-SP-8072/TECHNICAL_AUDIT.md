@@ -193,3 +193,11 @@ Secondary audit and checks:
 - Browser checks cover three plotted spectra, two residual series, cumulative diagnostics, all-band values, CSV/report provenance, calculator loading, fixed-case isolation, mobile layout and offline use.
 
 See [detailed source audit](reference/PUBLISHED_CASE.md), `reference/published-comparison-results.json` and `reference/published-independent-results.json`. This is a secondary technical review, not independent professional sign-off or full-scale rocket validation.
+
+## Follow-up: measured NAL-735 assessment
+
+Added an actual measured-data benchmark from Fukuda et al. (2011), Figures 17–18, with inputs from the companion Tsutsumi et al. (2009) study. Original and both author ground-corrected readings are retained as distinct data. No parameter or offset was fitted. The fixed baseline uses exit conditions, an axis-derived exit speed, assumed c0=343 m/s and the published Sutherland-based 0.84% efficiency estimate with our documented power convention. Geometry resolves the journal prose's radius/diameter inconsistency using the earlier 63.5De radius and diagrams.
+
+The primary 125–2,000 Hz assessment yields 4.39–4.73 dB RMS at M1 and 2.23–2.73 dB RMS at M8. M1 individual discrepancies reach 8.24 dB. These are reported as accuracy evidence with unresolved ground/source-power/model limitations, not a validation pass. Author ground corrections depend on an assumed source distribution, which limits target independence. Above-2-kHz data are retained but excluded from headline metrics.
+
+Vector extraction is independent of the solver and records source hashes and coordinates. Data/geometry/convergence checks and browser/export tests cover the new flow. The independent continuous-plume verification includes both receivers. No production physics or Smith diagnostic code was changed. See [measured-case audit](reference/MEASURED_CASE.md).

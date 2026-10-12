@@ -1,0 +1,13 @@
+{
+  "passed": [
+    "Offline two-receiver measured/corrected overlays",
+    "Primary 13-band assessment; 38 total rows",
+    "Input sensitivities",
+    "CSV and standalone report provenance",
+    "Calculator input mapping and corrected-data pin",
+    "Fixed-case isolation and stale exports",
+    "390px layout"
+  ],
+  "errors": [],
+  "networkRequests": []
+}

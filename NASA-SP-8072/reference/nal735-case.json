@@ -1,0 +1,38 @@
+{
+  "schema": "rocket-acoustics-1",
+  "name": "JAXA NAL-735 · measured-data assessment",
+  "notes": "Conditional comparison to Fukuda et al. (2011), Figs 17-18, Noshiro December 2007 NAL-735 static firings. Motor/efficiency from Tsutsumi et al. EUCASS 2009 Table 1 and Section 3.1: F=260 kN, De=0.614 m, Me=2.92, eta=0.84% (Sutherland estimate, not fitted here). Ue≈2456 m/s inferred from published f=4000 Hz at Sr=1. Atmospheric c0=343 m/s is an explicit assumption. M1 horizontal radius 39 m at 80 degrees; M8 axial=10 m, lateral=13 m. Nozzle height=1.8 m; microphone heights=1.45/0.12 m folded into radial distances. Free-field baseline compared with both author ground-corrected curves; original ground-affected measurements retained separately. Primary assessment nominal 125-2000 Hz; higher bands diagnostic only. Our 0.5*F*Ue power convention differs from the paper's fully-expanded kinetic-power convention. No fit, no physical validation pass, no Smith replay. Source: https://www.jstage.jst.go.jp/article/tjsass/54/184/54_184_120/_article",
+  "thrust": 260000,
+  "velocity": 2456,
+  "diameter": 0.614,
+  "mach": 2.92,
+  "engines": 1,
+  "eta": 0.84,
+  "model": "dsm2",
+  "core": "eldred",
+  "normalize": true,
+  "cluster": "merged",
+  "directivity": "legacy",
+  "propagation": "none",
+  "reflection": 0,
+  "margin": 0,
+  "fmin": 125,
+  "fmax": 8000,
+  "slices": 240,
+  "deflection": 0,
+  "bend": 0,
+  "terminate": false,
+  "c0": 343,
+  "receivers": [
+    {
+      "name": "M1 · 80° arc",
+      "x": 6.7722789290102865,
+      "y": 38.40909707488167
+    },
+    {
+      "name": "M8 · near field",
+      "x": 10,
+      "y": 13.108104363331872
+    }
+  ]
+}

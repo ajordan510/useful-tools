@@ -1,0 +1,424 @@
+{
+  "status": "Conditional measured-data assessment — no validation pass claimed",
+  "source": "https://www.jstage.jst.go.jp/article/tjsass/54/184/54_184_120/_article",
+  "receivers": [
+    {
+      "name": "M1",
+      "rows": [
+        {
+          "nominalHz": 125,
+          "frequency": 125.89254117941672,
+          "measured": 123.322,
+          "corrected5000": 117.703,
+          "corrected200000": 117.463,
+          "predicted": 124.67586240414491,
+          "assessed": true
+        },
+        {
+          "nominalHz": 160,
+          "frequency": 158.48931924611134,
+          "measured": 123.132,
+          "corrected5000": 117.741,
+          "corrected200000": 117.374,
+          "predicted": 125.61132169503075,
+          "assessed": true
+        },
+        {
+          "nominalHz": 200,
+          "frequency": 199.526231496888,
+          "measured": 125.7,
+          "corrected5000": 120.601,
+          "corrected200000": 120.082,
+          "predicted": 126.06550420769689,
+          "assessed": true
+        },
+        {
+          "nominalHz": 250,
+          "frequency": 251.188643150958,
+          "measured": 130.408,
+          "corrected5000": 125.65,
+          "corrected200000": 125.017,
+          "predicted": 126.19018979149024,
+          "assessed": true
+        },
+        {
+          "nominalHz": 315,
+          "frequency": 316.22776601683796,
+          "measured": 128.067,
+          "corrected5000": 123.815,
+          "corrected200000": 123.031,
+          "predicted": 126.02067884718514,
+          "assessed": true
+        },
+        {
+          "nominalHz": 400,
+          "frequency": 398.1071705534972,
+          "measured": 127.561,
+          "corrected5000": 124.245,
+          "corrected200000": 123.119,
+          "predicted": 125.60753821060948,
+          "assessed": true
+        },
+        {
+          "nominalHz": 500,
+          "frequency": 501.18723362727224,
+          "measured": 127.94,
+          "corrected5000": 125.523,
+          "corrected200000": 124.397,
+          "predicted": 125.00789026397892,
+          "assessed": true
+        },
+        {
+          "nominalHz": 630,
+          "frequency": 630.9573444801932,
+          "measured": 126.827,
+          "corrected5000": 126.068,
+          "corrected200000": 124.714,
+          "predicted": 124.33351880443756,
+          "assessed": true
+        },
+        {
+          "nominalHz": 800,
+          "frequency": 794.3282347242815,
+          "measured": 125.916,
+          "corrected5000": 127.421,
+          "corrected200000": 125.966,
+          "predicted": 123.56639347394413,
+          "assessed": true
+        },
+        {
+          "nominalHz": 1000,
+          "frequency": 1000,
+          "measured": 123.55,
+          "corrected5000": 126.257,
+          "corrected200000": 125.169,
+          "predicted": 122.73289960381096,
+          "assessed": true
+        },
+        {
+          "nominalHz": 1250,
+          "frequency": 1258.9254117941673,
+          "measured": 127.472,
+          "corrected5000": 128.573,
+          "corrected200000": 127.535,
+          "predicted": 121.84936477700474,
+          "assessed": true
+        },
+        {
+          "nominalHz": 1600,
+          "frequency": 1584.8931924611136,
+          "measured": 126.586,
+          "corrected5000": 125.422,
+          "corrected200000": 123.904,
+          "predicted": 120.9262403527592,
+          "assessed": true
+        },
+        {
+          "nominalHz": 2000,
+          "frequency": 1995.2623149688795,
+          "measured": 128.118,
+          "corrected5000": 126.574,
+          "corrected200000": 124.676,
+          "predicted": 119.66907444997591,
+          "assessed": true
+        },
+        {
+          "nominalHz": 2500,
+          "frequency": 2511.8864315095802,
+          "measured": 126.574,
+          "corrected5000": 125.802,
+          "corrected200000": 123.625,
+          "predicted": 118.36883833859814,
+          "assessed": false
+        },
+        {
+          "nominalHz": 3150,
+          "frequency": 3162.2776601683795,
+          "measured": 122.815,
+          "corrected5000": 121.689,
+          "corrected200000": 119.349,
+          "predicted": 117.0320683823389,
+          "assessed": false
+        },
+        {
+          "nominalHz": 4000,
+          "frequency": 3981.0717055349724,
+          "measured": 121.234,
+          "corrected5000": 120.689,
+          "corrected200000": 118.589,
+          "predicted": 115.64180672967875,
+          "assessed": false
+        },
+        {
+          "nominalHz": 5000,
+          "frequency": 5011.872336272722,
+          "measured": 120.538,
+          "corrected5000": 120.082,
+          "corrected200000": 118.108,
+          "predicted": 114.18833299465133,
+          "assessed": false
+        },
+        {
+          "nominalHz": 6300,
+          "frequency": 6309.573444801933,
+          "measured": 122.271,
+          "corrected5000": 121.626,
+          "corrected200000": 119.399,
+          "predicted": 112.67549058450251,
+          "assessed": false
+        },
+        {
+          "nominalHz": 8000,
+          "frequency": 7943.282347242815,
+          "measured": 120.854,
+          "corrected5000": 120.55,
+          "corrected200000": 118.716,
+          "predicted": 111.1067969209093,
+          "assessed": false
+        }
+      ],
+      "metrics": {
+        "corrected5000": {
+          "bands": 13,
+          "bias": -0.2566556244562456,
+          "rmse": 4.731929797332974,
+          "maxAbsolute": 7.8703216950307535
+        },
+        "corrected200000": {
+          "bands": 13,
+          "bias": 0.7545751447745269,
+          "rmse": 4.391092426178004,
+          "maxAbsolute": 8.237321695030758
+        },
+        "raw": {
+          "bands": 13,
+          "bias": -2.487886393687013,
+          "rmse": 3.822415747498397,
+          "maxAbsolute": 8.448925550024086
+        }
+      }
+    },
+    {
+      "name": "M8",
+      "rows": [
+        {
+          "nominalHz": 125,
+          "frequency": 125.89254117941672,
+          "measured": 134.464,
+          "corrected5000": 128.583,
+          "corrected200000": 128.456,
+          "predicted": 132.76334960473943,
+          "assessed": true
+        },
+        {
+          "nominalHz": 160,
+          "frequency": 158.48931924611134,
+          "measured": 135.785,
+          "corrected5000": 129.942,
+          "corrected200000": 129.777,
+          "predicted": 134.1330027672017,
+          "assessed": true
+        },
+        {
+          "nominalHz": 200,
+          "frequency": 199.526231496888,
+          "measured": 142.404,
+          "corrected5000": 136.598,
+          "corrected200000": 136.408,
+          "predicted": 135.04627072575173,
+          "assessed": true
+        },
+        {
+          "nominalHz": 250,
+          "frequency": 251.188643150958,
+          "measured": 141.794,
+          "corrected5000": 136.09,
+          "corrected200000": 135.811,
+          "predicted": 135.64614390013648,
+          "assessed": true
+        },
+        {
+          "nominalHz": 315,
+          "frequency": 316.22776601683796,
+          "measured": 142.988,
+          "corrected5000": 137.373,
+          "corrected200000": 137.03,
+          "predicted": 135.94196799183172,
+          "assessed": true
+        },
+        {
+          "nominalHz": 400,
+          "frequency": 398.1071705534972,
+          "measured": 144.106,
+          "corrected5000": 138.657,
+          "corrected200000": 138.174,
+          "predicted": 135.94718851121652,
+          "assessed": true
+        },
+        {
+          "nominalHz": 500,
+          "frequency": 501.18723362727224,
+          "measured": 143.763,
+          "corrected5000": 138.529,
+          "corrected200000": 137.869,
+          "predicted": 135.68757295081866,
+          "assessed": true
+        },
+        {
+          "nominalHz": 630,
+          "frequency": 630.9573444801932,
+          "measured": 142.023,
+          "corrected5000": 136.84,
+          "corrected200000": 136.192,
+          "predicted": 135.1656820840972,
+          "assessed": true
+        },
+        {
+          "nominalHz": 800,
+          "frequency": 794.3282347242815,
+          "measured": 141.184,
+          "corrected5000": 136.281,
+          "corrected200000": 135.455,
+          "predicted": 134.42162018259262,
+          "assessed": true
+        },
+        {
+          "nominalHz": 1000,
+          "frequency": 1000,
+          "measured": 140.524,
+          "corrected5000": 135.989,
+          "corrected200000": 134.985,
+          "predicted": 133.5073151184073,
+          "assessed": true
+        },
+        {
+          "nominalHz": 1250,
+          "frequency": 1258.9254117941673,
+          "measured": 138.555,
+          "corrected5000": 134.49,
+          "corrected200000": 133.308,
+          "predicted": 132.47736241400665,
+          "assessed": true
+        },
+        {
+          "nominalHz": 1600,
+          "frequency": 1584.8931924611136,
+          "measured": 138.606,
+          "corrected5000": 135.214,
+          "corrected200000": 133.867,
+          "predicted": 131.37732825843963,
+          "assessed": true
+        },
+        {
+          "nominalHz": 2000,
+          "frequency": 1995.2623149688795,
+          "measured": 135.836,
+          "corrected5000": 133.296,
+          "corrected200000": 131.835,
+          "predicted": 130.09102357721005,
+          "assessed": true
+        },
+        {
+          "nominalHz": 2500,
+          "frequency": 2511.8864315095802,
+          "measured": 135.036,
+          "corrected5000": 133.677,
+          "corrected200000": 132.216,
+          "predicted": 128.77635262550393,
+          "assessed": false
+        },
+        {
+          "nominalHz": 3150,
+          "frequency": 3162.2776601683795,
+          "measured": 134.642,
+          "corrected5000": 134.985,
+          "corrected200000": 133.778,
+          "predicted": 127.44224685533167,
+          "assessed": false
+        },
+        {
+          "nominalHz": 4000,
+          "frequency": 3981.0717055349724,
+          "measured": 132.966,
+          "corrected5000": 135.163,
+          "corrected200000": 134.782,
+          "predicted": 126.08502328144557,
+          "assessed": false
+        },
+        {
+          "nominalHz": 5000,
+          "frequency": 5011.872336272722,
+          "measured": 133.473,
+          "corrected5000": 135.748,
+          "corrected200000": 135.71,
+          "predicted": 124.69869820920637,
+          "assessed": false
+        },
+        {
+          "nominalHz": 6300,
+          "frequency": 6309.573444801933,
+          "measured": 134.096,
+          "corrected5000": 134.388,
+          "corrected200000": 133.346,
+          "predicted": 123.27126351592945,
+          "assessed": false
+        },
+        {
+          "nominalHz": 8000,
+          "frequency": 7943.282347242815,
+          "measured": 133.283,
+          "corrected5000": 132,
+          "corrected200000": 130.425,
+          "predicted": 121.7817601647918,
+          "assessed": false
+        }
+      ],
+      "metrics": {
+        "corrected5000": {
+          "bands": 13,
+          "bias": -1.2058593779654114,
+          "rmse": 2.725539681146418,
+          "maxAbsolute": 4.191002767201695
+        },
+        "corrected200000": {
+          "bands": 13,
+          "bias": -0.5354747625807936,
+          "rmse": 2.228232565676796,
+          "maxAbsolute": 4.356002767201716
+        },
+        "raw": {
+          "bands": 13,
+          "bias": -6.140474762580794,
+          "rmse": 6.463872974003315,
+          "maxAbsolute": 8.15881148878347
+        }
+      }
+    }
+  ],
+  "sensitivity": [
+    {
+      "name": "Sound speed 331 m/s",
+      "maxBandChangeDb": 0.20208211415172173
+    },
+    {
+      "name": "Sound speed 355 m/s",
+      "maxBandChangeDb": 0.19449007393038187
+    },
+    {
+      "name": "Exit speed −5%",
+      "maxBandChangeDb": 0.22276394711153102
+    },
+    {
+      "name": "Exit speed +5%",
+      "maxBandChangeDb": 0.2118929906993685
+    },
+    {
+      "name": "Acoustic efficiency 0.5%",
+      "maxBandChangeDb": 2.253092817258647
+    },
+    {
+      "name": "Acoustic efficiency 1.0%",
+      "maxBandChangeDb": 0.7572071393812223
+    }
+  ]
+}
