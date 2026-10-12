@@ -17,14 +17,30 @@ const VDCReport = (() => {
   function summary(c, r) {
     return {
       fatigue: `${r.worst.margin >= 1 ? "Modeled fatigue target met" : "Modeled fatigue coverage gap"}: ${num(r.worst.margin)}× at ${num(r.worst.fn, 6)} Hz`,
-      peak: `${r.peakWorst.peakRatio >= 1 ? "Peak screen covered" : "Peak-screen gap"}: ${num(r.peakWorst.peakRatio)}× at ${num(r.peakWorst.fn, 6)} Hz`,
+      peak: `${r.peakWorst.peakRatio >= 1 ? "Peak screen covered" : "Peak-screen gap"}: ${num(r.peakWorst.peakRatio)}× at ${num(r.peakWorst.fn, 6)} Hz (${peakLabel(c)})`,
       scope: c.scope === "bank" ? `Full bank, ${num(c.fmin)}–${num(c.fmax)} Hz` : `Listed modes only: ${c.modes.map((f) => num(f, 6)).join(", ")} Hz`,
       dwell: c.dwellMode === "assumed" ? `Independent assumed dwell: ${c.assumedDwell.hours ? c.assumedDwell.hours+" h cap" : "no time cap"}, ${c.assumedDwell.cycleCap ? c.assumedDwell.cycleCap+" cycle cap" : "no cycle cap"}, ${c.assumedDwell.repeats} repeat(s)` : `${c.dwell.length} documented dwell(s)`,
       gaps: r.gaps.length ? r.gaps.map((g) => `${num(g.from, 5)}${g.to !== g.from ? "–" + num(g.to, 5) : ""} Hz`).join(", ") : "None at assessed frequencies",
       noDwell: c.dwellMode === "assumed" ? r.assessed.filter((x) => !x.contributions.length).length : 0,
     };
   }
+  function peakLabel(c) {
+    return c.peakMode === "extreme" ? `Extreme ${num(c.peakProbability)}% per mode` : `Selected k = ${num(c.peakFactor)}`;
+  }
+  function peakCaption(c) {
+    return c.peakMode === "extreme"
+      ? `${c.peakProbability}% nominal non-exceedance per oscillator over ${num(c.T)} s; approximate Gaussian, nearly narrowband model. Not a joint probability across modes.`
+      : `Selected k = ${num(c.peakFactor)}; this fixed factor is not a duration-based confidence level.`;
+  }
   function peakBasis(c,r) {
+    if(c.peakMode === "extreme") {
+      const factors=r.rows.map(x=>x.effectivePeakFactor);
+      return `${peakCaption(c)} Irvine Rev H equation (4), with N = ν₀T from each response spectrum. `+
+        `Across the plotted bank, k = ${num(Math.min(...factors))}–${num(Math.max(...factors))}. `+
+        `At the inspected ${num(r.inspect.fn)} Hz oscillator: ν₀ = ${num(r.inspect.nu0)} Hz, N = ${num(r.inspect.peakCycles)}, k = ${num(r.inspect.effectivePeakFactor)}, RMS = ${num(r.inspect.sigma*1000)} mm, random extreme = ${num(r.inspect.peakRandom*1000)} mm. `+
+        `At the peak-governing ${num(r.peakWorst.fn)} Hz oscillator, k = ${num(r.peakWorst.effectivePeakFactor)}. `+
+        `Total duration combines ${c.randomRepeats} exposure(s); startup transients are excluded. The tool requires N ≥ 100 as a practical long-exposure guard. Review bandwidth and measured peak behavior before relying on the nominal probability.`;
+    }
     const n=r.inspect.nu0*c.T;
     const estimate=n>1?Math.sqrt(2*Math.log(n)):null;
     return `Selected k = ${num(c.peakFactor)}. At the inspected ${num(r.inspect.fn)} Hz oscillator, RMS = ${num(r.inspect.sigma*1000)} mm and the selected random peak = ${num(r.inspect.peakRandom*1000)} mm. `+
@@ -41,7 +57,7 @@ const VDCReport = (() => {
       ["Random exposure", `${num(c.T / 60, 6)} min total, ${c.randomRepeats} exposure(s), ${c.psdDb} dB`],
       ["Random input", `${num(r.grms, 5)} gRMS, ${c.psd[0][0]}–${c.psd.at(-1)[0]} Hz`],
       ["Model", `Q = ${c.Q}, b = ${c.b}, ${c.method === "dirlik" ? "Dirlik" : "Narrowband"}`],
-      ["Targets", `Damage factor ${c.damageFactor}, random peak ${c.peakFactor}σ`],
+      ["Targets", `Damage factor ${c.damageFactor}; ${peakLabel(c)}`],
     ];
   }
   function figures(c, r, settings = {}) {
@@ -65,7 +81,7 @@ const VDCReport = (() => {
     const displacement = sine.map(([f,a])=>[f,2*a*9.80665/((2*Math.PI*f)**2)/0.0254]);
     return [
       fig("ratioPlot", "Fatigue coverage", "Fatigue coverage", ratio, {threshold: 1, gaps: r.gaps, governing: [r.worst.fn, r.worst.margin], limits: settings.coverageLimits, definition: `Coverage = R / F; R = sine damage / random damage; F = ${num(c.damageFactor)}. Target = 1.`}),
-      fig("peakPlot", "Peak-response coverage", "Peak coverage", [{name: `Peak screen (${c.peakFactor}σ)`, data: bank("peakRatio")}], {threshold: 1, governing: [r.peakWorst.fn, r.peakWorst.peakRatio], limits: settings.peakLimits, definition: "Peak coverage = sine peak / random peak estimate. Target = 1."}),
+      fig("peakPlot", "Peak-response coverage", "Peak coverage", [{name: peakLabel(c), data: bank("peakRatio")}], {threshold: 1, governing: [r.peakWorst.fn, r.peakWorst.peakRatio], limits: settings.peakLimits, scope: `${scope} | ${peakLabel(c)}${c.peakMode === "extreme" ? `; T = ${num(c.T)} s` : ""}`, definition: `Peak coverage = sine peak / random peak. Target = 1.${c.peakMode === "extreme" ? ` Approximate extreme; T = ${num(c.T)} s.` : ""}`}),
       fig("sinePlot", "Sine input profile", "Acceleration, g peak", [{name: c.sineName || "Sine specification", data: sine}], {scopeModes: null, scope: "Input spectrum", xLabel: "Excitation frequency, Hz"}),
       fig("psdPlot", "Random input PSD", "Acceleration PSD, g²/Hz", [{name: c.randomName || "Random specification", data: c.psd.map(([f, p]) => [f, p * c.psdScale])}], {scopeModes: null, scope: `Input spectrum: ${num(r.grms)} gRMS, ${num(c.T / 60)} min`, xLabel: "Excitation frequency, Hz"}),
       fig("fatigueComparePlot", "Fatigue comparison", "Normalized damage index", [
@@ -74,9 +90,9 @@ const VDCReport = (() => {
       ], {xLimits:settings.coverageLimits, definition:"Coverage on the right = sine damage / required random damage. Same Q, b and duration basis."}),
       fig("peakResponsePlot", "Peak response and RMS VRS", "Relative displacement, mm", [
         {name:"Sine peak",data:r.rows.map(x=>[x.fn,x.peakSine*1000])},
-        {name:`Random peak (${num(c.peakFactor)} × RMS)`,data:r.rows.map(x=>[x.fn,x.peakRandom*1000])},
+        {name:c.peakMode === "extreme" ? `Random extreme (${num(c.peakProbability)}% per mode)` : `Random peak (${num(c.peakFactor)} × RMS)`,data:r.rows.map(x=>[x.fn,x.peakRandom*1000])},
         {name:"Random RMS (VRS; reference)",data:r.rows.map(x=>[x.fn,x.sigma*1000])},
-      ], {xLimits:settings.peakLimits, definition:"Coverage uses the two peak curves. RMS is shown for context; it is not a peak."}),
+      ], {xLimits:settings.peakLimits, scope: c.peakMode === "extreme" ? `${scope} | Approximate extreme; T = ${num(c.T)} s` : scope, definition:c.peakMode === "extreme" ? `Coverage uses sine / random extreme. Approximate ${num(c.peakProbability)}% per mode; T = ${num(c.T)} s. RMS = context.` : "Coverage uses the two peak curves. RMS is shown for context; it is not a peak."}),
       fig("sineDisplacementPlot", "Sine input displacement", "Displacement, inches DA", [{name:c.sineName||"Sine specification",data:displacement}],
         {scopeModes:null,scope:"Base input · double amplitude = peak-to-peak",xLabel:"Excitation frequency, Hz",definition:`DA = 2 × peak displacement. Includes sine scale ${num(c.sineScale)}; excludes dwell overrides.`}),
       fig("damagePlot", "Fatigue-damage spectra", "Normalized damage index", [
@@ -143,6 +159,6 @@ const VDCReport = (() => {
     out+=text(`Engine ${f.version} · ${f.generated}`,W-R,H-9,11,'text-anchor="end"');
     return `<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="620" viewBox="0 0 1000 620" role="img" aria-label="${xml(f.title+": "+f.meta)}" style="font-family:Arial,sans-serif;fill:#172d40"><title>${xml(f.title+" — "+f.meta)}</title>${out}</svg>`;
   }
-  return {xml, num, slug, wrap, summary, peakBasis, specs, figures, svg, limits, commonLimits};
+  return {xml, num, slug, wrap, summary, peakLabel, peakCaption, peakBasis, specs, figures, svg, limits, commonLimits};
 })();
 if (typeof module !== "undefined" && module.exports) module.exports = VDCReport;

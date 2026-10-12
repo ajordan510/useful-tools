@@ -19,9 +19,17 @@ assert.equal(await page.evaluate(()=>chartRegistry.ratioPlot.series.length),1);
 await page.check('#showCrosscheck');assert.equal(await page.evaluate(()=>chartRegistry.ratioPlot.series.length),2);
 await page.uncheck('#showCrosscheck');
 await page.click('#duplicateCase');assert.equal(await page.locator('#activeCase option').count(),2);assert.equal(await page.evaluate(()=>last),null);
-await page.fill('#caseName','Bracket X — longer random');await page.fill('#duration','4');assert.equal(await page.locator('#exportPptx').isDisabled(),true);await run();
+await page.fill('#caseName','Bracket X — longer random');await page.fill('#duration','4');
+assert.equal(await page.locator('#peakMode').inputValue(),'fixed');assert.equal(await page.locator('#peakProbability').isDisabled(),true);
+await page.selectOption('#peakMode','extreme');assert.equal(await page.locator('#peakFactor').isDisabled(),true);await page.fill('#peakProbability','95');
+assert.equal(await page.locator('#exportPptx').isDisabled(),true);await run();
+assert.match(await page.locator('#peakBasis').innerText(),/95% nominal non-exceedance/);
+assert.match(await page.locator('#peakResponsePlot').innerText(),/95% per mode/);
+const peakBounds=await page.locator('#peakResponsePlot svg').evaluate(el=>[...el.querySelectorAll('text')].filter(t=>{const b=t.getBoundingClientRect(),r=el.getBoundingClientRect();return b.left<r.left-1||b.top<r.top-1||b.right>r.right+1||b.bottom>r.bottom+1;}).map(t=>t.textContent));assert.deepEqual(peakBounds,[]);
+await save('#csv','extreme-case.csv');assert.match(fs.readFileSync(path.join(out,'extreme-case.csv'),'utf8'),/effective_peak_factor_k/);
 assert.equal(await page.evaluate(()=>study.cases[0].result.r.worst.margin),original.ratio);
 await page.selectOption('#activeCase','C01');assert.equal(await page.locator('#duration').inputValue(),original.inputs.duration);assert.equal(await page.evaluate(()=>last.r.worst.margin),original.ratio);
+assert.equal(await page.locator('#peakMode').inputValue(),'fixed');assert.equal(await page.locator('#peakProbability').isDisabled(),true);assert.equal(await page.locator('#peakFactor').isEnabled(),true);
 await page.fill('#Q','11');assert.equal(await page.locator('[data-svg="ratioPlot"]').isDisabled(),true);assert.equal(await page.locator('[data-png="ratioPlot"]').isDisabled(),true);await run();
 await page.check('#resultsOnly');assert.equal(await page.locator('.inputs').isVisible(),false);await page.uncheck('#resultsOnly');
 // A mixed collection: shared sine, independent pairs, bank and listed-mode scopes, assumed and documented dwells.
@@ -38,6 +46,7 @@ await save('#exportPptx','seven-cases.pptx');await settle();
 const zip=await JSZip.loadAsync(fs.readFileSync(path.join(out,'seven-cases.pptx')));const slides=Object.keys(zip.files).filter(x=>/^ppt\/slides\/slide\d+\.xml$/.test(x));assert.equal(slides.length,29);const notes=Object.keys(zip.files).filter(x=>/^ppt\/notesSlides\/notesSlide\d+\.xml$/.test(x));assert.equal(notes.length,29);
 const xml=(await Promise.all(slides.map(x=>zip.file(x).async('string')))).join('\n');assert.match(xml,/Bracket X/);assert.match(xml,/&lt;|Fatigue/);assert.ok(xml.includes('<a:tbl>'));assert.equal((xml.match(/<p:pic>/g)||[]).length,56);
 const noteXML=(await Promise.all(notes.map(x=>zip.file(x).async('string')))).join('\n');assert.match(noteXML,/Exact input record/);assert.match(noteXML,/analystNotes/);assert.match(noteXML,/sineText/);
+assert.match(xml,/Extreme 95% per mode/);assert.match(xml,/95% nominal non-exceedance/);assert.match(noteXML,/Irvine Rev H equation \(4\)/);assert.match(noteXML,/peakProbability/);
 // Appendix, plot downloads, and exported SVG text bounds.
 for(const box of await page.locator('[data-include]').all())await box.uncheck();await page.locator('[data-include="C01"]').check();await page.check('#includeAppendix');await save('#exportPptx','appendix.pptx');await settle();
 await tab('analysis');await page.selectOption('#activeCase','C01');
@@ -49,6 +58,7 @@ await page.locator('#psdText + details').evaluate(el=>el.open=true);await page.l
 await page.fill('#psdText','90,0.01\n110,0.01');await page.locator('#psdText').evaluate(el=>{el.select();const d=new DataTransfer();d.setData('text/plain','90\t0.01\n110\t0.01');el.dispatchEvent(new ClipboardEvent('paste',{clipboardData:d,bubbles:true,cancelable:true}));});assert.equal(await page.locator('#psdText').inputValue(),'90,0.01\n110,0.01');
 await page.click('#removeCase');assert.equal(await page.locator('#activeCase option').count(),6);await page.click('#undoRemove');assert.equal(await page.locator('#activeCase option').count(),7);
 await tab('study');await page.setInputFiles('#loadStudy',path.join(out,'study.json'));await page.waitForFunction(()=>study.cases.length===7&&study.cases.every(e=>!e.result));assert.equal(await page.locator('#exportPptx').isDisabled(),true);assert.equal(await page.evaluate(()=>study.cases[0].inputs.Q),'11');
+assert.equal(await page.evaluate(()=>study.cases[1].inputs.peakMode),'extreme');assert.equal(await page.evaluate(()=>study.cases[1].inputs.peakProbability),'95');
 // Invalid import is atomic and cannot replace the collection.
 await page.setInputFiles('#loadStudy',{name:'bad.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({...saved,cases:[saved.cases[0],saved.cases[0]]}))});await page.waitForFunction(()=>document.querySelector('#collectionMessage').textContent.includes('unique'));assert.equal(await page.evaluate(()=>study.cases.length),7);
 await page.click('#runAllCases');await settle();assert.equal(await page.locator('#exportPptx').isEnabled(),true);

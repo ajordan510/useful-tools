@@ -5,7 +5,7 @@
   else root.VDC = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
-  const VERSION = "2.1.0",
+  const VERSION = "2.2.0",
     G = 9.80665,
     ZREF = 0.001;
   const UNITS = {
@@ -329,12 +329,20 @@
       fmax: [0.1, 1e5],
       density: [12, 192],
       damageFactor: [1, 1e6],
-      peakFactor: [1, 20],
       psdDb: [-100, 100],
       sineScale: [0.001, 1000],
       inspectFn: [0.1, 1e5],
     };
     for (const [k, r] of Object.entries(ranges)) c[k] = number(raw[k], k, ...r);
+    c.peakMode = raw.peakMode ?? "fixed";
+    assert(["fixed", "extreme"].includes(c.peakMode), "Invalid peak response model.");
+    const fixedFactor = Number(raw.peakFactor);
+    c.peakFactor = c.peakMode === "fixed"
+      ? number(raw.peakFactor, "peakFactor", 1, 20)
+      : (Number.isFinite(fixedFactor) && fixedFactor >= 1 && fixedFactor <= 20 ? fixedFactor : null);
+    c.peakProbability = c.peakMode === "extreme"
+      ? number(raw.peakProbability ?? 99, "Peak non-exceedance probability (%)", 50, 99.99)
+      : 99;
     assert(c.fmax > c.fmin, "Maximum mode frequency must exceed minimum.");
     assert(
       Number.isInteger(c.density) &&
@@ -484,7 +492,11 @@
       heritage = sweep + dwell,
       random = rand[c.method],
       ratio = heritage / random,
-      peakRandom = c.peakFactor * rand.sigma;
+      peakCycles = rand.nu0 * c.T,
+      effectivePeakFactor = c.peakMode === "extreme"
+        ? extremePeakFactor(peakCycles, c.peakProbability / 100)
+        : c.peakFactor,
+      peakRandom = effectivePeakFactor * rand.sigma;
     assert(
       [sweep, dwell, heritage, ratio, peakRandom].every(Number.isFinite),
       "Numerical overflow; reduce extreme levels, frequency range or exponent.",
@@ -506,12 +518,27 @@
       psdReserve: (ratio / c.damageFactor) ** (2 / b),
       peakSine: peak,
       peakRandom,
+      effectivePeakFactor,
+      peakCycles,
+      peakFixed: c.peakFactor === null ? null : c.peakFactor * rand.sigma,
       peakRatio: peak / peakRandom,
       contributions,
       dwellStatus: c.dwellMode === "assumed"
         ? (contributions.length ? "assumed at resonance" : "outside sine profile; no dwell credit")
         : (contributions.length ? "documented schedule" : "no dwell credit"),
     };
+  }
+  // Irvine, Peak Response to Random Vibration, Rev H, equation (4).
+  // p is per-oscillator event non-exceedance; N = response zero-upcrossings.
+  // 100 cycles is this tool's practical long-exposure guard, not a theorem.
+  function extremePeakFactor(N, p) {
+    assert(Number.isFinite(N) && N >= 100,
+      "Extreme-response estimate requires at least 100 expected response cycles (ν₀T) at every calculated oscillator. Increase exposure or use selected k with a justified basis.");
+    assert(Number.isFinite(p) && p >= 0.5 && p <= 0.9999,
+      "Peak non-exceedance probability must be 50% to 99.99%.");
+    const logN = Math.log(N), leading = Math.sqrt(2 * logN);
+    // expm1 avoids cancellation for long exposures and high probabilities.
+    return (leading + 0.5772 / leading) * Math.sqrt(-Math.log(-Math.expm1(Math.log(p) / N)) / logN);
   }
   function grid(c) {
     const n = Math.ceil(Math.log2(c.fmax / c.fmin) * c.density);
@@ -633,8 +660,12 @@
         "Integration refinement changed the governing damage ratio (or random damage when coverage is zero) by more than 0.5%; numerical review is required.",
       );
     warnings.push(
-      "Peak response uses your selected k-sigma factor; it is not a duration-based maximum confidence level.",
+      c.peakMode === "extreme"
+        ? `Random peaks use Irvine Rev H equation (4), ${c.peakProbability}% nominal non-exceedance per oscillator over ${c.T} s. This approximate stationary Gaussian, nearly narrowband model is not a joint probability across modes or a hardware reliability claim. Repeated exposures are combined; startup transients and peak dependence are not modeled.`
+        : "Peak response uses your selected k-sigma factor; it is not a duration-based maximum confidence level.",
     );
+    if (c.peakMode === "extreme" && rows.some((r) => r.alpha < 0.9))
+      warnings.push("Extreme-response model: some calculated responses have alpha < 0.9. The nearly narrowband approximation needs independent validation for those responses.");
     warnings.push(
       "This is relative exposure severity, not an absolute Miner fraction, failure probability, remaining-life estimate or qualification approval.",
     );
@@ -671,5 +702,6 @@
     grid,
     analyze,
     gamma,
+    extremePeakFactor,
   };
 });

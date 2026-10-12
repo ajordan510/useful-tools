@@ -43,6 +43,7 @@ python3 verify_audit.py --flife-root /path/to/FLife
 node build.mjs
 node test_engine.cjs
 node test_reporting.cjs
+node test_extreme.cjs
 python3 validate_reference.py
 python3 build_white_paper.py
 python3 build_white_paper.py --source TECHNICAL_AUDIT.md --output Vibration_Damage_Comparison_Technical_Audit.pdf --audit
@@ -120,10 +121,9 @@ Browser smoke tests require Playwright and Chromium:
 ```sh
 node test_browser.mjs
 node test_collection.mjs
+node test_peak_browser.mjs
 # Windows with PowerPoint installed: powershell -File test_powerpoint.ps1
 # Optional: CHROMIUM_PATH=/path/to/chromium TEST_ARTIFACT_DIR=/tmp/vdc-qa node test_browser.mjs
-node test_collection.mjs
-# Windows with PowerPoint installed: powershell -File test_powerpoint.ps1
 ```
 
 Twenty-five engine test groups cover the baseline model and assumed-dwell analytical values, grid independence, caps, scaling, optional sweeps, boundary choices, zero credit and sensitivity. The independent reference script covers 96 quadrature/PDF-integration cases; the archived audit contains 32 additional sweep/peak cases. Browser checks cover both dwell modes, plots, exports, case roundtrip and legacy imports, stale-result protection, invalid inputs, zero coverage, mobile layout and absence of network requests. Tutorial checks verify worked values, rendered plots, mobile label bounds, experiment scaling, workspace/export isolation and both example loaders. This is numerical/software verification; experimental validation and engineering approval remain specific to the hardware and program.
@@ -150,3 +150,24 @@ The seven-case browser test checks independent duplication, switching, common ax
 - Shared figure formatting uses scientific notation below 0.001 and at or above 10,000, with additional axis clearance. UI, SVG/PNG, HTML and PowerPoint use the same figure definitions. Each coverage pair shares frequency limits, including common axes across cases.
 
 Primary references for the new peak guidance: [VRS definition](https://www.vibrationdata.com/VRS.htm), [Irvine, Peak Response to Random Vibration, Rev H (2020)](https://www.vibrationdata.com/tutorials2/peak_response_random_revisionH.pdf), and [Rayleigh peak distribution](https://www.vibrationdata.com/tutorials_alt/RayD.pdf). The calculation equations and selected-k outputs are unchanged.
+
+## Optional extreme-response estimate (v2.2.0, 2026-10-12)
+
+In the random inputs, **Random peak model** defaults to **Selected k × RMS**. Existing cases and the tutorial retain that calculation. Choose **Duration + probability estimate** to compare sine peaks against an approximate random extreme spectrum. The selected random peak curve is the denominator of peak coverage; the RMS VRS remains a context curve. Fatigue calculations are unchanged.
+
+The optional model uses [Irvine, Rev H, equation (4)](https://www.vibrationdata.com/tutorials2/peak_response_random_revisionH.pdf), often called an XRS/URS when a probability is specified:
+
+```text
+N = ν₀ T; ν₀ = sqrt(m₂/m₀) in Hz; T = minutes × 60 × repetitions
+k(N,p) = [sqrt(2 ln N) + 0.5772 / sqrt(2 ln N)]
+         × sqrt(-ln[1 - p^(1/N)] / ln N)
+random extreme = k(N,p) × response RMS
+```
+
+Here p is the nominal non-exceedance probability for the event's maximum absolute response **at one oscillator**, not simultaneous coverage across modes or hardware reliability. The tool accepts 50–99.99%, starting at an editable 99%. Select the probability from the analysis requirement and record its rationale. The model assumes stationary Gaussian, nearly narrowband response; repeated exposures contribute to total duration without modeling startup transients. Broadband responses prompt an explicit review note. A minimum of 100 expected response cycles at every calculated oscillator is a practical long-exposure guard, not a statistical validity guarantee. Below it the optional calculation stops with an explanation; the selected-k method remains available.
+
+The engine evaluates the small tail probability with `expm1` to avoid cancellation. It reproduces the source's 500 Hz / 1200 s / 50% example, k = 5.34 to published precision. This verifies implementation of the approximation, not its applicability to a particular measured environment.
+
+Case/collection JSON preserves the selected model and probability. Plots, HTML reports and PowerPoint slides identify the model; exported peak figures include exposure duration. The peak-basis narrative gives the frequency-dependent k range, inspected and governing values, assumptions and source. Slide notes retain the complete inputs. CSV now labels the selected denominator `random_selected_peak_m` and adds `effective_peak_factor_k`, `expected_response_cycles`, and `random_fixed_k_reference_peak_m`; metadata and the collection summary also identify the model/probability. Consumers of the old `random_k_sigma_peak_m` header should use the selected or fixed-reference column explicitly.
+
+`test_extreme.cjs` checks the published example, independent CDF inversion over large cycle counts, probability/duration monotonicity, response-rate rather than natural-frequency dependence, PSD scaling, repeat equivalence, invalid and short exposures, broadband warnings, fixed-mode compatibility, unchanged fatigue, and paired-curve identities. Browser/collection tests include mixed peak models, disabled inputs, stale results, saved settings and probability provenance in the 29-slide PowerPoint export. All three generated decks are also opened and rendered in PowerPoint for layout review. The archived white paper remains the baseline documented-schedule method; this section and the app's Method tab specify the optional peak extension.

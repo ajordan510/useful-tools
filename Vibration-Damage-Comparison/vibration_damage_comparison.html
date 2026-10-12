@@ -645,7 +645,7 @@
         ><button id="report" disabled>Save analysis report</button
         ><button id="demo">Load example</button
         ><button id="referenceCase">Load reference case</button
-        ><span class="tag">v2.1.0 · OFFLINE · ONE AXIS PER CASE</span>
+        ><span class="tag">v2.2.0 · OFFLINE · ONE AXIS PER CASE</span>
       </div>
       <div class="toolbar"><label for="activeCase">Active case</label><select id="activeCase"></select><button id="newCase">Add case</button><button id="duplicateCase">Duplicate case</button><button id="removeCase">Remove case</button><button id="undoRemove" disabled>Undo remove</button></div>
       <nav aria-label="Workspace">
@@ -858,7 +858,15 @@
                   ><input id="psdDb" type="number" value="0" step="0.5" />
                 </div>
                 <div>
-                  <label for="peakFactor">Peak screen factor, k × RMS</label
+                  <label for="peakMode">Random peak model</label>
+                  <select id="peakMode"><option value="fixed">Selected k × RMS (default)</option><option value="extreme">Duration + probability estimate</option></select>
+                </div>
+                <div>
+                  <label for="peakProbability">Non-exceedance probability per oscillator, %</label>
+                  <input id="peakProbability" type="number" value="99" min="50" max="99.99" step="0.1" disabled />
+                </div>
+                <div>
+                  <label for="peakFactor">Selected peak factor, k × RMS</label
                   ><input
                     id="peakFactor"
                     type="number"
@@ -870,6 +878,8 @@
                 </div>
               </div>
               <details id="peakGuidance"><summary>How to choose k · VRS and extreme response</summary>
+                <p><b>Optional duration + probability estimate:</b> selecting this model replaces the random peak curve and its coverage denominator with an approximate extreme spectrum. Select the non-exceedance probability required by your analysis plan; 99% is an editable starting assumption. It applies to each oscillator over the total random exposure (minutes × repeats), not simultaneously across all modes.</p>
+                <p>We use Irvine Rev H equation (4), with <b>N = ν₀T</b> from each oscillator’s response spectrum. The peak factor therefore varies with frequency. This model assumes stationary Gaussian, nearly narrowband response; verify it for broad bandwidth, non-Gaussian excitation, correlated peaks or transients. The tool requires at least 100 expected response cycles at every calculated oscillator as a practical long-exposure guard. This guard does not establish statistical validity.</p>
                 <p><b>Start with the analysis or qualification requirement.</b> If it prescribes k, use that value and record its source in Evidence and assumptions. The default k = 4 is an editable screening assumption, not a universal recommendation.</p>
                 <p><b>VRS:</b> the random RMS response of each oscillator versus natural frequency. Here it is relative displacement in mm, using the same Q and response coordinate as the sine response. Comparing RMS directly with a sine peak mixes different statistics.</p>
                 <p><b>Peak screen:</b> k × RMS. For zero-mean Gaussian response, RMS = σ. Although ±3σ contains about 99.73% of instantaneous samples, that is not the probability that a complete exposure stays below 3σ. Longer exposure and more response cycles increase the opportunity for larger peaks.</p>
@@ -1097,7 +1107,7 @@
       <div><label for="tutorialRandomSeconds">Random exposure duration</label><select id="tutorialRandomSeconds"><option value="30" selected>30 seconds</option><option value="60">60 seconds</option></select></div>
     </div>
     <div id="tutorialExperimentResult" class="notice" aria-live="polite"></div>
-    <p>Doubling dwell cycles doubles sine damage. Doubling random duration doubles expected random damage. Doubling both preserves their ratio. Neither change alters this steady-state sine amplitude or the selected 4σ random screen; a duration-based extreme-value model would be a different calculation.</p>
+    <p>Doubling dwell cycles doubles sine damage. Doubling random duration doubles expected random damage. Doubling both preserves their ratio. Neither change alters this steady-state sine amplitude or the selected 4σ random screen. The main analysis also offers a duration + probability peak estimate: increasing duration then increases the random extreme, while the fatigue calculation stays the same. Its nominal probability applies per oscillator, not jointly across possible modes. This tutorial keeps the selected 4σ screen so its worked values remain directly comparable.</p>
     <p class="hint">These controls affect only this experiment. The worked example, its plots, the “Load” buttons and your workspace retain their stated inputs.</p>
   </article>
 
@@ -1262,8 +1272,9 @@
                 >Peak ratio = maximum modeled heritage relative displacement /
                 (k × random RMS relative displacement).</b
               >
-              This independently screens for peak severity. k is user-selected,
-              not a stated probability or duration-based maximum.
+              This independently screens for peak severity. k is either
+              user-selected (default) or calculated per oscillator by the optional
+              duration + probability model described below.
             </li>
             <li>
               <b>Sensitivity matrix.</b> The worst coverage ratio within the
@@ -1271,7 +1282,7 @@
               assumptions on both sides.
             </li>
           </ul>
-          <h3>Peak-factor selection and response spectra</h3><p>The random RMS spectrum is a relative-displacement VRS. The plotted random peak is the selected k times that RMS spectrum. A fixed k does not define an ERS with a stated event duration or non-exceedance probability. For an event maximum, use a justified extreme-value model and retain its duration, probability and bandwidth assumptions. A common leading narrowband estimate is √[2 ln(ν₀T)]; it is a typical extreme level, not a high-confidence bound. See <a href="https://www.vibrationdata.com/tutorials2/peak_response_random_revisionH.pdf">Irvine, Peak Response to Random Vibration, Rev H</a> for duration and probability distinctions.</p>
+          <h3>Peak-factor selection and response spectra</h3><p>The random RMS spectrum is a relative-displacement VRS. The plotted random peak uses either selected k times RMS (default), or the optional duration + probability estimate. The latter uses Irvine Rev H equation (4): k = [√(2 ln N) + 0.5772 / √(2 ln N)] √{−ln[1 − p^(1/N)] / ln N}, where N = ν₀T, ν₀ = √(m₂/m₀) in Hz, T is total exposure in seconds, and p is the per-oscillator non-exceedance probability as a fraction. This approximate model assumes stationary Gaussian, nearly narrowband response. The tool requires N ≥ 100 as a practical guard, and accepts 50–99.99%; neither restriction validates the nominal probability. Repeats contribute to total exposure, excluding startup transients. It does not establish simultaneous coverage of multiple modes. A fixed k does not define an ERS with a stated event duration or non-exceedance probability. For an event maximum, use a justified extreme-value model and retain its duration, probability and bandwidth assumptions. A common leading narrowband estimate is √[2 ln(ν₀T)]; it is a typical extreme level, not a high-confidence bound. See <a href="https://www.vibrationdata.com/tutorials2/peak_response_random_revisionH.pdf">Irvine, Peak Response to Random Vibration, Rev H</a> for duration and probability distinctions.</p>
           <h2>Ground rules before a determination</h2>
           <ol>
             <li>
@@ -1368,7 +1379,7 @@
         </div>
       </section>
       <div class="foot">
-        Vibration Damage Comparison · 2.1.0 · No network requests. Input data
+        Vibration Damage Comparison · 2.2.0 · No network requests. Input data
         stays in your browser.
       </div>
     </main>
@@ -1393,7 +1404,7 @@
   else root.VDC = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
-  const VERSION = "2.1.0",
+  const VERSION = "2.2.0",
     G = 9.80665,
     ZREF = 0.001;
   const UNITS = {
@@ -1717,12 +1728,20 @@
       fmax: [0.1, 1e5],
       density: [12, 192],
       damageFactor: [1, 1e6],
-      peakFactor: [1, 20],
       psdDb: [-100, 100],
       sineScale: [0.001, 1000],
       inspectFn: [0.1, 1e5],
     };
     for (const [k, r] of Object.entries(ranges)) c[k] = number(raw[k], k, ...r);
+    c.peakMode = raw.peakMode ?? "fixed";
+    assert(["fixed", "extreme"].includes(c.peakMode), "Invalid peak response model.");
+    const fixedFactor = Number(raw.peakFactor);
+    c.peakFactor = c.peakMode === "fixed"
+      ? number(raw.peakFactor, "peakFactor", 1, 20)
+      : (Number.isFinite(fixedFactor) && fixedFactor >= 1 && fixedFactor <= 20 ? fixedFactor : null);
+    c.peakProbability = c.peakMode === "extreme"
+      ? number(raw.peakProbability ?? 99, "Peak non-exceedance probability (%)", 50, 99.99)
+      : 99;
     assert(c.fmax > c.fmin, "Maximum mode frequency must exceed minimum.");
     assert(
       Number.isInteger(c.density) &&
@@ -1872,7 +1891,11 @@
       heritage = sweep + dwell,
       random = rand[c.method],
       ratio = heritage / random,
-      peakRandom = c.peakFactor * rand.sigma;
+      peakCycles = rand.nu0 * c.T,
+      effectivePeakFactor = c.peakMode === "extreme"
+        ? extremePeakFactor(peakCycles, c.peakProbability / 100)
+        : c.peakFactor,
+      peakRandom = effectivePeakFactor * rand.sigma;
     assert(
       [sweep, dwell, heritage, ratio, peakRandom].every(Number.isFinite),
       "Numerical overflow; reduce extreme levels, frequency range or exponent.",
@@ -1894,12 +1917,27 @@
       psdReserve: (ratio / c.damageFactor) ** (2 / b),
       peakSine: peak,
       peakRandom,
+      effectivePeakFactor,
+      peakCycles,
+      peakFixed: c.peakFactor === null ? null : c.peakFactor * rand.sigma,
       peakRatio: peak / peakRandom,
       contributions,
       dwellStatus: c.dwellMode === "assumed"
         ? (contributions.length ? "assumed at resonance" : "outside sine profile; no dwell credit")
         : (contributions.length ? "documented schedule" : "no dwell credit"),
     };
+  }
+  // Irvine, Peak Response to Random Vibration, Rev H, equation (4).
+  // p is per-oscillator event non-exceedance; N = response zero-upcrossings.
+  // 100 cycles is this tool's practical long-exposure guard, not a theorem.
+  function extremePeakFactor(N, p) {
+    assert(Number.isFinite(N) && N >= 100,
+      "Extreme-response estimate requires at least 100 expected response cycles (ν₀T) at every calculated oscillator. Increase exposure or use selected k with a justified basis.");
+    assert(Number.isFinite(p) && p >= 0.5 && p <= 0.9999,
+      "Peak non-exceedance probability must be 50% to 99.99%.");
+    const logN = Math.log(N), leading = Math.sqrt(2 * logN);
+    // expm1 avoids cancellation for long exposures and high probabilities.
+    return (leading + 0.5772 / leading) * Math.sqrt(-Math.log(-Math.expm1(Math.log(p) / N)) / logN);
   }
   function grid(c) {
     const n = Math.ceil(Math.log2(c.fmax / c.fmin) * c.density);
@@ -2021,8 +2059,12 @@
         "Integration refinement changed the governing damage ratio (or random damage when coverage is zero) by more than 0.5%; numerical review is required.",
       );
     warnings.push(
-      "Peak response uses your selected k-sigma factor; it is not a duration-based maximum confidence level.",
+      c.peakMode === "extreme"
+        ? `Random peaks use Irvine Rev H equation (4), ${c.peakProbability}% nominal non-exceedance per oscillator over ${c.T} s. This approximate stationary Gaussian, nearly narrowband model is not a joint probability across modes or a hardware reliability claim. Repeated exposures are combined; startup transients and peak dependence are not modeled.`
+        : "Peak response uses your selected k-sigma factor; it is not a duration-based maximum confidence level.",
     );
+    if (c.peakMode === "extreme" && rows.some((r) => r.alpha < 0.9))
+      warnings.push("Extreme-response model: some calculated responses have alpha < 0.9. The nearly narrowband approximation needs independent validation for those responses.");
     warnings.push(
       "This is relative exposure severity, not an absolute Miner fraction, failure probability, remaining-life estimate or qualification approval.",
     );
@@ -2059,6 +2101,7 @@
     grid,
     analyze,
     gamma,
+    extremePeakFactor,
   };
 });
 
@@ -2186,6 +2229,8 @@
           "randomRepeats",
           "psdDb",
           "peakFactor",
+          "peakMode",
+          "peakProbability",
           "fmin",
           "fmax",
           "density",
@@ -2223,6 +2268,7 @@
       defaults.method = $("methodSelect").value;
       defaults.example = true;
       function syncDwellMode() {
+        syncPeakMode();
         const assumed = $("dwellMode").value === "assumed";
         $("documentedDwellFields").hidden = assumed;
         $("assumedDwellFields").hidden = !assumed;
@@ -2231,6 +2277,12 @@
           (k) => $(k).disabled = !assumed,
         );
       }
+      function syncPeakMode() {
+        const extreme = $("peakMode").value === "extreme";
+        $("peakFactor").disabled = extreme;
+        $("peakProbability").disabled = !extreme;
+      }
+      $("peakMode").addEventListener("change", syncPeakMode);
       syncDwellMode();
       $("dwellMode").addEventListener("change", () => {
         if ($("dwellMode").value === "assumed") $("scope").value = "bank";
@@ -2382,10 +2434,10 @@
           scope = c.scope === "modes" ? "listed modes" : "oscillator bank";
         $("results").innerHTML =
           (c.dwellMode === "assumed" ? `<div class="notice"><b>Hypothetical resonance screening</b><br>One independent resonant dwell at each SDOF frequency, using the sine profile and the common dwell rule. Neighboring hypothetical dwells receive no credit. ${c.passes ? "Enabled sweep exposure is included." : "Sweep exposure is excluded."} This is an assumed specification comparison, not achieved test exposure.</div>` : "") +
-          `<div class="notice ${w.margin < 1 || kw.peakRatio < 1 ? "warn" : ""}"><b>${c.example ? "EXAMPLE · " : ""}${w.margin >= 1 ? "Modeled fatigue target met" : "Modeled fatigue coverage gap"} within the ${scope}.</b><br>${esc(c.caseName)} · Q = ${fmt(c.Q)}, b = ${fmt(c.b)} · ${esc(c.method === "dirlik" ? "Dirlik" : "Narrowband")} · damage target ${fmt(c.damageFactor)}. ${kw.peakRatio < 1 ? "The peak-response screen also has a gap." : "The selected peak-response screen is covered."} These are analytical comparisons, not qualification approval.</div><div class="metrics">${metric("MINIMUM FATIGUE COVERAGE", fmt(w.margin) + "×", `R / target at ${fmt(w.fn, 5)} Hz`, w.margin < 1)}${metric("EQUAL-DAMAGE RANDOM EXPOSURE", fmt(w.eqMinutes) + " min", `At the fatigue-governing mode; new exposure ${fmt(c.T / 60)} min`)}${metric("MINIMUM PEAK COVERAGE", fmt(kw.peakRatio) + "×", `At ${fmt(kw.fn, 5)} Hz · selected ${fmt(c.peakFactor)}σ screen`, kw.peakRatio < 1)}</div>` +
+          `<div class="notice ${w.margin < 1 || kw.peakRatio < 1 ? "warn" : ""}"><b>${c.example ? "EXAMPLE · " : ""}${w.margin >= 1 ? "Modeled fatigue target met" : "Modeled fatigue coverage gap"} within the ${scope}.</b><br>${esc(c.caseName)} · Q = ${fmt(c.Q)}, b = ${fmt(c.b)} · ${esc(c.method === "dirlik" ? "Dirlik" : "Narrowband")} · damage target ${fmt(c.damageFactor)}. ${kw.peakRatio < 1 ? "The peak-response screen also has a gap." : "The selected peak-response screen is covered."} These are analytical comparisons, not qualification approval.</div><div class="metrics">${metric("MINIMUM FATIGUE COVERAGE", fmt(w.margin) + "×", `R / target at ${fmt(w.fn, 5)} Hz`, w.margin < 1)}${metric("EQUAL-DAMAGE RANDOM EXPOSURE", fmt(w.eqMinutes) + " min", `At the fatigue-governing mode; new exposure ${fmt(c.T / 60)} min`)}${metric("MINIMUM PEAK COVERAGE", fmt(kw.peakRatio) + "×", `At ${fmt(kw.fn, 5)} Hz · ${VDCReport.peakLabel(c)}`, kw.peakRatio < 1)}</div>` +
           `<div class="comparison-pair">${chartCard("fatigueComparePlot", "Fatigue: source curves", `Sine damage and required random damage (random damage × F, with F = ${fmt(c.damageFactor)}). Their ratio is the fatigue coverage shown at right.`)}${chartCard("ratioPlot", "Fatigue: coverage", "R = sine damage / random damage. Coverage = R / required factor F. Target = 1. Logarithmic spacing changes the axis scale, not the values.")}</div>` +
           `<div class="comparison-pair">${chartCard("peakResponsePlot", "Peaks: source curves and VRS", "Compare sine peak with the random peak estimate using the same relative-displacement response and Q. Random RMS (the VRS) is a reference curve, not a peak.")}${chartCard("peakPlot", "Peaks: coverage", "Peak coverage = sine peak / random peak estimate. Target = 1. This screen is separate from fatigue coverage.")}</div>` +
-          `<div class="card" id="peakBasis"><h3>Peak-factor basis</h3><p>${esc(VDCReport.peakBasis(c,r))}</p><p class="hint">VRS describes RMS response; an extreme-response estimate adds a duration model. The fixed-k ratio above uses your selected k. Consult the peak-factor guidance beside the random inputs and record your selection rationale.</p></div>` +
+          `<div class="card" id="peakBasis"><h3>Peak-factor basis</h3><p>${esc(VDCReport.peakBasis(c,r))}</p><p class="hint">VRS describes RMS response; an extreme-response estimate adds a duration model. The peak ratio uses the selected random peak model. Consult the peak-factor guidance beside the random inputs and record your selection rationale.</p></div>` +
           gapSummary(c, r) +
           `<details id="advancedResults"><summary>Inspect input plots, exposure details, spectra and sensitivity</summary>` +
           chartCard(
@@ -2485,6 +2537,9 @@
           "alpha",
           "nu0",
           "nup",
+          "effectivePeakFactor",
+          "peakCycles",
+          "peakFixed",
         ];
         const names = [
           "fn_Hz",
@@ -2503,11 +2558,14 @@
           "allowable_PSD_scale",
           "random_response_RMS_m",
           "heritage_peak_m",
-          "random_k_sigma_peak_m",
+          "random_selected_peak_m",
           "peak_ratio",
           "alpha",
           "nu0_Hz",
           "nup_Hz",
+          "effective_peak_factor_k",
+          "expected_response_cycles",
+          "random_fixed_k_reference_peak_m",
         ];
         const quote = (x) => '"' + String(x).replace(/"/g, '""') + '"';
         const meta = [
@@ -2519,7 +2577,9 @@
           ["dwell_analysis", c.dwellMode],
           ["total_random_seconds", c.T],
           ["damage_target", c.damageFactor],
-          ["peak_factor_k", c.peakFactor],
+          ["fixed_peak_factor_k", c.peakFactor ?? "not assigned"],
+          ["peak_model", c.peakMode],
+          ["peak_non_exceedance_percent_per_oscillator", c.peakMode === "extreme" ? c.peakProbability : "not assigned"],
           ["base_random_gRMS", r.grms],
           ["zref_m", VDC.ZREF],
           ["example", c.example],
@@ -2585,14 +2645,30 @@ const VDCReport = (() => {
   function summary(c, r) {
     return {
       fatigue: `${r.worst.margin >= 1 ? "Modeled fatigue target met" : "Modeled fatigue coverage gap"}: ${num(r.worst.margin)}× at ${num(r.worst.fn, 6)} Hz`,
-      peak: `${r.peakWorst.peakRatio >= 1 ? "Peak screen covered" : "Peak-screen gap"}: ${num(r.peakWorst.peakRatio)}× at ${num(r.peakWorst.fn, 6)} Hz`,
+      peak: `${r.peakWorst.peakRatio >= 1 ? "Peak screen covered" : "Peak-screen gap"}: ${num(r.peakWorst.peakRatio)}× at ${num(r.peakWorst.fn, 6)} Hz (${peakLabel(c)})`,
       scope: c.scope === "bank" ? `Full bank, ${num(c.fmin)}–${num(c.fmax)} Hz` : `Listed modes only: ${c.modes.map((f) => num(f, 6)).join(", ")} Hz`,
       dwell: c.dwellMode === "assumed" ? `Independent assumed dwell: ${c.assumedDwell.hours ? c.assumedDwell.hours+" h cap" : "no time cap"}, ${c.assumedDwell.cycleCap ? c.assumedDwell.cycleCap+" cycle cap" : "no cycle cap"}, ${c.assumedDwell.repeats} repeat(s)` : `${c.dwell.length} documented dwell(s)`,
       gaps: r.gaps.length ? r.gaps.map((g) => `${num(g.from, 5)}${g.to !== g.from ? "–" + num(g.to, 5) : ""} Hz`).join(", ") : "None at assessed frequencies",
       noDwell: c.dwellMode === "assumed" ? r.assessed.filter((x) => !x.contributions.length).length : 0,
     };
   }
+  function peakLabel(c) {
+    return c.peakMode === "extreme" ? `Extreme ${num(c.peakProbability)}% per mode` : `Selected k = ${num(c.peakFactor)}`;
+  }
+  function peakCaption(c) {
+    return c.peakMode === "extreme"
+      ? `${c.peakProbability}% nominal non-exceedance per oscillator over ${num(c.T)} s; approximate Gaussian, nearly narrowband model. Not a joint probability across modes.`
+      : `Selected k = ${num(c.peakFactor)}; this fixed factor is not a duration-based confidence level.`;
+  }
   function peakBasis(c,r) {
+    if(c.peakMode === "extreme") {
+      const factors=r.rows.map(x=>x.effectivePeakFactor);
+      return `${peakCaption(c)} Irvine Rev H equation (4), with N = ν₀T from each response spectrum. `+
+        `Across the plotted bank, k = ${num(Math.min(...factors))}–${num(Math.max(...factors))}. `+
+        `At the inspected ${num(r.inspect.fn)} Hz oscillator: ν₀ = ${num(r.inspect.nu0)} Hz, N = ${num(r.inspect.peakCycles)}, k = ${num(r.inspect.effectivePeakFactor)}, RMS = ${num(r.inspect.sigma*1000)} mm, random extreme = ${num(r.inspect.peakRandom*1000)} mm. `+
+        `At the peak-governing ${num(r.peakWorst.fn)} Hz oscillator, k = ${num(r.peakWorst.effectivePeakFactor)}. `+
+        `Total duration combines ${c.randomRepeats} exposure(s); startup transients are excluded. The tool requires N ≥ 100 as a practical long-exposure guard. Review bandwidth and measured peak behavior before relying on the nominal probability.`;
+    }
     const n=r.inspect.nu0*c.T;
     const estimate=n>1?Math.sqrt(2*Math.log(n)):null;
     return `Selected k = ${num(c.peakFactor)}. At the inspected ${num(r.inspect.fn)} Hz oscillator, RMS = ${num(r.inspect.sigma*1000)} mm and the selected random peak = ${num(r.inspect.peakRandom*1000)} mm. `+
@@ -2609,7 +2685,7 @@ const VDCReport = (() => {
       ["Random exposure", `${num(c.T / 60, 6)} min total, ${c.randomRepeats} exposure(s), ${c.psdDb} dB`],
       ["Random input", `${num(r.grms, 5)} gRMS, ${c.psd[0][0]}–${c.psd.at(-1)[0]} Hz`],
       ["Model", `Q = ${c.Q}, b = ${c.b}, ${c.method === "dirlik" ? "Dirlik" : "Narrowband"}`],
-      ["Targets", `Damage factor ${c.damageFactor}, random peak ${c.peakFactor}σ`],
+      ["Targets", `Damage factor ${c.damageFactor}; ${peakLabel(c)}`],
     ];
   }
   function figures(c, r, settings = {}) {
@@ -2633,7 +2709,7 @@ const VDCReport = (() => {
     const displacement = sine.map(([f,a])=>[f,2*a*9.80665/((2*Math.PI*f)**2)/0.0254]);
     return [
       fig("ratioPlot", "Fatigue coverage", "Fatigue coverage", ratio, {threshold: 1, gaps: r.gaps, governing: [r.worst.fn, r.worst.margin], limits: settings.coverageLimits, definition: `Coverage = R / F; R = sine damage / random damage; F = ${num(c.damageFactor)}. Target = 1.`}),
-      fig("peakPlot", "Peak-response coverage", "Peak coverage", [{name: `Peak screen (${c.peakFactor}σ)`, data: bank("peakRatio")}], {threshold: 1, governing: [r.peakWorst.fn, r.peakWorst.peakRatio], limits: settings.peakLimits, definition: "Peak coverage = sine peak / random peak estimate. Target = 1."}),
+      fig("peakPlot", "Peak-response coverage", "Peak coverage", [{name: peakLabel(c), data: bank("peakRatio")}], {threshold: 1, governing: [r.peakWorst.fn, r.peakWorst.peakRatio], limits: settings.peakLimits, scope: `${scope} | ${peakLabel(c)}${c.peakMode === "extreme" ? `; T = ${num(c.T)} s` : ""}`, definition: `Peak coverage = sine peak / random peak. Target = 1.${c.peakMode === "extreme" ? ` Approximate extreme; T = ${num(c.T)} s.` : ""}`}),
       fig("sinePlot", "Sine input profile", "Acceleration, g peak", [{name: c.sineName || "Sine specification", data: sine}], {scopeModes: null, scope: "Input spectrum", xLabel: "Excitation frequency, Hz"}),
       fig("psdPlot", "Random input PSD", "Acceleration PSD, g²/Hz", [{name: c.randomName || "Random specification", data: c.psd.map(([f, p]) => [f, p * c.psdScale])}], {scopeModes: null, scope: `Input spectrum: ${num(r.grms)} gRMS, ${num(c.T / 60)} min`, xLabel: "Excitation frequency, Hz"}),
       fig("fatigueComparePlot", "Fatigue comparison", "Normalized damage index", [
@@ -2642,9 +2718,9 @@ const VDCReport = (() => {
       ], {xLimits:settings.coverageLimits, definition:"Coverage on the right = sine damage / required random damage. Same Q, b and duration basis."}),
       fig("peakResponsePlot", "Peak response and RMS VRS", "Relative displacement, mm", [
         {name:"Sine peak",data:r.rows.map(x=>[x.fn,x.peakSine*1000])},
-        {name:`Random peak (${num(c.peakFactor)} × RMS)`,data:r.rows.map(x=>[x.fn,x.peakRandom*1000])},
+        {name:c.peakMode === "extreme" ? `Random extreme (${num(c.peakProbability)}% per mode)` : `Random peak (${num(c.peakFactor)} × RMS)`,data:r.rows.map(x=>[x.fn,x.peakRandom*1000])},
         {name:"Random RMS (VRS; reference)",data:r.rows.map(x=>[x.fn,x.sigma*1000])},
-      ], {xLimits:settings.peakLimits, definition:"Coverage uses the two peak curves. RMS is shown for context; it is not a peak."}),
+      ], {xLimits:settings.peakLimits, scope: c.peakMode === "extreme" ? `${scope} | Approximate extreme; T = ${num(c.T)} s` : scope, definition:c.peakMode === "extreme" ? `Coverage uses sine / random extreme. Approximate ${num(c.peakProbability)}% per mode; T = ${num(c.T)} s. RMS = context.` : "Coverage uses the two peak curves. RMS is shown for context; it is not a peak."}),
       fig("sineDisplacementPlot", "Sine input displacement", "Displacement, inches DA", [{name:c.sineName||"Sine specification",data:displacement}],
         {scopeModes:null,scope:"Base input · double amplitude = peak-to-peak",xLabel:"Excitation frequency, Hz",definition:`DA = 2 × peak displacement. Includes sine scale ${num(c.sineScale)}; excludes dwell overrides.`}),
       fig("damagePlot", "Fatigue-damage spectra", "Normalized damage index", [
@@ -2711,7 +2787,7 @@ const VDCReport = (() => {
     out+=text(`Engine ${f.version} · ${f.generated}`,W-R,H-9,11,'text-anchor="end"');
     return `<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="620" viewBox="0 0 1000 620" role="img" aria-label="${xml(f.title+": "+f.meta)}" style="font-family:Arial,sans-serif;fill:#172d40"><title>${xml(f.title+" — "+f.meta)}</title>${out}</svg>`;
   }
-  return {xml, num, slug, wrap, summary, peakBasis, specs, figures, svg, limits, commonLimits};
+  return {xml, num, slug, wrap, summary, peakLabel, peakCaption, peakBasis, specs, figures, svg, limits, commonLimits};
 })();
 if (typeof module !== "undefined" && module.exports) module.exports = VDCReport;
 
@@ -2855,7 +2931,7 @@ function initCollection() {
   $("loadStudy").onchange=async(e)=>{try{const file=e.target.files[0];if(!file)return;if(file.size>10e6)throw Error("Collection is too large (10 MB limit).");const imported=cleanStudy(JSON.parse(await file.text()));study=imported;removedCase=null;$("studyTitle").value=study.title;setActiveCase(study.cases[0]);$("collectionMessage").textContent="Collection opened. Run all included cases to calculate current results.";}catch(err){$("collectionMessage").textContent=err.message;}e.target.value="";};
   $("exportStudyReport").onclick=()=>{if($("exportStudyReport").disabled)return;download(`${VDCReport.slug(study.title)}-report.html`,compactReport(readyCases(),study.title,$("includeAppendix").checked),"text/html");};
   $("report").onclick=()=>{if(last)download(caseFilename("report","html"),compactReport([activeCase()],last.c.caseName,$("includeAppendix").checked),"text/html");};
-  $("exportStudyCSV").onclick=()=>{if($("exportStudyCSV").disabled)return;const q=(s)=>'"'+String(s).replace(/"/g,'""')+'"';const rows=[["Case ID","Case name","Sine specification","Random specification","Dwell mode","Scope","Fatigue coverage","Fatigue Hz","Peak coverage","Peak Hz","Analyst interpretation"],...readyCases().map((e)=>{const {c,r}=e.result;return [e.id,c.caseName,c.sineName,c.randomName,c.dwellMode,c.scope,r.worst.margin,r.worst.fn,r.peakWorst.peakRatio,r.peakWorst.fn,c.analystNotes];})];download(`${VDCReport.slug(study.title)}-summary.csv`,rows.map((r)=>r.map(q).join(",")).join("\n"),"text/csv");};
+  $("exportStudyCSV").onclick=()=>{if($("exportStudyCSV").disabled)return;const q=(s)=>'"'+String(s).replace(/"/g,'""')+'"';const rows=[["Case ID","Case name","Sine specification","Random specification","Dwell mode","Scope","Fatigue coverage","Fatigue Hz","Peak coverage","Peak Hz","Peak model","Non-exceedance % per oscillator","Total random seconds","Governing peak factor k","Analyst interpretation"],...readyCases().map((e)=>{const {c,r}=e.result;return [e.id,c.caseName,c.sineName,c.randomName,c.dwellMode,c.scope,r.worst.margin,r.worst.fn,r.peakWorst.peakRatio,r.peakWorst.fn,c.peakMode,c.peakMode==="extreme"?c.peakProbability:"not assigned",c.T,r.peakWorst.effectivePeakFactor,c.analystNotes];})];download(`${VDCReport.slug(study.title)}-summary.csv`,rows.map((r)=>r.map(q).join(",")).join("\n"),"text/csv");};
   $("resultsOnly").onchange=()=>document.querySelector(".layout").classList.toggle("results-only",$("resultsOnly").checked);
   for(const id of ["showCrosscheck","commonAxes"])$(id).onchange=()=>{if(last)render(last.c,last.r);};
   refreshCollection();
@@ -2930,7 +3006,7 @@ async function exportPowerPoint(){
     const chunks=(lines,size)=>Array.from({length:Math.ceil(lines.length/size)},(_,i)=>lines.slice(i*size,(i+1)*size));
     for(const group of chunks(entries,7)){
       const s=slide(title,"Collection summary · fatigue and peak screens are independent · coverage target = 1");
-      table(s,[["Case / specification pair","Dwell / scope","Fatigue minimum","Peak minimum"],...group.map(e=>{const {c,r}=e.result;return [`${e.id} · ${short(c.caseName,45)}\n${short((c.sineName||"Sine unnamed")+" / "+(c.randomName||"Random unnamed"),70)}`,`${c.dwellMode==="assumed"?"Assumed resonances":"Documented"}\n${c.scope==="bank"?"Full bank":"Listed modes only"}`,`${VDCReport.num(r.worst.margin)}× at ${VDCReport.num(r.worst.fn)} Hz\n${r.worst.margin>=1?"Target met":"Coverage gap"}`,`${VDCReport.num(r.peakWorst.peakRatio)}× at ${VDCReport.num(r.peakWorst.fn)} Hz\n${r.peakWorst.peakRatio>=1?"Screen covered":"Screen gap"}`];})],.4,1.55,12.5,[5,2.3,2.6,2.6],11);
+      table(s,[["Case / specification pair","Dwell / scope","Fatigue minimum","Peak minimum"],...group.map(e=>{const {c,r}=e.result;return [`${e.id} · ${short(c.caseName,45)}\n${short((c.sineName||"Sine unnamed")+" / "+(c.randomName||"Random unnamed"),70)}`,`${c.dwellMode==="assumed"?"Assumed resonances":"Documented"}\n${c.scope==="bank"?"Full bank":"Listed modes only"}`,`${VDCReport.num(r.worst.margin)}× at ${VDCReport.num(r.worst.fn)} Hz\n${r.worst.margin>=1?"Target met":"Coverage gap"}`,`${VDCReport.num(r.peakWorst.peakRatio)}× at ${VDCReport.num(r.peakWorst.fn)} Hz\n${VDCReport.peakLabel(c)}`];})],.4,1.55,12.5,[5,2.3,2.6,2.6],11);
       txt(s,"Full labels, scope, assumptions and evidence are in the individual cases and slide notes. Cases are independent; coverage ratios are never summed across frequencies or cases.",.4,6.55,12.3,.4,13);
       s.addNotes(entries.map(e=>`${e.id}: ${e.inputs.caseName}; revision ${e.revision}; calculated ${e.result.r.generated}`).join("\n"));
     }
@@ -2939,7 +3015,7 @@ async function exportPowerPoint(){
       const {c,r}=e.result,summary=VDCReport.summary(c,r),figs=VDCReport.figures(c,r,settings);
       const images={};for(const f of figs.filter(f=>!["damagePlot","responsePlot"].includes(f.id)))images[f.id]=await svgPNG(VDCReport.svg(f),2);
       const input=slide(`${e.id} · ${c.caseName}`,`Inputs · ${c.example?"EXAMPLE · ":""}${summary.dwell}`);
-      table(input,[["Sine specification / exposure","Random specification / exposure","Shared model / assessment"],[`${VDCReport.wrap(c.sineName||"Not identified",40).join("\n")}\n${c.passes} traversals; ${c.sweepRate} ${c.sweepType==="oct"?"oct/min":"Hz/min"}; scale ${c.sineScale}×`,`${VDCReport.wrap(c.randomName||"Not identified",40).join("\n")}\n${VDCReport.num(c.T/60)} min total; ${c.psdDb} dB; ${VDCReport.num(r.grms)} gRMS`,`Q ${c.Q}; b ${c.b}; ${c.method}; target ${c.damageFactor}\n${c.scope==="bank"?`${c.fmin}–${c.fmax} Hz bank`:"Listed modes (see slide notes)"}; peak ${c.peakFactor}σ`]],.4,1.6,12.5,[4.2,4.2,4.1],13);
+      table(input,[["Sine specification / exposure","Random specification / exposure","Shared model / assessment"],[`${VDCReport.wrap(c.sineName||"Not identified",40).join("\n")}\n${c.passes} traversals; ${c.sweepRate} ${c.sweepType==="oct"?"oct/min":"Hz/min"}; scale ${c.sineScale}×`,`${VDCReport.wrap(c.randomName||"Not identified",40).join("\n")}\n${VDCReport.num(c.T/60)} min total; ${c.psdDb} dB; ${VDCReport.num(r.grms)} gRMS`,`Q ${c.Q}; b ${c.b}; ${c.method}; target ${c.damageFactor}\n${c.scope==="bank"?`${c.fmin}–${c.fmax} Hz bank`:"Listed modes (see slide notes)"}; ${VDCReport.peakLabel(c)}`]],.4,1.6,12.5,[4.2,4.2,4.1],13);
       const chartTop=Math.max(3.05,2.6+Math.max(VDCReport.wrap(c.sineName||"",40).length,VDCReport.wrap(c.randomName||"",40).length)*.22),chartH=7-chartTop,chartW=chartH/0.62;
       input.addImage({data:images.sinePlot,x:.25+(6.4-chartW)/2,y:chartTop,w:chartW,h:chartH,altText:"Sine input profile with units and specification label"});input.addImage({data:images.psdPlot,x:6.68+(6.4-chartW)/2,y:chartTop,w:chartW,h:chartH,altText:"Random input PSD with exposure and gRMS"});note(input,e);
       const pairSlide=(heading,left,right,takeaway,definition)=>{
@@ -2954,7 +3030,7 @@ async function exportPowerPoint(){
       pairSlide(`Fatigue · ${c.scope==="modes"?"listed modes only":"oscillator bank"} · ${settings.coverageLimits?"common coverage axes":"per-case coverage axes"}`, "fatigueComparePlot", "ratioPlot", summary.fatigue,
         `R = sine damage / random damage. Fatigue coverage = R / F, with F = ${c.damageFactor}. The left random curve includes F. Target = 1. Analyst interpretation: ${short(c.analystNotes||"Not supplied.",180)}`);
       pairSlide("Peak comparison · same relative-displacement response and Q on both sides", "peakResponsePlot", "peakPlot", summary.peak,
-        `Peak coverage = sine peak / random peak estimate. The RMS VRS is context, not a peak. Selected k = ${c.peakFactor}; this fixed factor is not a duration-based confidence level. ${r.warnings.length} review note(s) in slide notes.`);
+        `Peak coverage = sine peak / random peak estimate. The RMS VRS is context, not a peak. ${VDCReport.peakCaption(c)} ${r.warnings.length} review note(s) in slide notes.`);
       if(appendix){
         const detail=slide(`${e.id} · sensitivity and peak screen`,"Sensitivity scenarios are not confidence bounds. Peak screening does not establish fatigue coverage.");
         detail.addImage({data:images.peakPlot,x:.2,y:1.6,w:7.9,h:4.898,altText:summary.peak});

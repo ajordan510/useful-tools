@@ -645,7 +645,7 @@
         ><button id="report" disabled>Save analysis report</button
         ><button id="demo">Load example</button
         ><button id="referenceCase">Load reference case</button
-        ><span class="tag">v2.1.0 · OFFLINE · ONE AXIS PER CASE</span>
+        ><span class="tag">v2.2.0 · OFFLINE · ONE AXIS PER CASE</span>
       </div>
       <div class="toolbar"><label for="activeCase">Active case</label><select id="activeCase"></select><button id="newCase">Add case</button><button id="duplicateCase">Duplicate case</button><button id="removeCase">Remove case</button><button id="undoRemove" disabled>Undo remove</button></div>
       <nav aria-label="Workspace">
@@ -858,7 +858,15 @@
                   ><input id="psdDb" type="number" value="0" step="0.5" />
                 </div>
                 <div>
-                  <label for="peakFactor">Peak screen factor, k × RMS</label
+                  <label for="peakMode">Random peak model</label>
+                  <select id="peakMode"><option value="fixed">Selected k × RMS (default)</option><option value="extreme">Duration + probability estimate</option></select>
+                </div>
+                <div>
+                  <label for="peakProbability">Non-exceedance probability per oscillator, %</label>
+                  <input id="peakProbability" type="number" value="99" min="50" max="99.99" step="0.1" disabled />
+                </div>
+                <div>
+                  <label for="peakFactor">Selected peak factor, k × RMS</label
                   ><input
                     id="peakFactor"
                     type="number"
@@ -870,6 +878,8 @@
                 </div>
               </div>
               <details id="peakGuidance"><summary>How to choose k · VRS and extreme response</summary>
+                <p><b>Optional duration + probability estimate:</b> selecting this model replaces the random peak curve and its coverage denominator with an approximate extreme spectrum. Select the non-exceedance probability required by your analysis plan; 99% is an editable starting assumption. It applies to each oscillator over the total random exposure (minutes × repeats), not simultaneously across all modes.</p>
+                <p>We use Irvine Rev H equation (4), with <b>N = ν₀T</b> from each oscillator’s response spectrum. The peak factor therefore varies with frequency. This model assumes stationary Gaussian, nearly narrowband response; verify it for broad bandwidth, non-Gaussian excitation, correlated peaks or transients. The tool requires at least 100 expected response cycles at every calculated oscillator as a practical long-exposure guard. This guard does not establish statistical validity.</p>
                 <p><b>Start with the analysis or qualification requirement.</b> If it prescribes k, use that value and record its source in Evidence and assumptions. The default k = 4 is an editable screening assumption, not a universal recommendation.</p>
                 <p><b>VRS:</b> the random RMS response of each oscillator versus natural frequency. Here it is relative displacement in mm, using the same Q and response coordinate as the sine response. Comparing RMS directly with a sine peak mixes different statistics.</p>
                 <p><b>Peak screen:</b> k × RMS. For zero-mean Gaussian response, RMS = σ. Although ±3σ contains about 99.73% of instantaneous samples, that is not the probability that a complete exposure stays below 3σ. Longer exposure and more response cycles increase the opportunity for larger peaks.</p>
@@ -1087,8 +1097,9 @@
                 >Peak ratio = maximum modeled heritage relative displacement /
                 (k × random RMS relative displacement).</b
               >
-              This independently screens for peak severity. k is user-selected,
-              not a stated probability or duration-based maximum.
+              This independently screens for peak severity. k is either
+              user-selected (default) or calculated per oscillator by the optional
+              duration + probability model described below.
             </li>
             <li>
               <b>Sensitivity matrix.</b> The worst coverage ratio within the
@@ -1096,7 +1107,7 @@
               assumptions on both sides.
             </li>
           </ul>
-          <h3>Peak-factor selection and response spectra</h3><p>The random RMS spectrum is a relative-displacement VRS. The plotted random peak is the selected k times that RMS spectrum. A fixed k does not define an ERS with a stated event duration or non-exceedance probability. For an event maximum, use a justified extreme-value model and retain its duration, probability and bandwidth assumptions. A common leading narrowband estimate is √[2 ln(ν₀T)]; it is a typical extreme level, not a high-confidence bound. See <a href="https://www.vibrationdata.com/tutorials2/peak_response_random_revisionH.pdf">Irvine, Peak Response to Random Vibration, Rev H</a> for duration and probability distinctions.</p>
+          <h3>Peak-factor selection and response spectra</h3><p>The random RMS spectrum is a relative-displacement VRS. The plotted random peak uses either selected k times RMS (default), or the optional duration + probability estimate. The latter uses Irvine Rev H equation (4): k = [√(2 ln N) + 0.5772 / √(2 ln N)] √{−ln[1 − p^(1/N)] / ln N}, where N = ν₀T, ν₀ = √(m₂/m₀) in Hz, T is total exposure in seconds, and p is the per-oscillator non-exceedance probability as a fraction. This approximate model assumes stationary Gaussian, nearly narrowband response. The tool requires N ≥ 100 as a practical guard, and accepts 50–99.99%; neither restriction validates the nominal probability. Repeats contribute to total exposure, excluding startup transients. It does not establish simultaneous coverage of multiple modes. A fixed k does not define an ERS with a stated event duration or non-exceedance probability. For an event maximum, use a justified extreme-value model and retain its duration, probability and bandwidth assumptions. A common leading narrowband estimate is √[2 ln(ν₀T)]; it is a typical extreme level, not a high-confidence bound. See <a href="https://www.vibrationdata.com/tutorials2/peak_response_random_revisionH.pdf">Irvine, Peak Response to Random Vibration, Rev H</a> for duration and probability distinctions.</p>
           <h2>Ground rules before a determination</h2>
           <ol>
             <li>
@@ -1193,7 +1204,7 @@
         </div>
       </section>
       <div class="foot">
-        Vibration Damage Comparison · 2.1.0 · No network requests. Input data
+        Vibration Damage Comparison · 2.2.0 · No network requests. Input data
         stays in your browser.
       </div>
     </main>
@@ -1240,6 +1251,8 @@
           "randomRepeats",
           "psdDb",
           "peakFactor",
+          "peakMode",
+          "peakProbability",
           "fmin",
           "fmax",
           "density",
@@ -1277,6 +1290,7 @@
       defaults.method = $("methodSelect").value;
       defaults.example = true;
       function syncDwellMode() {
+        syncPeakMode();
         const assumed = $("dwellMode").value === "assumed";
         $("documentedDwellFields").hidden = assumed;
         $("assumedDwellFields").hidden = !assumed;
@@ -1285,6 +1299,12 @@
           (k) => $(k).disabled = !assumed,
         );
       }
+      function syncPeakMode() {
+        const extreme = $("peakMode").value === "extreme";
+        $("peakFactor").disabled = extreme;
+        $("peakProbability").disabled = !extreme;
+      }
+      $("peakMode").addEventListener("change", syncPeakMode);
       syncDwellMode();
       $("dwellMode").addEventListener("change", () => {
         if ($("dwellMode").value === "assumed") $("scope").value = "bank";
@@ -1436,10 +1456,10 @@
           scope = c.scope === "modes" ? "listed modes" : "oscillator bank";
         $("results").innerHTML =
           (c.dwellMode === "assumed" ? `<div class="notice"><b>Hypothetical resonance screening</b><br>One independent resonant dwell at each SDOF frequency, using the sine profile and the common dwell rule. Neighboring hypothetical dwells receive no credit. ${c.passes ? "Enabled sweep exposure is included." : "Sweep exposure is excluded."} This is an assumed specification comparison, not achieved test exposure.</div>` : "") +
-          `<div class="notice ${w.margin < 1 || kw.peakRatio < 1 ? "warn" : ""}"><b>${c.example ? "EXAMPLE · " : ""}${w.margin >= 1 ? "Modeled fatigue target met" : "Modeled fatigue coverage gap"} within the ${scope}.</b><br>${esc(c.caseName)} · Q = ${fmt(c.Q)}, b = ${fmt(c.b)} · ${esc(c.method === "dirlik" ? "Dirlik" : "Narrowband")} · damage target ${fmt(c.damageFactor)}. ${kw.peakRatio < 1 ? "The peak-response screen also has a gap." : "The selected peak-response screen is covered."} These are analytical comparisons, not qualification approval.</div><div class="metrics">${metric("MINIMUM FATIGUE COVERAGE", fmt(w.margin) + "×", `R / target at ${fmt(w.fn, 5)} Hz`, w.margin < 1)}${metric("EQUAL-DAMAGE RANDOM EXPOSURE", fmt(w.eqMinutes) + " min", `At the fatigue-governing mode; new exposure ${fmt(c.T / 60)} min`)}${metric("MINIMUM PEAK COVERAGE", fmt(kw.peakRatio) + "×", `At ${fmt(kw.fn, 5)} Hz · selected ${fmt(c.peakFactor)}σ screen`, kw.peakRatio < 1)}</div>` +
+          `<div class="notice ${w.margin < 1 || kw.peakRatio < 1 ? "warn" : ""}"><b>${c.example ? "EXAMPLE · " : ""}${w.margin >= 1 ? "Modeled fatigue target met" : "Modeled fatigue coverage gap"} within the ${scope}.</b><br>${esc(c.caseName)} · Q = ${fmt(c.Q)}, b = ${fmt(c.b)} · ${esc(c.method === "dirlik" ? "Dirlik" : "Narrowband")} · damage target ${fmt(c.damageFactor)}. ${kw.peakRatio < 1 ? "The peak-response screen also has a gap." : "The selected peak-response screen is covered."} These are analytical comparisons, not qualification approval.</div><div class="metrics">${metric("MINIMUM FATIGUE COVERAGE", fmt(w.margin) + "×", `R / target at ${fmt(w.fn, 5)} Hz`, w.margin < 1)}${metric("EQUAL-DAMAGE RANDOM EXPOSURE", fmt(w.eqMinutes) + " min", `At the fatigue-governing mode; new exposure ${fmt(c.T / 60)} min`)}${metric("MINIMUM PEAK COVERAGE", fmt(kw.peakRatio) + "×", `At ${fmt(kw.fn, 5)} Hz · ${VDCReport.peakLabel(c)}`, kw.peakRatio < 1)}</div>` +
           `<div class="comparison-pair">${chartCard("fatigueComparePlot", "Fatigue: source curves", `Sine damage and required random damage (random damage × F, with F = ${fmt(c.damageFactor)}). Their ratio is the fatigue coverage shown at right.`)}${chartCard("ratioPlot", "Fatigue: coverage", "R = sine damage / random damage. Coverage = R / required factor F. Target = 1. Logarithmic spacing changes the axis scale, not the values.")}</div>` +
           `<div class="comparison-pair">${chartCard("peakResponsePlot", "Peaks: source curves and VRS", "Compare sine peak with the random peak estimate using the same relative-displacement response and Q. Random RMS (the VRS) is a reference curve, not a peak.")}${chartCard("peakPlot", "Peaks: coverage", "Peak coverage = sine peak / random peak estimate. Target = 1. This screen is separate from fatigue coverage.")}</div>` +
-          `<div class="card" id="peakBasis"><h3>Peak-factor basis</h3><p>${esc(VDCReport.peakBasis(c,r))}</p><p class="hint">VRS describes RMS response; an extreme-response estimate adds a duration model. The fixed-k ratio above uses your selected k. Consult the peak-factor guidance beside the random inputs and record your selection rationale.</p></div>` +
+          `<div class="card" id="peakBasis"><h3>Peak-factor basis</h3><p>${esc(VDCReport.peakBasis(c,r))}</p><p class="hint">VRS describes RMS response; an extreme-response estimate adds a duration model. The peak ratio uses the selected random peak model. Consult the peak-factor guidance beside the random inputs and record your selection rationale.</p></div>` +
           gapSummary(c, r) +
           `<details id="advancedResults"><summary>Inspect input plots, exposure details, spectra and sensitivity</summary>` +
           chartCard(
@@ -1539,6 +1559,9 @@
           "alpha",
           "nu0",
           "nup",
+          "effectivePeakFactor",
+          "peakCycles",
+          "peakFixed",
         ];
         const names = [
           "fn_Hz",
@@ -1557,11 +1580,14 @@
           "allowable_PSD_scale",
           "random_response_RMS_m",
           "heritage_peak_m",
-          "random_k_sigma_peak_m",
+          "random_selected_peak_m",
           "peak_ratio",
           "alpha",
           "nu0_Hz",
           "nup_Hz",
+          "effective_peak_factor_k",
+          "expected_response_cycles",
+          "random_fixed_k_reference_peak_m",
         ];
         const quote = (x) => '"' + String(x).replace(/"/g, '""') + '"';
         const meta = [
@@ -1573,7 +1599,9 @@
           ["dwell_analysis", c.dwellMode],
           ["total_random_seconds", c.T],
           ["damage_target", c.damageFactor],
-          ["peak_factor_k", c.peakFactor],
+          ["fixed_peak_factor_k", c.peakFactor ?? "not assigned"],
+          ["peak_model", c.peakMode],
+          ["peak_non_exceedance_percent_per_oscillator", c.peakMode === "extreme" ? c.peakProbability : "not assigned"],
           ["base_random_gRMS", r.grms],
           ["zref_m", VDC.ZREF],
           ["example", c.example],
