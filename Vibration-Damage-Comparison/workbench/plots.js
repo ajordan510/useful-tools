@@ -1,5 +1,5 @@
 const WBPlots = (() => {
-  const colors = ["#17689b", "#b45a29", "#747487", "#34836e"],
+  const colors = ["#2563a6", "#b66b16", "#7964a5", "#197b83"],
     dash = ["solid", "dash", "dot", "dashdot"];
   const order = {
     requirements: ["sinePlot", "sineDisplacementPlot", "psdPlot"],
@@ -10,30 +10,86 @@ const WBPlots = (() => {
   };
   const esc = VDCReport.xml,
     n = VDCReport.num;
-  function specs(run, all) {
+  function displayContext(run, display = {}) {
+    const frequencies = run.r.rows
+      .filter(r => run.c.scope !== "modes" || run.c.modes.includes(r.fn))
+      .map(r => r.fn);
+    const requested = display.frequency || run.c.inspectFn;
+    const frequency = frequencies.reduce((a, b) =>
+      Math.abs(Math.log(a / requested)) <= Math.abs(Math.log(b / requested)) ? a : b);
+    return {
+      summaryScope: display.summaryScope || "overall",
+      summaryMetric: display.summaryMetric || "fatigue",
+      coverageView: display.coverageView || "selected",
+      frequency, frequencies,
+    };
+  }
+  function coverageAt(s, key, frequency) {
+    if (frequency != null) return s.r.rows.find(r => r.fn === frequency)[key];
+    return key === "margin" ? s.r.worst.margin : s.r.peakWorst.peakRatio;
+  }
+  function displayNote(run, display) {
+    const d = displayContext(run, display);
+    return `Summary charts: ${d.summaryScope === "frequency" ? `at ${n(d.frequency, 7)} Hz (calculated point)` : "minimum over assessed frequencies"}. Coverage curves: ${d.coverageView === "envelope" ? "all-scenario range with selected b/Q overlaid; not a confidence interval" : "selected b/Q"}. Source spectra and headline minima remain scenario-specific and full-scope respectively.`;
+  }
+  function specs(run, all, display = {}) {
+    const d = displayContext(run, display),
+      frequency = d.summaryScope === "frequency" ? d.frequency : null,
+      scopeLabel = frequency == null ? "Minimum" : `${n(frequency, 7)} Hz`,
+      metric = d.summaryMetric === "peak" ? "peak" : "fatigue";
     const fs = VDCReport.figures(run.c, run.r, { crosscheck: true });
     fs.find(f=>f.id==='fatigueComparePlot').definition="Coverage on the right = sine damage / required random damage. Common Q and b; each exposure uses its recorded duration.";
     for (const f of fs)
       f.meta = `${run.c.caseName.slice(0, 70)} | b ${run.c.b}, Q ${run.c.Q} | ${run.c.dwellMode === "assumed" ? "Independent assumed resonances" : "Documented exposure"}`;
+    for (const f of fs.filter(f => !order.requirements.includes(f.id)))
+      f.definition = `Selected b = ${run.c.b}, Q = ${run.c.Q}. ${f.definition || ""}`;
+    if (d.coverageView === "envelope") {
+      for (const [id, key] of [["ratioPlot", "margin"], ["peakPlot", "peakRatio"]]) {
+        const f = fs.find(f => f.id === id);
+        const lo = [], hi = [], selected = [];
+        run.r.rows.forEach((r, i) => {
+          const values = all.map(s => s.r.rows[i][key]);
+          lo.push([r.fn, Math.min(...values)]);
+          hi.push([r.fn, Math.max(...values)]);
+          selected.push([r.fn, r[key]]);
+        });
+        f.series = [
+          {name: "Scenario minimum", data: lo, color: "#8298ad", dash: "dash"},
+          {name: "Scenario maximum", data: hi, color: "#8298ad", dash: "dash", fill: "tonexty"},
+          {name: `Selected b ${run.c.b}, Q ${run.c.Q}`, data: selected, color: colors[0], dash: "solid"},
+        ];
+        f.title = id === "ratioPlot" ? "Fatigue coverage · all scenarios" : "Peak coverage · all scenarios";
+        delete f.governing;
+        f.definition = `Shading spans the calculated b × Q scenarios at each frequency; the blue curve is b ${run.c.b}, Q ${run.c.Q}. This is an assumption range, not a confidence interval or simultaneous resonances. Target = 1. ${run.c.scope === "modes" ? "Only marked, listed modes are assessed." : ""}`;
+        f.meta = `All-scenario range | selected b ${run.c.b}, Q ${run.c.Q} | Not a confidence interval`;
+      }
+    }
     const bs = [...new Set(all.map((s) => s.c.b))],
       qs = [...new Set(all.map((s) => s.c.Q))];
     fs.push({
       id: "heatmap",
-      title: "Minimum fatigue coverage by b and Q",
+      title: `${scopeLabel} ${metric} coverage by b and Q`,
       kind: "heatmap",
       bs,
       qs,
       all,
+      frequency,
+      metric,
+      selected: { b: run.c.b, Q: run.c.Q },
+      meta: frequency == null ? "Minimum over assessed frequencies; governing frequencies can differ by cell." : `At ${n(frequency, 7)} Hz; one calculated oscillator, not an overall minimum.`,
       definition:
-        "Cells show minimum assessed coverage. Select a cell to inspect that scenario. A value below 1 identifies a modeled gap. Color defaults to 0–2 and saturates above 2; labels retain actual values.",
+        `${frequency == null ? "Cells show minimum assessed coverage." : `Cells show coverage at ${n(frequency, 7)} Hz; no interpolation.`} Select a cell to inspect that b/Q pair; the outline marks your selection. ${metric === "peak" ? "Peak response is independent of b. " : ""}Below 1 = modeled gap. Color defaults to 0–2 and saturates above 2; labels retain actual values.`,
     });
     fs.push({
       id: "bars",
-      title: `Minimum coverage at b = ${run.c.b}`,
+      title: `${scopeLabel} coverage at b = ${run.c.b}`,
       kind: "bars",
       all: all.filter((s) => s.c.b === run.c.b),
+      frequency,
+      label: "Coverage",
+      meta: frequency == null ? "Minimum over assessed frequencies; fatigue and peak minima can occur at different frequencies." : `At ${n(frequency, 7)} Hz; fatigue and peak evaluated at the same oscillator.`,
       definition:
-        "Grouped columns compare minimum fatigue and peak coverage by Q. Their governing frequencies may differ. Peak response is independent of b.",
+        `Grouped columns compare fatigue and peak coverage by Q at b = ${run.c.b}. ${frequency == null ? "Minima may govern at different frequencies." : `Both metrics use ${n(frequency, 7)} Hz.`} Peak response is independent of b.`,
     });
     return fs;
   }
@@ -94,7 +150,7 @@ const WBPlots = (() => {
     if (f.kind === "heatmap") {
       const z = f.bs.map((b) =>
         f.qs.map(
-          (Q) => f.all.find((s) => s.c.b === b && s.c.Q === Q).r.worst.margin,
+          (Q) => coverageAt(f.all.find((s) => s.c.b === b && s.c.Q === Q), f.metric === "peak" ? "peakRatio" : "margin", f.frequency),
         ),
       );
       data = [
@@ -107,11 +163,11 @@ const WBPlots = (() => {
           texttemplate: "%{text}",
           textfont: { size: large ? 17 : 14 },
           hovertemplate:
-            "b %{y}, Q %{x}<br>Minimum fatigue coverage %{z:.4g}×<extra></extra>",
+            `b %{y}, Q %{x}<br>${f.frequency == null ? "Minimum" : n(f.frequency, 7) + " Hz"} ${f.metric} coverage %{z:.4g}×<extra></extra>`,
           colorscale: [
-            [0, "#f6e4d2"],
-            [0.5, "#edf1f4"],
-            [1, "#4084a8"],
+            [0, "#eed4ac"],
+            [0.5, "#f4f6f8"],
+            [1, "#769ebd"],
           ],
           zmin: 0,
           zmax: 2,
@@ -124,6 +180,9 @@ const WBPlots = (() => {
       layout.yaxis.title.text = "Fatigue exponent b";
       layout.showlegend = false;
       layout.margin.t = 25;
+      const ix = f.qs.indexOf(f.selected.Q), iy = f.bs.indexOf(f.selected.b);
+      layout.shapes = [{type: "rect", xref: "x", yref: "y", x0: ix - 0.48, x1: ix + 0.48,
+        y0: iy - 0.48, y1: iy + 0.48, line: {color: "#24384b", width: 3}, fillcolor: "rgba(0,0,0,0)"}];
     } else if (f.kind === "bars") {
       data = [
         ["Fatigue coverage", "margin"],
@@ -133,7 +192,7 @@ const WBPlots = (() => {
         name,
         x: f.all.map((s) => String(s.c.Q)),
         y: f.all.map((s) =>
-          k === "margin" ? s.r.worst.margin : s.r.peakWorst.peakRatio,
+          coverageAt(s, k, f.frequency),
         ),
         marker: { color: colors[i], pattern: { shape: i ? "/" : "" } },
         hovertemplate: "Q %{x}<br>%{y:.4g}×<extra>" + name + "</extra>",
@@ -146,6 +205,7 @@ const WBPlots = (() => {
       const bounds = VDCReport.limits(f.series, f.threshold),
         floor = bounds.ymin;
       data = [];
+      const markers = [];
       f.series.forEach((s, i) => {
         data.push({
           type: "scatter",
@@ -153,7 +213,9 @@ const WBPlots = (() => {
           name: esc(s.name.length > 55 ? s.name.slice(0, 54) + "…" : s.name),
           x: s.data.map((p) => p[0]),
           y: s.data.map((p) => (p[1] > 0 ? p[1] : null)),
-          line: { color: colors[i % 4], width: 2, dash: dash[i % 4] },
+          line: { color: s.color || colors[i % 4], width: 2, dash: s.dash || dash[i % 4] },
+          fill: s.fill || "none",
+          fillcolor: "rgba(87,126,160,0.15)",
           opacity: f.scopeModes?.length ? 0.4 : 1,
           connectgaps: false,
           hovertemplate:
@@ -163,7 +225,7 @@ const WBPlots = (() => {
           (p) => p[1] === 0 || f.scopeModes?.includes(p[0]),
         );
         if (marks.length)
-          data.push({
+          markers.push({
             type: "scatter",
             mode: "markers",
             name: s.name + " assessed / zero",
@@ -174,7 +236,7 @@ const WBPlots = (() => {
             ),
             customdata: marks.map((p) => p[1]),
             marker: {
-              color: colors[i % 4],
+              color: s.color || colors[i % 4],
               size: 7,
               symbol: marks.map((p) =>
                 p[1] === 0 ? "triangle-down" : "circle",
@@ -184,6 +246,7 @@ const WBPlots = (() => {
               "%{x:.6g} Hz<br>Actual value %{customdata:.5g}<extra></extra>",
           });
       });
+      data.push(...markers);
       if (f.threshold) layout.shapes = [threshold()];
       if (f.governing) {
         const [x, y] = f.governing;
@@ -392,5 +455,5 @@ const WBPlots = (() => {
       div.remove();
     }
   }
-  return { order, specs, figure, viewOf, image, updateTicks };
+  return { order, specs, figure, viewOf, image, updateTicks, displayContext, displayNote };
 })();

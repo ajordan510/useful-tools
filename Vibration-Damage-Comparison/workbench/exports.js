@@ -121,7 +121,7 @@ const WBExports = (() => {
     save(VDCReport.slug(title) + "-summary.csv", csvBlob(rows));
   }
   async function images(item, format = "png") {
-    const figs = WBPlots.specs(item.run, item.all);
+    const figs = WBPlots.specs(item.run, item.all, item.entry.display);
     const map = {};
     for (const id of [
       ...WBPlots.order.requirements,
@@ -148,6 +148,7 @@ const WBExports = (() => {
         inputs: item.run.c,
         generated: item.run.r.generated,
         views: item.entry.views,
+        display: item.entry.display,
         assessment: VDCReport.summary(item.run.c, item.run.r),
         warnings: item.run.r.warnings,
         convergence: item.run.r.convergence,
@@ -163,7 +164,7 @@ const WBExports = (() => {
       const s = item.run,
         t = VDCReport.summary(s.c, s.r),
         img = await images(item, "svg");
-      body += `<section><h2>${esc(item.entry.name)} · b ${s.c.b}, Q ${s.c.Q}</h2><div class="takeaway">${esc(t.fatigue)}<br>${esc(t.peak)}</div><p>${esc(t.scope)}. ${esc(VDCReport.peakCaption(s.c))}</p><table>${VDCReport.specs(
+      body += `<section><h2>${esc(item.entry.name)} · b ${s.c.b}, Q ${s.c.Q}</h2><p class="display-note">${esc(WBPlots.displayNote(s, item.entry.display))}</p><div class="takeaway">Selected b ${s.c.b}, Q ${s.c.Q} — overall assessment<br>${esc(t.fatigue)}<br>${esc(t.peak)}</div><p>${esc(t.scope)}. ${esc(VDCReport.peakCaption(s.c))}</p><table>${VDCReport.specs(
         s.c,
         s.r,
       )
@@ -346,7 +347,7 @@ const WBExports = (() => {
           fill: { color: "EDF3F6" },
           line: { color: "EDF3F6" },
         });
-        text(sl, takeaway, 0.6, 5.42, 12.1, 0.4, 17, {
+        text(sl, k !== "scenarios" && item.entry.display?.coverageView === "envelope" ? "Selected b/Q: " + takeaway : takeaway, 0.6, 5.42, 12.1, 0.4, 17, {
           bold: true,
           fit: "shrink",
         });
@@ -355,7 +356,7 @@ const WBExports = (() => {
             ? `Coverage = sine damage / (F × random damage), F = ${s.c.damageFactor}. Target = 1. Same b, Q and response coordinate on both curves.`
             : k === "peak"
               ? VDCReport.peakCaption(s.c) + " RMS is context, not a peak."
-              : "Minima may occur at different frequencies. Raw damage indices are not compared across different b values.";
+              : WBPlots.displayNote(s, item.entry.display);
         text(sl, definition, 0.4, 6.2, 12.5, 0.65, 13, { fit: "shrink" });
       }
     }

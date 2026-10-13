@@ -26,6 +26,28 @@ const close = (a, b, t = 1e-10) =>
     [5, 10, 20],
   );
   assert.equal(all.length, 9);
+  global.VDC = E;
+  const P = require("node:vm").runInNewContext(
+    fs.readFileSync(require("node:path").join(__dirname, "plots.js"), "utf8") + ";WBPlots",
+    { VDCReport: require("../reporting.js") },
+  );
+  const picked = all.find(s => s.c.b === 6 && s.c.Q === 10);
+  const scoped = { ...picked, c: { ...picked.c, scope: "modes", modes: [100] } };
+  const dc = P.displayContext(scoped, {summaryScope: "frequency", frequency: 107});
+  assert.deepEqual(Array.from(dc.frequencies), [100]);
+  assert.equal(dc.frequency, 100);
+  const matrix = P.specs(picked, all, {summaryScope: "frequency", frequency: 100}).find(f => f.id === "heatmap");
+  const z = P.figure(matrix).data[0].z;
+  matrix.bs.forEach((b,i) => matrix.qs.forEach((Q,j) =>
+    close(z[i][j], all.find(s => s.c.b === b && s.c.Q === Q).r.rows.find(r => r.fn === 100).margin)));
+  c.display = {summaryScope: "frequency", summaryMetric: "peak", frequency: 100, coverageView: "envelope"};
+  assert.deepEqual(M.validate(study).cases[0].display, c.display);
+  const signatureBeforeView = M.signature(study, c);
+  c.display.frequency = 105;
+  assert.equal(M.signature(study, c), signatureBeforeView);
+  c.display.summaryMetric = "invalid";
+  assert.throws(() => M.validate(study), /Invalid summaryMetric/);
+  c.display.summaryMetric = "fatigue";
   for (const s of all) {
     const direct = E.analyze(s.c, { skipSensitivity: true });
     for (let j = 0; j < s.r.rows.length; j++)

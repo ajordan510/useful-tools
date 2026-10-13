@@ -217,6 +217,20 @@
         clean.QValues.includes(c.selected.Q)
       )
         clean.selected = { b: c.selected.b, Q: c.selected.Q };
+      const display = c.display || {};
+      for (const [key, options] of Object.entries({
+        summaryScope: ["overall", "frequency"],
+        summaryMetric: ["fatigue", "peak"],
+        coverageView: ["selected", "envelope"],
+      }))
+        assert(display[key] === undefined || options.includes(display[key]), `Invalid ${key} display option.`);
+      assert(display.frequency == null || (Number.isFinite(display.frequency) && display.frequency > 0), "Invalid summary frequency.");
+      clean.display = {
+        summaryScope: display.summaryScope || "overall",
+        summaryMetric: display.summaryMetric || "fatigue",
+        coverageView: display.coverageView || "selected",
+        frequency: display.frequency ?? null,
+      };
       assert(
         clean.bValues.length * clean.QValues.length <= 72,
         "Limit each case to 72 b × Q combinations.",

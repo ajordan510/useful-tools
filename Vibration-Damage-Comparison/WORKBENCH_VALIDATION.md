@@ -25,6 +25,8 @@ The standalone file was exercised in headless desktop Edge at 1600 × 1000. Test
 - Default requirement plots and all eleven charts, with source/coverage pairs.
 - Wheel zoom, box zoom, pan, numeric/log axis limits, fit, expand/restore, linked pair axes, and category/color limits.
 - Heatmap cell selection and persisted b/Q selection and view settings in downloaded study JSON.
+- Overall/frequency-specific summaries, fatigue/peak heatmap switching, exact row agreement, frequency dropdown and keyboard-operated slider, with unchanged headline minima. Listed-mode frequency filtering, display validation and saved-display round trips are covered.
+- Coverage envelopes agree with the pointwise minimum/maximum across all scenarios; the selected curve updates with b/Q. Frequency-specific and envelope choices propagate into report figures, HTML labels and PowerPoint notes.
 - Unchanged governing results after viewport edits.
 - Shared-profile invalidation and independent exposure settings.
 - Actual Excel template import and preview, malformed inputs, duplicate keys, formula rejection, numeric validation and missing references.
@@ -40,7 +42,7 @@ The original browser, collection and peak suites also pass. The original standal
 
 All seven template worksheets were rendered and visually inspected. Typed values and the three example comparisons were read back through the actual application importer. Desktop Excel also opened the delivered workbook read-only and confirmed seven sheets, retained numeric inputs, and all four dropdown types. The workbook uses list dropdowns for kinds, unit codes, inclusion and settings; the long setting list references cells rather than exceeding the inline Excel validation-list limit. Template creation includes recalculation and an error scan with no matches.
 
-The seven-case PowerPoint opens in desktop PowerPoint and all 29 slides render at 1600 × 900. All shapes are within slide bounds. Representative summary, requirements, fatigue, peak and scenario slides were inspected visually. Chart labels were enlarged and titles separated from legends following this review. Full input and model provenance is retained in speaker notes; long visible names may be abbreviated with an ellipsis. Plots honor saved axis limits, so a cropped view does not restrict the separately reported assessment scope.
+The seven-case PowerPoint opens in desktop PowerPoint and all 29 slides render at 1600 × 900. All shapes are within slide bounds. Representative summary, requirements, fatigue, peak and scenario slides were inspected visually, including scenario envelopes and frequency-specific summary charts. Chart labels were enlarged and titles separated from legends following this review. Full input and model provenance is retained in speaker notes; long visible names may be abbreviated with an ellipsis. Plots honor saved axis limits, so a cropped view does not restrict the separately reported assessment scope.
 
 Generated test decks, screenshots and import fixtures are under ignored `_paper_build/workbench`. The template and standalone workbench are committed deliverables. The HTML technical reference is generated from the same source embedded in the application.
 

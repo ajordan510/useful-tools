@@ -28,7 +28,7 @@ page.on("request", (r) => {
 page.on("dialog", (d) => d.dismiss());
 const ready = () =>
   page.waitForFunction(
-    () => !Workbench.busy && document.querySelector("#plot_bars")?._fullLayout,
+    () => !Workbench.busy && !Workbench.rendering && document.querySelector("#plot_bars")?._fullLayout,
     {},
     { timeout: 120000 },
   );
@@ -60,6 +60,71 @@ try {
   });
   assert.equal(await page.locator("#requirements .plot").count(), 3);
   assert.equal(await page.locator(".plot").count(), 11);
+  // Display controls use actual calculated rows, without changing assessment minima.
+  const headline = await page.locator("#summary").innerText();
+  await page.locator("#summaryScope").selectOption("frequency");
+  await ready();
+  await page.locator("#summaryFrequency").selectOption({ index: 12 });
+  await ready();
+  assert.equal(await page.evaluate(() => {
+    const c = Workbench.study.cases[0], all = Workbench.result(c);
+    const plot = document.querySelector("#plot_heatmap");
+    return plot.data[0].z.every((row, i) => row.every((v, j) => {
+      const s = all.find(s => s.c.b === Number(plot.data[0].y[i]) && s.c.Q === Number(plot.data[0].x[j]));
+      return v === s.r.rows.find(r => r.fn === c.display.frequency).margin;
+    }));
+  }), true);
+  await page.locator("#summaryMetric").selectOption("peak");
+  await ready();
+  assert.equal(await page.evaluate(() => {
+    const c = Workbench.study.cases[0], all = Workbench.result(c);
+    const z = document.querySelector("#plot_heatmap").data[0].z;
+    return z.every(row => JSON.stringify(row) === JSON.stringify(z[0])) &&
+      document.querySelector("#plot_bars").data[1].y.every((v,j) => {
+        const Q = Number(document.querySelector("#plot_bars").data[1].x[j]);
+        return v === all.find(s => s.c.Q === Q).r.rows.find(r => r.fn === c.display.frequency).peakRatio;
+      });
+  }), true);
+  await page.locator("#frequencySlider").focus();
+  await page.keyboard.press("End");
+  await ready();
+  assert.equal(await page.locator("#frequencySlider").inputValue(), await page.locator("#frequencySlider").getAttribute("max"));
+  assert.equal(await page.locator("#summary").innerText(), headline);
+  await page.locator("#coverageView").selectOption("envelope");
+  await ready();
+  assert.equal(await page.evaluate(() => {
+    const c = Workbench.study.cases[0], all = Workbench.result(c);
+    return [["ratioPlot", "margin"], ["peakPlot", "peakRatio"]].every(([id,k]) => {
+      const d = document.querySelector("#plot_"+id).data;
+      return d[0].y.every((v,i) => v === Math.min(...all.map(s => s.r.rows[i][k]))) &&
+        d[1].y.every((v,i) => v === Math.max(...all.map(s => s.r.rows[i][k]))) && d[1].fill === "tonexty";
+    });
+  }), true);
+  await page.locator("#activeB").selectOption("8");
+  await page.locator("#activeQ").selectOption("5");
+  await ready();
+  assert.match(await page.locator("#plotContext").innerText(), /selected b 8, Q 5/);
+  assert.equal(await page.evaluate(() => {
+    const s = Workbench.chosen(Workbench.study.cases[0]);
+    return document.querySelector("#plot_ratioPlot").data[2].y.every((v,i) => v === s.r.rows[i].margin);
+  }), true);
+  const display = await page.evaluate(() => {
+    const s = WBModel.validate(JSON.parse(JSON.stringify(Workbench.study)));
+    return s.cases[0].display;
+  });
+  assert.equal(display.coverageView, "envelope");
+  assert.equal(display.summaryScope, "frequency");
+  assert.equal(display.summaryMetric, "peak");
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({path: path.join(out, "frequency-envelope-workspace.png"), fullPage: true});
+  await download(page.locator('[data-image="ratioPlot"][data-format="svg"]'), "envelope.svg");
+  await download(page.locator('[data-image="heatmap"][data-format="png"]'), "frequency-heatmap.png");
+  await page.locator("#summaryScope").selectOption("overall");
+  await page.locator("#summaryMetric").selectOption("fatigue");
+  await page.locator("#coverageView").selectOption("selected");
+  await page.locator("#activeB").selectOption("6");
+  await page.locator("#activeQ").selectOption("10");
+  await ready();
   const before = await page.evaluate(
     () => Workbench.chosen(Workbench.study.cases[0]).r.worst.margin,
   );
@@ -120,7 +185,7 @@ try {
     ),
   );
   // Box zoom and fit on a requirement plot.
-  await page.locator('#plot_psdPlot').scrollIntoViewIfNeeded();
+  await page.locator('#plot_psdPlot').evaluate(el => el.scrollIntoView({block: "center"}));
   const psdRange=await page.evaluate(()=>document.querySelector('#plot_psdPlot')._fullLayout.xaxis.range.slice());
   const area=await page.locator('#plot_psdPlot .nsewdrag').boundingBox();
   await page.mouse.move(area.x+area.width*.25,area.y+area.height*.25);await page.mouse.down();
@@ -226,6 +291,9 @@ try {
     ),
     7,
   );
+  await page.locator("#summaryScope").selectOption("frequency");
+  await page.locator("#coverageView").selectOption("envelope");
+  await ready();
   await page.evaluate(() => Workbench.actions.export());
   const ppt = await download(
     page.getByRole("button", { name: "PowerPoint", exact: true }),
@@ -241,11 +309,14 @@ try {
     .async("string");
   assert.match(notes, /peakProbability/);
   assert.match(notes, /sineRevision/);
+  assert.match(notes, /coverageView/);
+  assert.match(notes, /envelope/);
   const report = await download(
     page.getByRole("button", { name: "HTML report", exact: true }),
     "seven-case-report.html",
   );
   assert.match(await fs.readFile(report, "utf8"), /Exact calculation inputs/);
+  assert.match(await fs.readFile(report, "utf8"), /calculated point/);
   await download(
     page.getByRole("button", { name: "Summary CSV", exact: true }),
     "summary.csv",

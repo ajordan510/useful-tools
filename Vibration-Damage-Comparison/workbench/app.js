@@ -12,6 +12,7 @@ const Workbench = (() => {
     busy = false,
     dirty = false,
     renderId = 0,
+    renderedId = 0,
     undo = null,
     plotSpecs = new Map(),
     suppressLink = false;
@@ -590,8 +591,26 @@ const Workbench = (() => {
     $("summary").replaceChildren();
     if (!run) {
       status(busy ? "Calculating…" : "Inputs ready · calculation required");
+      renderedId = rid;
       return;
     }
+    const display = WBPlots.displayContext(run, c.display);
+    c.display = {
+      summaryScope: display.summaryScope, summaryMetric: display.summaryMetric,
+      coverageView: display.coverageView, frequency: display.frequency,
+    };
+    for (const id of ["summaryScope", "summaryMetric", "coverageView"])
+      $(id).value = display[id];
+    $("summaryFrequency").innerHTML = display.frequencies.map(f =>
+      `<option value="${f}" ${f === display.frequency ? "selected" : ""}>${n(f, 7)} Hz</option>`).join("");
+    $("frequencySlider").max = display.frequencies.length - 1;
+    $("frequencySlider").value = display.frequencies.indexOf(display.frequency);
+    $("frequencySlider").setAttribute("aria-valuetext", `${n(display.frequency, 7)} Hz`);
+    $("frequencyPreview").textContent = `${n(display.frequency, 7)} Hz`;
+    $("summaryFrequency").disabled = display.summaryScope !== "frequency";
+    $("frequencySlider").disabled = display.summaryScope !== "frequency" || display.frequencies.length < 2;
+    $("plotContext").textContent = `Source spectra: selected b ${run.c.b}, Q ${run.c.Q}. Coverage: ${display.coverageView === "envelope" ? "all calculated pairs, with selected pair overlaid" : "selected pair"}.`;
+    $("summaryContext").textContent = `${display.summaryScope === "overall" ? "Each cell uses its minimum over assessed frequencies; the governing frequency can differ between cells." : `Showing ${n(display.frequency, 7)} Hz from the calculated ${run.c.scope === "modes" ? "listed modes" : "oscillator bank"}. Slider follows calculated points; no interpolation. Release to update.`} Headline minima remain overall. Click a heatmap cell or use Selected b / Q above to inspect a pair.`;
     const worst = all.reduce((a, b) =>
         a.r.worst.margin < b.r.worst.margin ? a : b,
       ),
@@ -602,7 +621,7 @@ const Workbench = (() => {
       `<div class="${run.r.worst.margin < 1 ? "gap" : ""}">Selected scenario fatigue coverage<strong>${n(run.r.worst.margin)}×</strong><small>At ${n(run.r.worst.fn)} Hz · b ${run.c.b}, Q ${run.c.Q}<br>Target ≥ 1 · ${esc(run.c.method)}</small></div><div class="${run.r.peakWorst.peakRatio < 1 ? "gap" : ""}">Selected scenario peak coverage<strong>${n(run.r.peakWorst.peakRatio)}×</strong><small>At ${n(run.r.peakWorst.fn)} Hz · ${esc(VDCReport.peakLabel(run.c))}<br>Relative displacement · ${n(run.c.T)} s random exposure</small></div><div class="${worst.r.worst.margin < 1 || peak.r.peakWorst.peakRatio < 1 ? "gap" : ""}">Governing across assumptions<strong>${n(worst.r.worst.margin)}× fatigue / ${n(peak.r.peakWorst.peakRatio)}× peak</strong><small>Fatigue: b ${worst.c.b}, Q ${worst.c.Q}, ${n(worst.r.worst.fn)} Hz<br>Peak: Q ${peak.c.Q}, ${n(peak.r.peakWorst.fn)} Hz</small></div>`;
     $("review").innerHTML =
       `<p>${esc(VDCReport.summary(run.c, run.r).scope)}. View limits do not change this scope. Sampled minima and gap endpoints are not exact frequency crossings.</p><p>Integration refinement at governing frequencies: fatigue ${n(100 * run.r.convergence)}%; peak ${n(100 * run.r.peakConvergence)}%.</p><ul>${[...new Set(all.flatMap((s) => s.r.warnings))].map((w) => `<li>${esc(w)}</li>`).join("")}</ul><p><b>Assumption rationale:</b> ${esc(run.c.rationale || "Not recorded")}</p><p><b>Analyst interpretation:</b> ${esc(run.c.analystNotes || "Not recorded")}</p>`;
-    plotSpecs = new Map(WBPlots.specs(run, all).map((f) => [f.id, f]));
+    plotSpecs = new Map(WBPlots.specs(run, all, c.display).map((f) => [f.id, f]));
     for (const [group, ids] of Object.entries(WBPlots.order)) {
       const host = $(group);
       host.querySelectorAll(".plot").forEach((p) => Plotly.purge(p));
@@ -625,12 +644,14 @@ const Workbench = (() => {
               b: Number(d.points[0].y),
               Q: Number(d.points[0].x),
             };
+            setDirty();
             refresh();
           });
       }
     }
     if (!busy)
       status(`${all.length} scenarios current · b ${run.c.b}, Q ${run.c.Q}`);
+    if (rid === renderId) renderedId = rid;
   }
   function recordView(id) {
     const c = active(),
@@ -1063,8 +1084,30 @@ const Workbench = (() => {
   ])
     $(id).onchange = (e) => {
       selection[active().id][k] = Number(e.target.value);
+      setDirty();
       refresh();
     };
+  function changeDisplay(key, value) {
+    const c = active();
+    c.display = { ...c.display, [key]: value };
+    if (key === "coverageView")
+      for (const id of ["ratioPlot", "peakPlot"])
+        if (c.views[id]) delete c.views[id].y;
+    if (key === "frequency" || key === "summaryScope")
+      if (c.views.bars) delete c.views.bars.y;
+    setDirty();
+    refresh();
+  }
+  for (const id of ["summaryScope", "summaryMetric", "coverageView"])
+    $(id).onchange = e => changeDisplay(id, e.target.value);
+  $("summaryFrequency").onchange = e => changeDisplay("frequency", Number(e.target.value));
+  $("frequencySlider").oninput = e => {
+    const option = $("summaryFrequency").options[Number(e.target.value)];
+    $("summaryFrequency").value = option.value;
+    $("frequencyPreview").textContent = option.text;
+    e.target.setAttribute("aria-valuetext", option.text);
+  };
+  $("frequencySlider").onchange = () => changeDisplay("frequency", Number($("summaryFrequency").value));
   $("linked").onchange = (e) => {
     study.linkedAxes = e.target.checked;
     setDirty();
@@ -1218,6 +1261,9 @@ const Workbench = (() => {
     },
     get busy() {
       return busy;
+    },
+    get rendering() {
+      return renderedId !== renderId;
     },
     result,
     chosen,
