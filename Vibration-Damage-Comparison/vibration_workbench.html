@@ -5410,9 +5410,13 @@ if (typeof module !== "undefined" && module.exports) module.exports = VDCReport;
         title: { text: f.xLabel || "Quality factor Q", standoff: 12 },
         type: "log",
         showline: true,
-        linecolor: "#657784",
+        linecolor: "#46545f",
+        linewidth: 1.2,
+        layer: "above traces",
         mirror: true,
-        gridcolor: "#e3e8eb",
+        showgrid: true,
+        gridcolor: "#dce2e6",
+        gridwidth: 1,
         ticks: "outside",
         exponentformat: "e",
         minexponent: 3,
@@ -5422,9 +5426,13 @@ if (typeof module !== "undefined" && module.exports) module.exports = VDCReport;
         title: { text: f.label || "Minimum coverage", standoff: 15 },
         type: "log",
         showline: true,
-        linecolor: "#657784",
+        linecolor: "#46545f",
+        linewidth: 1.2,
+        layer: "above traces",
         mirror: true,
-        gridcolor: "#e3e8eb",
+        showgrid: true,
+        gridcolor: "#dce2e6",
+        gridwidth: 1,
         ticks: "outside",
         exponentformat: "e",
         minexponent: 3,
@@ -5571,6 +5579,11 @@ if (typeof module !== "undefined" && module.exports) module.exports = VDCReport;
         }
       }
     }
+    for (const a of ["x", "y"]) {
+      const axis = layout[a + "axis"];
+      axis.minor = minorGrid(axis);
+      if (axis.type === "category") axis.showgrid = false;
+    }
     return {
       data,
       layout,
@@ -5582,6 +5595,25 @@ if (typeof module !== "undefined" && module.exports) module.exports = VDCReport;
         modeBarButtonsToRemove: ["toImage", "select2d", "lasso2d"],
       },
     };
+  }
+  function minorGrid(axis) {
+    const numeric = axis.type === "log" || axis.type === "linear";
+    const minor = {
+      showgrid: numeric,
+      gridcolor: "#edf0f2",
+      gridwidth: 0.7,
+      ticks: "",
+      tickmode: "auto",
+    };
+    if (axis.type === "log" && axis.range) {
+      const decades = axis.range[1] - axis.range[0];
+      // Thin out very wide log ranges; use automatic subdivisions at close zoom.
+      if (decades >= 0.3) {
+        minor.tickmode = "linear";
+        minor.dtick = decades <= 3 ? "D1" : decades <= 8 ? "D2" : 1;
+      }
+    }
+    return minor;
   }
   function logTicks(range) {
     const lo = 10 ** range[0],
@@ -5614,6 +5646,11 @@ if (typeof module !== "undefined" && module.exports) module.exports = VDCReport;
     const change = {};
     for (const a of ["x", "y"]) {
       const axis = el._fullLayout?.[a + "axis"];
+      if (axis) {
+        const minor = minorGrid(axis);
+        if (JSON.stringify(el.layout[a + "axis"].minor) !== JSON.stringify(minor))
+          change[a + "axis.minor"] = minor;
+      }
       if (axis?.type === "log") {
         const ticks = logTicks(axis.range);
         if (
