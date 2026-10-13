@@ -223,6 +223,24 @@ const Workbench = (() => {
     $("f_peakMode").onchange = sync;
     sync();
   }
+  function appearanceDialog() {
+    ensureIdle();
+    const c = active(), d = c.display || {};
+    editor("Plot appearance & VRS", `<div class="fields">${field("vrsFactor", "VRS reference factor k", d.vrsFactor ?? 3,
+      "Reference curve = k × response RMS; default 3 (3σ). Enter a value greater than 0 and at most 20. This does not change the selected peak model or coverage.")}${field("legendMode", "Default legend placement", d.legendMode || "above", "Individual Legend buttons can override this setting.",
+      [["above", "Above plot"], ["boxed", "Boxed inside plot (draggable)"]])}</div><p class="helptext">Boxed legends have a white background and thin border. Drag their background or title to reposition them. Positions are saved with the study and used in exported figures. MATLAB’s default gem colors are used for solid data lines.</p>`, [
+      ["Cancel", () => $("editor").close()],
+      ["Apply appearance", async () => {
+        const next = M.copy(study), a = next.cases.find(x => x.id === c.id);
+        a.display = { ...d, vrsFactor: Number($("f_vrsFactor").value), legendMode: $("f_legendMode").value };
+        if (a.display.vrsFactor !== (d.vrsFactor ?? 3) && a.views.peakResponsePlot) delete a.views.peakResponsePlot.y;
+        if (a.display.legendMode !== (d.legendMode || "above"))
+          for (const v of Object.values(a.views)) delete v.legend;
+        study = M.validate(next);
+        setDirty(); $("editor").close(); await refresh();
+      }, true],
+    ]);
+  }
   function caseDialog() {
     ensureIdle();
     const c = active(),
@@ -598,6 +616,7 @@ const Workbench = (() => {
     c.display = {
       summaryScope: display.summaryScope, summaryMetric: display.summaryMetric,
       coverageView: display.coverageView, frequency: display.frequency,
+      vrsFactor: display.vrsFactor, legendMode: display.legendMode,
     };
     for (const id of ["summaryScope", "summaryMetric", "coverageView"])
       $(id).value = display[id];
@@ -610,7 +629,7 @@ const Workbench = (() => {
     $("summaryFrequency").disabled = display.summaryScope !== "frequency";
     $("frequencySlider").disabled = display.summaryScope !== "frequency" || display.frequencies.length < 2;
     $("plotContext").textContent = `Source spectra: selected b ${run.c.b}, Q ${run.c.Q}. Coverage: ${display.coverageView === "envelope" ? "all calculated pairs, with selected pair overlaid" : "selected pair"}.`;
-    $("summaryContext").textContent = `${display.summaryScope === "overall" ? "Each cell uses its minimum over assessed frequencies; the governing frequency can differ between cells." : `Showing ${n(display.frequency, 7)} Hz from the calculated ${run.c.scope === "modes" ? "listed modes" : "oscillator bank"}. Slider follows calculated points; no interpolation. Release to update.`} Headline minima remain overall. Click a heatmap cell or use Selected b / Q above to inspect a pair.`;
+    $("summaryContext").textContent = `${display.summaryScope === "overall" ? "Each cell uses its minimum over assessed frequencies; the governing frequency can differ between cells." : `Showing ${n(display.frequency, 7)} Hz from the calculated ${run.c.scope === "modes" ? "listed modes" : "oscillator bank"}; no interpolation.`} Headline minima remain overall.`;
     const worst = all.reduce((a, b) =>
         a.r.worst.margin < b.r.worst.margin ? a : b,
       ),
@@ -628,7 +647,8 @@ const Workbench = (() => {
       host.innerHTML = ids
         .map((id) => {
           const f = plotSpecs.get(id);
-          return `<section class="plotcard" id="card_${id}"><div class="plothead"><strong>${esc(f.title)}</strong><button data-axis="${id}">Axes</button><button data-fit="${id}" title="Fit data">Fit</button><button data-expand="${id}">Expand</button><button data-image="${id}" data-format="svg">SVG</button><button data-image="${id}" data-format="png">PNG</button></div><div class="plot" id="plot_${id}" role="img" aria-label="${esc(f.title)}"></div><div class="caption">${esc(f.definition || f.scope || "")} ${!f.kind ? "Drag to zoom; use the plot toolbar to pan. Double-click to fit. Zero values use downward markers at the log floor." : ""}</div></section>`;
+          const boxed = (c.views[id]?.legend?.mode || f.legendMode) === "boxed";
+          return `<section class="plotcard" id="card_${id}"><div class="plothead"><strong>${esc(f.title)}</strong><button data-axis="${id}">Axes</button>${f.kind !== "heatmap" ? `<button data-legend="${id}" aria-pressed="${boxed}" title="Toggle boxed legend">Legend</button>` : ""}<button data-fit="${id}" title="Fit data">Fit</button><button data-expand="${id}">Expand</button><button data-image="${id}" data-format="svg">SVG</button><button data-image="${id}" data-format="png">PNG</button></div><div class="plot" id="plot_${id}" role="img" aria-label="${esc(f.title)}"></div><div class="caption">${esc(f.definition || f.scope || "")}${f.series?.some(s => s.data.some(p => p[1] === 0)) ? " Zero values are marked at the log floor." : ""}</div></section>`;
         })
         .join("");
       for (const id of ids) {
@@ -637,7 +657,7 @@ const Workbench = (() => {
           p = $("plot_" + id),
           g = WBPlots.figure(f, c.views[id]);
         await Plotly.newPlot(p, g.data, g.layout, g.config);
-        p.on("plotly_relayout", () => recordView(id));
+        p.on("plotly_relayout", changes => recordView(id, changes));
         if (id === "heatmap")
           p.on("plotly_click", (d) => {
             selection[c.id] = {
@@ -653,13 +673,14 @@ const Workbench = (() => {
       status(`${all.length} scenarios current · b ${run.c.b}, Q ${run.c.Q}`);
     if (rid === renderId) renderedId = rid;
   }
-  function recordView(id) {
+  function recordView(id, changes) {
     const c = active(),
       p = $("plot_" + id);
     if (!p?._fullLayout) return;
     c.views[id] = WBPlots.viewOf(p);
     WBPlots.updateTicks(p);
     setDirty();
+    if (changes && !Object.keys(changes).some(k => k.startsWith("xaxis.range") || k === "xaxis.autorange" || k === "xaxis.type")) return;
     if (
       suppressLink ||
       !study.linkedAxes ||
@@ -778,10 +799,20 @@ const Workbench = (() => {
     );
   }
   async function fit(id) {
-    delete active().views[id];
+    const legend = WBPlots.viewOf($("plot_" + id)).legend;
+    active().views[id] = legend ? { legend } : {};
     const f = plotSpecs.get(id),
-      g = WBPlots.figure(f);
+      g = WBPlots.figure(f, active().views[id]);
     await Plotly.react($("plot_" + id), g.data, g.layout, g.config);
+    recordView(id);
+  }
+  async function toggleLegend(id) {
+    const c = active(), p = $("plot_" + id), view = WBPlots.viewOf(p);
+    view.legend = { mode: view.legend.mode === "boxed" ? "above" : "boxed" };
+    c.views[id] = view;
+    const g = WBPlots.figure(plotSpecs.get(id), view);
+    await Plotly.react(p, g.data, g.layout, g.config);
+    document.querySelector(`[data-legend="${id}"]`).setAttribute("aria-pressed", String(view.legend.mode === "boxed"));
     recordView(id);
   }
   async function calculate(all = false) {
@@ -870,6 +901,7 @@ const Workbench = (() => {
   const actions = {
     case: caseDialog,
     settings: settingsDialog,
+    appearance: appearanceDialog,
     profiles: () => profilesDialog(),
     cases: casesDialog,
     run: () => calculate(),
@@ -1041,6 +1073,7 @@ const Workbench = (() => {
       safe(actions[b.dataset.action]);
     }
     if (b.dataset.axis) safe(() => axisDialog(b.dataset.axis));
+    if (b.dataset.legend) safe(() => toggleLegend(b.dataset.legend));
     if (b.dataset.fit) safe(() => fit(b.dataset.fit));
     if (b.dataset.expand) {
       const card = $("card_" + b.dataset.expand);

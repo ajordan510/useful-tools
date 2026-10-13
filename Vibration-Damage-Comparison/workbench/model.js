@@ -222,14 +222,18 @@
         summaryScope: ["overall", "frequency"],
         summaryMetric: ["fatigue", "peak"],
         coverageView: ["selected", "envelope"],
+        legendMode: ["above", "boxed"],
       }))
         assert(display[key] === undefined || options.includes(display[key]), `Invalid ${key} display option.`);
       assert(display.frequency == null || (Number.isFinite(display.frequency) && display.frequency > 0), "Invalid summary frequency.");
+      assert(display.vrsFactor === undefined || (Number.isFinite(display.vrsFactor) && display.vrsFactor > 0 && display.vrsFactor <= 20), "VRS factor must be greater than 0 and at most 20.");
       clean.display = {
         summaryScope: display.summaryScope || "overall",
         summaryMetric: display.summaryMetric || "fatigue",
         coverageView: display.coverageView || "selected",
         frequency: display.frequency ?? null,
+        vrsFactor: display.vrsFactor ?? 3,
+        legendMode: display.legendMode || "above",
       };
       assert(
         clean.bValues.length * clean.QValues.length <= 72,
@@ -263,6 +267,20 @@
               "Invalid color limits.",
             );
             w.color = [...v.color];
+          }
+          if (v?.legend) {
+            assert(["above", "boxed"].includes(v.legend.mode), "Invalid legend mode.");
+            w.legend = { mode: v.legend.mode };
+            for (const key of ["x", "y"])
+              if (v.legend[key] !== undefined) {
+                assert(Number.isFinite(v.legend[key]) && v.legend[key] >= -2 && v.legend[key] <= 3, "Invalid legend position.");
+                w.legend[key] = v.legend[key];
+              }
+            for (const [key, options] of [["xanchor", ["left", "center", "right", "auto"]], ["yanchor", ["top", "middle", "bottom", "auto"]]])
+              if (v.legend[key] !== undefined) {
+                assert(options.includes(v.legend[key]), "Invalid legend anchor.");
+                w.legend[key] = v.legend[key];
+              }
           }
           clean.views[key] = w;
         }

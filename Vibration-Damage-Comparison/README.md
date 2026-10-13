@@ -215,3 +215,15 @@ Captured on 2026-10-13 from the desktop workbench using its illustrative example
 ### 7. Spectrum library
 
 ![Spectrum library](docs/screenshots/2026-10-13/07-spectrum-library.png)
+
+### 8. Boxed legends and scaled VRS
+
+The random VRS reference defaults to 3 × RMS. Legends include the displayed b/Q context; optional white boxes can be dragged within each plot and retain their position in exported figures.
+
+![Boxed legends and scaled VRS](docs/screenshots/2026-10-13/08-boxed-legends-vrs.png)
+
+### 9. Plot appearance settings
+
+Use **View → Plot appearance & VRS** to set the VRS reference factor and default legend placement. The VRS display factor is independent of the selected peak-coverage model.
+
+![Plot appearance settings](docs/screenshots/2026-10-13/09-plot-appearance-dialog.png)

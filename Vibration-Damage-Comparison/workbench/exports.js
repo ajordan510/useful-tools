@@ -34,6 +34,8 @@ const WBExports = (() => {
         "sine_peak_m",
         "random_peak_m",
         "RMS_m",
+        "VRS_reference_m",
+        "VRS_reference_k",
         "peak_coverage",
         "peak_model",
         "nominal_probability_percent",
@@ -65,6 +67,8 @@ const WBExports = (() => {
           r.peakSine,
           r.peakRandom,
           r.sigma,
+          r.sigma * (entry.display?.vrsFactor ?? 3),
+          entry.display?.vrsFactor ?? 3,
           r.peakRatio,
           s.c.peakMode,
           s.c.peakMode === "extreme" ? s.c.peakProbability : "",
@@ -355,7 +359,7 @@ const WBExports = (() => {
           k === "fatigue"
             ? `Coverage = sine damage / (F × random damage), F = ${s.c.damageFactor}. Target = 1. Same b, Q and response coordinate on both curves.`
             : k === "peak"
-              ? VDCReport.peakCaption(s.c) + " RMS is context, not a peak."
+              ? VDCReport.peakCaption(s.c) + ` VRS reference = ${num(item.entry.display?.vrsFactor ?? 3)} × RMS; its display factor does not set coverage.`
               : WBPlots.displayNote(s, item.entry.display);
         text(sl, definition, 0.4, 6.2, 12.5, 0.65, 13, { fit: "shrink" });
       }

@@ -1,6 +1,6 @@
 const WBPlots = (() => {
-  const colors = ["#2563a6", "#b66b16", "#7964a5", "#197b83"],
-    dash = ["solid", "dash", "dot", "dashdot"];
+  // MATLAB light-theme default "gem", R2025a onward (MathWorks colororder reference).
+  const colors = ["#1171be", "#dd5400", "#edb120", "#8516d1", "#3baa32", "#2fbeef", "#d1048b"];
   const order = {
     requirements: ["sinePlot", "sineDisplacementPlot", "psdPlot"],
     fatigue: ["fatigueComparePlot", "ratioPlot"],
@@ -21,6 +21,8 @@ const WBPlots = (() => {
       summaryScope: display.summaryScope || "overall",
       summaryMetric: display.summaryMetric || "fatigue",
       coverageView: display.coverageView || "selected",
+      vrsFactor: display.vrsFactor ?? 3,
+      legendMode: display.legendMode || "above",
       frequency, frequencies,
     };
   }
@@ -30,7 +32,7 @@ const WBPlots = (() => {
   }
   function displayNote(run, display) {
     const d = displayContext(run, display);
-    return `Summary charts: ${d.summaryScope === "frequency" ? `at ${n(d.frequency, 7)} Hz (calculated point)` : "minimum over assessed frequencies"}. Coverage curves: ${d.coverageView === "envelope" ? "all-scenario range with selected b/Q overlaid; not a confidence interval" : "selected b/Q"}. Source spectra and headline minima remain scenario-specific and full-scope respectively.`;
+    return `Summary charts: ${d.summaryScope === "frequency" ? `at ${n(d.frequency, 7)} Hz (calculated point)` : "minimum over assessed frequencies"}. Coverage curves: ${d.coverageView === "envelope" ? "all-scenario range with selected b/Q overlaid; not a confidence interval" : "selected b/Q"}. VRS reference = ${n(d.vrsFactor)} × RMS; coverage uses the selected peak model. Headline minima retain full assessment scope.`;
   }
   function specs(run, all, display = {}) {
     const d = displayContext(run, display),
@@ -38,6 +40,10 @@ const WBPlots = (() => {
       scopeLabel = frequency == null ? "Minimum" : `${n(frequency, 7)} Hz`,
       metric = d.summaryMetric === "peak" ? "peak" : "fatigue";
     const fs = VDCReport.figures(run.c, run.r, { crosscheck: true });
+    const vrs = fs.find(f => f.id === "peakResponsePlot");
+    vrs.title = "Peak response and scaled VRS";
+    vrs.series[2] = { name: `Random VRS (${n(d.vrsFactor)} × RMS)`, data: run.r.rows.map(r => [r.fn, d.vrsFactor * r.sigma * 1000]) };
+    vrs.definition = `VRS reference = ${n(d.vrsFactor)} × response RMS. Peak coverage uses ${run.c.peakMode === "extreme" ? `the approximate ${n(run.c.peakProbability)}% extreme response` : `the selected peak factor ${n(run.c.peakFactor)} × RMS`}; the VRS display factor does not change coverage.`;
     fs.find(f=>f.id==='fatigueComparePlot').definition="Coverage on the right = sine damage / required random damage. Common Q and b; each exposure uses its recorded duration.";
     for (const f of fs)
       f.meta = `${run.c.caseName.slice(0, 70)} | b ${run.c.b}, Q ${run.c.Q} | ${run.c.dwellMode === "assumed" ? "Independent assumed resonances" : "Documented exposure"}`;
@@ -54,9 +60,9 @@ const WBPlots = (() => {
           selected.push([r.fn, r[key]]);
         });
         f.series = [
-          {name: "Scenario minimum", data: lo, color: "#8298ad", dash: "dash"},
-          {name: "Scenario maximum", data: hi, color: "#8298ad", dash: "dash", fill: "tonexty"},
-          {name: `Selected b ${run.c.b}, Q ${run.c.Q}`, data: selected, color: colors[0], dash: "solid"},
+          {name: "Scenario minimum", data: lo, color: colors[1]},
+          {name: "Scenario maximum", data: hi, color: colors[3], fill: "tonexty"},
+          {name: `Selected b ${run.c.b}, Q ${run.c.Q}`, data: selected, color: colors[0]},
         ];
         f.title = id === "ratioPlot" ? "Fatigue coverage · all scenarios" : "Peak coverage · all scenarios";
         delete f.governing;
@@ -78,7 +84,7 @@ const WBPlots = (() => {
       selected: { b: run.c.b, Q: run.c.Q },
       meta: frequency == null ? "Minimum over assessed frequencies; governing frequencies can differ by cell." : `At ${n(frequency, 7)} Hz; one calculated oscillator, not an overall minimum.`,
       definition:
-        `${frequency == null ? "Cells show minimum assessed coverage." : `Cells show coverage at ${n(frequency, 7)} Hz; no interpolation.`} Select a cell to inspect that b/Q pair; the outline marks your selection. ${metric === "peak" ? "Peak response is independent of b. " : ""}Below 1 = modeled gap. Color defaults to 0–2 and saturates above 2; labels retain actual values.`,
+        `${frequency == null ? "Cells show minimum assessed coverage." : `Cells show coverage at ${n(frequency, 7)} Hz; no interpolation.`} The outline marks the selected b/Q pair. ${metric === "peak" ? "Peak response is independent of b. " : ""}Below 1 = modeled gap. Color defaults to 0–2 and saturates above 2; labels retain actual values.`,
     });
     fs.push({
       id: "bars",
@@ -91,9 +97,19 @@ const WBPlots = (() => {
       definition:
         `Grouped columns compare fatigue and peak coverage by Q at b = ${run.c.b}. ${frequency == null ? "Minima may govern at different frequencies." : `Both metrics use ${n(frequency, 7)} Hz.`} Peak response is independent of b.`,
     });
+    for (const f of fs) {
+      f.legendMode = d.legendMode;
+      f.legendTitle = order.requirements.includes(f.id)
+        ? "Input specification · independent of b / Q"
+        : f.kind === "bars" ? `b = ${run.c.b} · Q = ${qs.join(", ")}`
+        : d.coverageView === "envelope" && ["ratioPlot", "peakPlot"].includes(f.id)
+          ? `b = ${bs.join(", ")} · Q = ${qs.join(", ")}`
+          : `b = ${run.c.b} · Q = ${run.c.Q}`;
+    }
     return fs;
   }
   function figure(f, view = {}, large = false) {
+    const boxed = (view.legend?.mode || f.legendMode) === "boxed";
     const layout = {
       paper_bgcolor: "#fff",
       plot_bgcolor: "#fff",
@@ -102,12 +118,19 @@ const WBPlots = (() => {
         size: large ? 25 : 13,
         color: "#253647",
       },
-      margin: { l: 85, r: 25, t: 65, b: 80 },
+      margin: { l: 85, r: 25, t: boxed ? 30 : 100, b: 80 },
       showlegend: true,
       legend: {
-        orientation: "h",
-        x: 0,
-        y: 1.2,
+        orientation: boxed ? "v" : "h",
+        traceorder: "normal",
+        title: { text: VDCReport.wrap(f.legendTitle || "", boxed ? 42 : 70).map(esc).join("<br>"), font: { size: large ? 19 : 11 } },
+        x: boxed ? (view.legend?.x ?? 0.98) : 0,
+        y: boxed ? (view.legend?.y ?? 0.98) : 1.03,
+        xanchor: boxed ? (view.legend?.xanchor || "right") : "left",
+        yanchor: boxed ? (view.legend?.yanchor || "top") : "bottom",
+        bgcolor: "#ffffff",
+        bordercolor: "#65717d",
+        borderwidth: boxed ? 1 : 0,
         font: { size: large ? 21 : 11 },
       },
       hovermode: "closest",
@@ -194,7 +217,7 @@ const WBPlots = (() => {
         y: f.all.map((s) =>
           coverageAt(s, k, f.frequency),
         ),
-        marker: { color: colors[i], pattern: { shape: i ? "/" : "" } },
+        marker: { color: colors[i] },
         hovertemplate: "Q %{x}<br>%{y:.4g}×<extra>" + name + "</extra>",
       }));
       layout.xaxis.type = "category";
@@ -210,10 +233,10 @@ const WBPlots = (() => {
         data.push({
           type: "scatter",
           mode: "lines",
-          name: esc(s.name.length > 55 ? s.name.slice(0, 54) + "…" : s.name),
+          name: VDCReport.wrap(s.name, boxed ? 42 : 55).map(esc).join("<br>"),
           x: s.data.map((p) => p[0]),
           y: s.data.map((p) => (p[1] > 0 ? p[1] : null)),
-          line: { color: s.color || colors[i % 4], width: 2, dash: s.dash || dash[i % 4] },
+          line: { color: s.color || colors[i % colors.length], width: 2, dash: "solid" },
           fill: s.fill || "none",
           fillcolor: "rgba(87,126,160,0.15)",
           opacity: f.scopeModes?.length ? 0.4 : 1,
@@ -236,7 +259,7 @@ const WBPlots = (() => {
             ),
             customdata: marks.map((p) => p[1]),
             marker: {
-              color: s.color || colors[i % 4],
+              color: s.color || colors[i % colors.length],
               size: 7,
               symbol: marks.map((p) =>
                 p[1] === 0 ? "triangle-down" : "circle",
@@ -305,6 +328,8 @@ const WBPlots = (() => {
         responsive: true,
         displaylogo: false,
         scrollZoom: true,
+        editable: false,
+        edits: { legendPosition: boxed && f.kind !== "heatmap" },
         toImageButtonOptions: { format: "png", scale: 2 },
         modeBarButtonsToRemove: ["toImage", "select2d", "lasso2d"],
       },
@@ -390,7 +415,7 @@ const WBPlots = (() => {
       yref: "y",
       y0: 1,
       y1: 1,
-      line: { color: "#9e4829", dash: "dash", width: 1.5 },
+      line: { color: "#616971", dash: "solid", width: 1.2 },
     };
   }
   function viewOf(el) {
@@ -401,6 +426,12 @@ const WBPlots = (() => {
         v[a] = { type: l[a + "axis"].type, range: [...l[a + "axis"].range] };
     if (el.data?.[0]?.type === "heatmap")
       v.color = [el.data[0].zmin, el.data[0].zmax];
+    else if (l?.legend) {
+      const boxed = l.legend.borderwidth > 0;
+      v.legend = { mode: boxed ? "boxed" : "above" };
+      if (boxed)
+        for (const key of ["x", "y", "xanchor", "yanchor"]) v.legend[key] = l.legend[key];
+    }
     return v;
   }
   async function image(f, view, format = "png", width = 1000, height = 600) {
@@ -423,9 +454,12 @@ const WBPlots = (() => {
         y: 0.98,
         yanchor: "top",
       };
-      g.layout.margin.t = 150;
-      g.layout.legend.y = 1.02;
-      g.layout.legend.yanchor = "bottom";
+      const boxed = g.layout.legend.borderwidth > 0;
+      g.layout.margin.t = boxed ? 85 : 160;
+      if (!boxed) {
+        g.layout.legend.y = 1.02;
+        g.layout.legend.yanchor = "bottom";
+      }
       if (f.meta) {
         const zeroNote=g.layout.yaxis.type==='log' && f.series?.some(s=>s.data.some(p=>p[1]===0))?' | ▼ = 0 at log floor':'';
         g.layout.margin.b = 150;
@@ -434,7 +468,8 @@ const WBPlots = (() => {
             xref: "paper",
             yref: "paper",
             x: 0,
-            y: -0.38,
+            y: 0,
+            yshift: -110,
             xanchor: "left",
             yanchor: "top",
             showarrow: false,

@@ -23,6 +23,8 @@ The standalone file was exercised in headless desktop Edge at 1600 × 1000. Test
 
 - All Cartesian combinations and worker cancellation; incomplete cases are not published.
 - Default requirement plots and all eleven charts, with source/coverage pairs.
+- Scaled VRS defaults to 3 × RMS; a changed factor scales the reference exactly while preserving coverage and cached calculations. Invalid factors are rejected, and CSV records the factor and scaled response.
+- MATLAB gem palette and solid data traces, legend b/Q context, removal of repeated interaction instructions, actual mouse-drag of a boxed legend, persisted position through Fit and validation, per-plot toggles, and exported SVG labels. Reports exercise both external and boxed legends.
 - Wheel zoom, box zoom, pan, numeric/log axis limits, fit, expand/restore, linked pair axes, and category/color limits.
 - Heatmap cell selection and persisted b/Q selection and view settings in downloaded study JSON.
 - Overall/frequency-specific summaries, fatigue/peak heatmap switching, exact row agreement, frequency dropdown and keyboard-operated slider, with unchanged headline minima. Listed-mode frequency filtering, display validation and saved-display round trips are covered.

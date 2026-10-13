@@ -60,6 +60,46 @@ try {
   });
   assert.equal(await page.locator("#requirements .plot").count(), 3);
   assert.equal(await page.locator(".plot").count(), 11);
+  assert.doesNotMatch(await page.locator("#results").innerText(), /Drag to zoom|Double-click to fit|Select a cell to inspect|Release to update/);
+  const peakBefore = await page.evaluate(() => Workbench.chosen(Workbench.study.cases[0]).r.peakWorst.peakRatio);
+  assert.equal(await page.evaluate(() => {
+    const s = Workbench.chosen(Workbench.study.cases[0]);
+    return document.querySelector('#plot_peakResponsePlot').data[2].y.every((v,i)=>v === 3*s.r.rows[i].sigma*1000);
+  }), true);
+  await page.evaluate(() => Workbench.actions.appearance());
+  await page.locator('#f_vrsFactor').fill('4.5');
+  await page.locator('#f_legendMode').selectOption('boxed');
+  await page.getByRole('button', {name:'Apply appearance'}).click();
+  await ready();
+  assert.equal(await page.evaluate(() => {
+    const s = Workbench.chosen(Workbench.study.cases[0]), p=document.querySelector('#plot_peakResponsePlot');
+    return p.data[2].y.every((v,i)=>v === 4.5*s.r.rows[i].sigma*1000) &&
+      p._fullLayout.legend.title.text.includes('b = 6') && p._fullLayout.legend.title.text.includes('Q = 10') &&
+      p._fullLayout.legend.borderwidth===1 && p._context.edits.legendPosition;
+  }), true);
+  assert.equal(await page.evaluate(() => Workbench.chosen(Workbench.study.cases[0]).r.peakWorst.peakRatio), peakBefore);
+  // Drag the actual legend, then check saved and exported coordinates.
+  await page.locator('#plot_peakResponsePlot').evaluate(el=>el.scrollIntoView({block:'center'}));
+  const legendBefore=await page.evaluate(()=>document.querySelector('#plot_peakResponsePlot')._fullLayout.legend.x);
+  const lb=await page.locator('#plot_peakResponsePlot .legend .bg').boundingBox();
+  await page.mouse.move(lb.x+lb.width/2,lb.y+8);await page.mouse.down();
+  await page.mouse.move(lb.x+lb.width/2-80,lb.y+68,{steps:10});await page.mouse.up();
+  await page.waitForFunction(x=>document.querySelector('#plot_peakResponsePlot')._fullLayout.legend.x!==x,legendBefore);
+  const legendSaved=await page.evaluate(()=>Workbench.study.cases[0].views.peakResponsePlot.legend);
+  assert.equal(legendSaved.mode,'boxed');
+  const svgLegend=await download(page.locator('[data-image="peakResponsePlot"][data-format="svg"]'),'boxed-vrs.svg');
+  const svgText=await fs.readFile(svgLegend,'utf8');
+  assert.match(svgText,/4\.5.*RMS/);assert.match(svgText,/b = 6/);assert.match(svgText,/Q = 10/);
+  await page.locator('[data-fit="peakResponsePlot"]').click();
+  assert.deepEqual(await page.evaluate(()=>Workbench.study.cases[0].views.peakResponsePlot.legend),legendSaved);
+  await page.locator('[data-legend="peakResponsePlot"]').click();
+  assert.equal(await page.evaluate(()=>document.querySelector('#plot_peakResponsePlot')._fullLayout.legend.borderwidth),0);
+  await page.locator('[data-legend="peakResponsePlot"]').click();
+  assert.equal(await page.evaluate(()=>document.querySelector('#plot_peakResponsePlot')._fullLayout.legend.borderwidth),1);
+  await page.evaluate(()=>Workbench.actions.appearance());
+  await page.locator('#f_vrsFactor').fill('3');
+  await page.locator('#f_legendMode').selectOption('above');
+  await page.getByRole('button',{name:'Apply appearance'}).click();await ready();
   // Display controls use actual calculated rows, without changing assessment minima.
   const headline = await page.locator("#summary").innerText();
   await page.locator("#summaryScope").selectOption("frequency");
@@ -294,6 +334,10 @@ try {
   await page.locator("#summaryScope").selectOption("frequency");
   await page.locator("#coverageView").selectOption("envelope");
   await ready();
+  await page.evaluate(() => Workbench.actions.appearance());
+  await page.locator('#f_vrsFactor').fill('4.5');
+  await page.locator('#f_legendMode').selectOption('boxed');
+  await page.getByRole('button', {name:'Apply appearance'}).click();await ready();
   await page.evaluate(() => Workbench.actions.export());
   const ppt = await download(
     page.getByRole("button", { name: "PowerPoint", exact: true }),
@@ -311,6 +355,8 @@ try {
   assert.match(notes, /sineRevision/);
   assert.match(notes, /coverageView/);
   assert.match(notes, /envelope/);
+  assert.match(notes, /vrsFactor/);
+  assert.match(notes, /boxed/);
   const report = await download(
     page.getByRole("button", { name: "HTML report", exact: true }),
     "seven-case-report.html",

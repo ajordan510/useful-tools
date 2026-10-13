@@ -41,7 +41,22 @@ const close = (a, b, t = 1e-10) =>
   matrix.bs.forEach((b,i) => matrix.qs.forEach((Q,j) =>
     close(z[i][j], all.find(s => s.c.b === b && s.c.Q === Q).r.rows.find(r => r.fn === 100).margin)));
   c.display = {summaryScope: "frequency", summaryMetric: "peak", frequency: 100, coverageView: "envelope"};
-  assert.deepEqual(M.validate(study).cases[0].display, c.display);
+  assert.deepEqual(M.validate(study).cases[0].display, { ...c.display, vrsFactor: 3, legendMode: "above" });
+  const peakSpec = P.specs(picked, all, {vrsFactor: 4.5}).find(f => f.id === "peakResponsePlot");
+  peakSpec.series[2].data.forEach((point,i) => close(point[1], 4.5 * picked.r.rows[i].sigma * 1000));
+  assert.match(peakSpec.legendTitle, /b = 6.*Q = 10/);
+  const boxed = P.figure(peakSpec, {legend: {mode: "boxed", x: 0.4, y: 0.7}});
+  assert.equal(boxed.layout.legend.borderwidth, 1);
+  assert.equal(boxed.layout.legend.bgcolor, "#ffffff");
+  assert.equal(boxed.layout.legend.x, 0.4);
+  assert.equal(boxed.config.edits.legendPosition, true);
+  assert.ok(boxed.data.filter(x=>x.mode === "lines").every(x=>x.line.dash === "solid"));
+  assert.deepEqual(Array.from(boxed.data.slice(0,3).map(x=>x.line.color)), ["#1171be", "#dd5400", "#edb120"]);
+  c.display.vrsFactor = 0;
+  assert.throws(() => M.validate(study), /VRS factor/);
+  c.display.vrsFactor = 3;
+  c.views.peakResponsePlot = {legend: {mode: "boxed", x: 0.4, y: 0.7, xanchor: "right", yanchor: "top"}};
+  assert.deepEqual(M.validate(study).cases[0].views.peakResponsePlot, c.views.peakResponsePlot);
   const signatureBeforeView = M.signature(study, c);
   c.display.frequency = 105;
   assert.equal(M.signature(study, c), signatureBeforeView);
