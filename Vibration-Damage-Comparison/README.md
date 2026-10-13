@@ -2,6 +2,8 @@
 
 ## New engineering workbench
 
+[View the workbench screenshot gallery](#workbench-screenshots) — accessible from a phone or another computer.
+
 Open [vibration_workbench.html](vibration_workbench.html) for the new desktop interface. The original `vibration_damage_comparison.html` remains available unchanged.
 
 The workbench combines menu-driven input dialogs with one results page, a reusable spectrum library, all b × Q scenarios, default requirement plots, paired fatigue/peak spectra and coverage, a selectable heatmap, and grouped columns. Every chart supports zoom, pan and editable limits. New studies use the approximate extreme-response model; legacy imports retain their original selected-k behavior.
@@ -181,3 +183,35 @@ The engine evaluates the small tail probability with `expm1` to avoid cancellati
 Case/collection JSON preserves the selected model and probability. Plots, HTML reports and PowerPoint slides identify the model; exported peak figures include exposure duration. The peak-basis narrative gives the frequency-dependent k range, inspected and governing values, assumptions and source. Slide notes retain the complete inputs. CSV now labels the selected denominator `random_selected_peak_m` and adds `effective_peak_factor_k`, `expected_response_cycles`, and `random_fixed_k_reference_peak_m`; metadata and the collection summary also identify the model/probability. Consumers of the old `random_k_sigma_peak_m` header should use the selected or fixed-reference column explicitly.
 
 `test_extreme.cjs` checks the published example, independent CDF inversion over large cycle counts, probability/duration monotonicity, response-rate rather than natural-frequency dependence, PSD scaling, repeat equivalence, invalid and short exposures, broadband warnings, fixed-mode compatibility, unchanged fatigue, and paired-curve identities. Browser/collection tests include mixed peak models, disabled inputs, stale results, saved settings and probability provenance in the 29-slide PowerPoint export. All three generated decks are also opened and rendered in PowerPoint for layout review. The archived white paper remains the baseline documented-schedule method; this section and the app's Method tab specify the optional peak extension.
+
+## Workbench screenshots
+
+Captured on 2026-10-13 from the desktop workbench using its illustrative example inputs. These are interface review images, not a hardware assessment. Open an image to inspect its full resolution.
+
+### 1. Overview and input requirements
+
+![Overview and input requirements](docs/screenshots/2026-10-13/01-overview.png)
+
+### 2. Selected b/Q comparisons
+
+![Selected b/Q comparisons](docs/screenshots/2026-10-13/02-selected-comparison.png)
+
+### 3. All-scenario coverage envelopes
+
+![All-scenario coverage envelopes](docs/screenshots/2026-10-13/03-scenario-envelope.png)
+
+### 4. Frequency-specific summary
+
+![Frequency-specific summary](docs/screenshots/2026-10-13/04-frequency-summary.png)
+
+### 5. Comparison and exposure inputs
+
+![Comparison and exposure inputs](docs/screenshots/2026-10-13/05-exposure-dialog.png)
+
+### 6. Analysis settings
+
+![Analysis settings](docs/screenshots/2026-10-13/06-analysis-dialog.png)
+
+### 7. Spectrum library
+
+![Spectrum library](docs/screenshots/2026-10-13/07-spectrum-library.png)
