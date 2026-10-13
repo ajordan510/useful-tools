@@ -1,5 +1,15 @@
 # Vibration Damage Comparison
 
+## New engineering workbench
+
+Open [vibration_workbench.html](vibration_workbench.html) for the new desktop interface. The original `vibration_damage_comparison.html` remains available unchanged.
+
+The workbench combines menu-driven input dialogs with one results page, a reusable spectrum library, all b × Q scenarios, default requirement plots, paired fatigue/peak spectra and coverage, a selectable heatmap, and grouped columns. Every chart supports zoom, pan and editable limits. New studies use the approximate extreme-response model; legacy imports retain their original selected-k behavior.
+
+Start with [the Excel input template](vibration_spectra_template.xlsx), or import existing case/collection JSON. **Help → Technical README** contains equations, variable definitions, linked references and a worked example. A [standalone readable copy](WORKBENCH_METHOD.html) is also provided. See [workbench development and operation](workbench/README.md), [research decisions](WORKBENCH_RESEARCH.md), and [verification evidence](WORKBENCH_VALIDATION.md).
+
+The remainder of this README describes the original interface and its release history.
+
 An offline engineering tool for comparing a documented heritage sine sweep / resonance-dwell qualification exposure, or an independent assumed resonant dwell at each SDOF frequency, with a new random vibration PSD requirement.
 
 ## Start

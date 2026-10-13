@@ -1,0 +1,88 @@
+{
+  "seed": 20261012,
+  "sample_rate_Hz": 2048,
+  "damage_trials": 32,
+  "damage_seconds_per_trial": 120,
+  "method": "Gaussian Fourier coefficients filtered by analytical SDOF displacement PSD; endpoint residual half cycles retained. Finite-period discretization and sampling remain approximations.",
+  "acceptance": "RMS within 5%; mean rainflow within max(35%,4SE) of Dirlik for these profiles. Peak probabilities reported, not certified.",
+  "results": [
+    {
+      "profile": "narrowband",
+      "alpha": 0.9959775862513626,
+      "RMS_ratio": 1.002293096711166,
+      "b": [
+        4,
+        6
+      ],
+      "rainflow_to_Dirlik_mean": [
+        0.9939383434157635,
+        0.9928863720987403
+      ],
+      "ratio_standard_error": [
+        0.007984362309237821,
+        0.015355000520882754
+      ],
+      "peak_experiment_5_seconds": [
+        {
+          "p": 0.5,
+          "k": 3.796187809591931,
+          "observed_nonexceedance": 0.855,
+          "wilson_95": [
+            0.8245666765815641,
+            0.8809163507554064
+          ],
+          "trials": 600
+        },
+        {
+          "p": 0.99,
+          "k": 4.866388661487375,
+          "observed_nonexceedance": 0.9966666666666667,
+          "wilson_95": [
+            0.9879283904323899,
+            0.9990854224615877
+          ],
+          "trials": 600
+        }
+      ]
+    },
+    {
+      "profile": "broadband",
+      "alpha": 0.826538019995252,
+      "RMS_ratio": 1.0027671522661428,
+      "b": [
+        4,
+        6
+      ],
+      "rainflow_to_Dirlik_mean": [
+        0.9901445955168905,
+        0.9642206901847566
+      ],
+      "ratio_standard_error": [
+        0.004227189985423244,
+        0.006882558234798004
+      ],
+      "peak_experiment_5_seconds": [
+        {
+          "p": 0.5,
+          "k": 3.795758971611445,
+          "observed_nonexceedance": 0.565,
+          "wilson_95": [
+            0.5250418771398944,
+            0.6041310715274382
+          ],
+          "trials": 600
+        },
+        {
+          "p": 0.99,
+          "k": 4.866076245477281,
+          "observed_nonexceedance": 0.9933333333333333,
+          "wilson_95": [
+            0.9829850183926548,
+            0.9974045407235107
+          ],
+          "trials": 600
+        }
+      ]
+    }
+  ]
+}

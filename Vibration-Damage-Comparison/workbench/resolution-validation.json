@@ -1,0 +1,79 @@
+{
+  "coarseDensity": 24,
+  "fineDensity": 48,
+  "criterion": "Under 3% minimum-coverage change for this illustrative 9-scenario matrix. This is a regression check, not a bound for arbitrary spectra.",
+  "results": [
+    {
+      "b": 4,
+      "Q": 5,
+      "fatigueRelativeChange": 0.0007466001616056595,
+      "peakRelativeChange": 0.0000030695747204045887,
+      "coarseFatigueFrequency": 1635.0460758873007,
+      "fineFatigueFrequency": 1657.7738833952908
+    },
+    {
+      "b": 8,
+      "Q": 5,
+      "fatigueRelativeChange": 0.00036445540567342505,
+      "peakRelativeChange": 0.0000030695747204045887,
+      "coarseFatigueFrequency": 1588.656469448564,
+      "fineFatigueFrequency": 1564.7570738651552
+    },
+    {
+      "b": 12,
+      "Q": 5,
+      "fatigueRelativeChange": 0.00006712572207179246,
+      "peakRelativeChange": 0.0000030695747204045887,
+      "coarseFatigueFrequency": 1543.5830311700258,
+      "fineFatigueFrequency": 1542.3300884894948
+    },
+    {
+      "b": 4,
+      "Q": 50,
+      "fatigueRelativeChange": 0.001313502855205706,
+      "peakRelativeChange": 0.000027089976799010707,
+      "coarseFatigueFrequency": 1834.5518707795604,
+      "fineFatigueFrequency": 1860.7243170348968
+    },
+    {
+      "b": 8,
+      "Q": 50,
+      "fatigueRelativeChange": 0.001550827818901146,
+      "peakRelativeChange": 0.000027089976799010707,
+      "coarseFatigueFrequency": 1782.5018762674927,
+      "fineFatigueFrequency": 1807.7686402735528
+    },
+    {
+      "b": 12,
+      "Q": 50,
+      "fatigueRelativeChange": 0.00004849835399234337,
+      "peakRelativeChange": 0.000027089976799010707,
+      "coarseFatigueFrequency": 1782.5018762674927,
+      "fineFatigueFrequency": 1781.8586753753937
+    },
+    {
+      "b": 4,
+      "Q": 100,
+      "fatigueRelativeChange": 0.000020851442577018986,
+      "peakRelativeChange": 8.06319139901035e-7,
+      "coarseFatigueFrequency": 1888.121752571848,
+      "fineFatigueFrequency": 1887.7810653650463
+    },
+    {
+      "b": 8,
+      "Q": 100,
+      "fatigueRelativeChange": 0.0016177508936506824,
+      "peakRelativeChange": 8.06319139901035e-7,
+      "coarseFatigueFrequency": 1834.5518707795604,
+      "fineFatigueFrequency": 1860.7243170348968
+    },
+    {
+      "b": 12,
+      "Q": 100,
+      "fatigueRelativeChange": 0.000021504605026034795,
+      "peakRelativeChange": 8.06319139901035e-7,
+      "coarseFatigueFrequency": 1834.5518707795604,
+      "fineFatigueFrequency": 1834.0553613591142
+    }
+  ]
+}

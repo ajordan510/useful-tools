@@ -446,9 +446,12 @@
     c.psdScale = 10 ** (c.psdDb / 10);
     return c;
   }
-  function atMode(c, fn, Q = c.Q, b = c.b, refine = 1) {
+  // Cache is deliberately supplied by one case run; never shared across inputs.
+  function atMode(c, fn, Q = c.Q, b = c.b, refine = 1, cache = null) {
+    const cacheKey = `${fn}|${Q}|${refine}`;
+    const cached = cache?.get(cacheKey);
     let m = [0, 0, 0, 0];
-    const pq = quadrature(
+    const pq = cached ? [] : quadrature(
       c.psd[0][0],
       c.psd.at(-1)[0],
       fn,
@@ -463,11 +466,17 @@
       m[2] += s * f * f;
       m[3] += s * f ** 4;
     }
+    if (cached) m = cached.m;
     const rand = spectral(m, b, c.T);
     let sweep = 0,
       peak = 0;
+    const sweepSamples = [];
+    if (cached) {
+      for (const [amp, cycles] of cached.sweepSamples) sweep += cycles * (amp / ZREF) ** b;
+      peak = cached.peak;
+    }
     for (const s of c.sine) {
-      if (!c.passes) break;
+      if (!c.passes || cached) break;
       const sq = quadrature(s.f1, s.f2, fn, Q, [], refine);
       for (const [f, w] of sq) {
         const a =
@@ -479,10 +488,12 @@
             ? 60 / (c.sweepRate * Math.LN2 * f)
             : 60 / c.sweepRate;
         sweep += c.passes * f * (a / ZREF) ** b * dt * w;
+        if (cache) sweepSamples.push([a, c.passes * f * dt * w]);
         peak = Math.max(peak, a);
       }
       peak = Math.max(peak, sinePeak(s, fn, Q, c.sineScale));
     }
+    if (cache && !cached) cache.set(cacheKey, {m, sweepSamples, peak});
     const contributions = dwellsAtMode(c, fn).map((d) => {
       const amp = d.a * transfer(d.f, fn, Q);
       peak = Math.max(peak, amp);
@@ -556,14 +567,14 @@
   function minBy(rows, k) {
     return rows.reduce((a, b) => (a[k] < b[k] ? a : b));
   }
-  function analyze(c) {
-    const rows = grid(c).map((f) => atMode(c, f));
+  function analyze(c, options = {}) {
+    const rows = options.rows || grid(c).map((f) => atMode(c, f, c.Q, c.b, 1, options.cache));
     const assessed =
       c.scope === "modes" ? rows.filter((r) => c.modes.includes(r.fn)) : rows;
     const worst = minBy(assessed, "margin"),
       peakWorst = minBy(assessed, "peakRatio"),
       inspect = rows.find((r) => r.fn === c.inspectFn);
-    const check = atMode(c, worst.fn, c.Q, c.b, 2),
+    const check = atMode(c, worst.fn, c.Q, c.b, 2, options.cache),
       convergence = worst.ratio === 0
         ? Math.abs(check.random / worst.random - 1)
         : Math.abs(check.ratio / worst.ratio - 1);
@@ -579,7 +590,7 @@
         previous.minimum = Math.min(previous.minimum, row.margin);
       } else gaps.push({ from: row.fn, to: row.fn, count: 1, minimum: row.margin });
     }
-    const qs = unique([5, 10, 20, 50, c.Q]),
+    const qs = options.skipSensitivity ? [] : unique([5, 10, 20, 50, c.Q]),
       bs = unique([4, 6, 8, c.b]);
     const sensitivity = [];
     for (const Q of qs)
