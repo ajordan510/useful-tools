@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Shock Prediction Workbench</title><style>/*__STYLE__*/</style></head>
+<body>
+<noscript>This workbench requires JavaScript. Open the downloaded HTML file in a current desktop browser with JavaScript enabled.</noscript>
+<header class="topbar"><a class="brand" href="#"><span class="brand-icon">S</span><span>SHOCK<span class="brand-sub">Prediction workbench</span></span></a><div class="study-title"><span class="eyebrow">SOURCE → STRUCTURE → COMPONENT</span><strong id="studyTitle"></strong></div><span class="version">v1.0 · Offline</span><button id="helpButton" class="quiet">Method & help</button></header>
+<div class="workspace">
+<aside class="sidebar"><div class="sidebar-label">STUDY FILE</div><div class="file-actions"><button id="saveProject">Save project</button><button id="openProject">Open</button></div><input id="projectFile" type="file" accept=".json" hidden><div class="file-actions"><button id="newProject" class="quiet">New study</button><button id="demoProject" class="quiet">Teaching study</button></div><p class="save-note" id="saveNote">Save a project file to preserve your work.</p><div class="sidebar-heading"><span>ASSESSMENTS</span><button id="addCase" aria-label="Add assessment">+</button></div><div id="caseList"></div><div class="sidebar-heading"><span>SOURCE LIBRARY</span><button id="addSource" aria-label="Add source">+</button></div><div id="sourceList"></div><div class="sidebar-bottom"><span class="dot"></span> Local calculations<br><small>Files stay in this browser. No network or account required.</small></div></aside>
+<main><div class="page-heading"><div><span class="eyebrow">ENGINEERING WORKSPACE</span><h1>Shock environments, with evidence.</h1><p>Characterize the source. Trace the path. Assess the component.</p></div><button id="run" class="primary">Run study <span>↗</span></button></div>
+<div id="status" class="status" role="status" aria-live="polite">Preparing workbench…</div>
+<nav class="tabs" aria-label="Workspace"><button data-tab="results" class="active">Overview & results</button><button data-tab="setup">Source & assessment</button><button data-tab="study">Study settings</button><button data-tab="method">Method & verification</button></nav>
+<section id="tab-results" class="tab-panel"><div id="resultsEmpty" class="empty"><h2>Ready for a prediction</h2><p>Enter your source and assessment, then run the study. Editing inputs makes previous results stale.</p><button data-goto="setup">Edit assessment</button></div><div id="results" hidden></div></section>
+<section id="tab-setup" class="tab-panel" hidden><div class="section-heading"><div><span class="eyebrow">ACTIVE ASSESSMENT</span><h2 id="caseHeading"></h2></div><div class="actions"><button id="duplicateCase">Duplicate</button><button id="deleteCase" class="danger">Delete</button></div></div><div id="editor"></div></section>
+<section id="tab-study" class="tab-panel" hidden><div id="studyEditor"></div></section>
+<section id="tab-method" class="tab-panel" hidden><!--__METHOD__--></section>
+<footer>Shock Workbench · Source evidence and model applicability remain part of every result. <span id="footerVersion"></span></footer>
+</main></div>
+<input id="dataFile" type="file" accept=".csv,.txt,.tsv" hidden><dialog id="confirmDialog"><form method="dialog"><h2 id="confirmTitle">Confirm change</h2><p id="confirmText"></p><div class="actions"><button value="cancel">Cancel</button><button value="ok" class="primary">Continue</button></div></form></dialog>
+<script id="engine-source" type="text/plain">/*__ENGINE_TEXT__*/</script>
+<script>/*__ENGINE__*/</script><script>/*__APP__*/</script>
+</body></html>

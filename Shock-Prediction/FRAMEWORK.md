@@ -2,6 +2,8 @@
 
 20 October 2026 · proposed architecture · research basis in [RESEARCH.md](RESEARCH.md).
 
+Implementation update: the [version 1.0 workbench](README.md) now implements the empirical/measurement foundation and linear SDOF isolation. This document remains the broader architecture; FRF/MIMO, FE/SEA, statistical uncertainty and physical hardware validation are still roadmap items. See [executed verification](VALIDATION.md) for the implemented scope.
+
 ## 1. The engineering question
 
 The tool should answer: **For a particular event and flight configuration, what shock reaches each component interface, what could amplify or attenuate it, and what evidence supports the resulting assessment?**

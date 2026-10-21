@@ -1,0 +1,61 @@
+{
+  "version": "1.0.0",
+  "executedAt": "2026-10-21T03:51:45.885Z",
+  "node": "v24.14.0",
+  "hashConvention": "SHA-256 of UTF-8 file text with CRLF normalized to LF",
+  "files": {
+    "engine.js": "c47ab4fa1b7a14f3eac765f03fe4935f6599ef4ad476231f64cbc3630c95fa1b",
+    "app.js": "4b7f21a1229f28e7133736b143dcaa622178992f84caf5fc0a839b65e91df943",
+    "app.template.html": "ee42bbcce6de17ec6918ec3704c9887b18f38dff0968f46a88d008e7a5ff4fa1",
+    "style.css": "9205e981983996c5cc9b3c8e4387bf81938387224d28dc592abb1b17ea02d99b",
+    "method.html": "69d1920b93427c25a4ec6f9e7e8ddd81bc66f75207ba6cdb49e7ce1980a64396",
+    "build.mjs": "5d08f80d4e350d1159ca6d6f6128bf5a41e31b93fba2b29cfafd4455d0d0eeb7",
+    "shock_workbench.html": "cc5eed37e1ddf77b0b9d8ec33b37b16df193502dae1008fe0e33c40fd179be24"
+  },
+  "engineChecks": 30,
+  "numerical": {
+    "scipy": "1.16.3",
+    "oscillator_cases": 64,
+    "scalar_comparisons": 640,
+    "max_material_relative_error": 0.003969180383380789,
+    "max_normalized_absolute_error": 0.003969180383380789,
+    "max_sa_relative_error": 0.003969180383380789,
+    "mount_waveform_normalized_max_error": 8.917157579956774e-15,
+    "mount_travel_mm": 0.8089840919858293,
+    "mount_force_N": 2664.7357055382313,
+    "srs_tolerance": "1% plus 1e-7 of metric scale"
+  },
+  "browser": {
+    "browser": "155.0.8059.85",
+    "checks": [
+      "Offline worker starts and computes three teaching cases",
+      "Run includes SHA-256 provenance",
+      "Plot hover reports values",
+      "View limits change charts only",
+      "Project download retains source and path evidence",
+      "CSV export includes every ordinate and blanks by contract",
+      "Run manifest contains reproducible inputs and numerical output",
+      "SVG export is standalone",
+      "HTML report opens with all cases and full input project",
+      "Editing invalidates results and exports",
+      "Worker rerun uses edited inputs",
+      "Project file round trip restores study",
+      "Invalid source damping produces actionable error",
+      "Invalid project does not replace active work",
+      "Distance and banded-factor editor runs",
+      "Teaching history exercises time-domain mount and diagnostics",
+      "Bottoming is flagged invalid in UI",
+      "Imported labels render as text without script execution",
+      "CSV labels neutralize formula prefixes",
+      "Mobile page has no document horizontal overflow",
+      "Mobile setup fields remain accessible",
+      "Embedded method guide is accessible",
+      "No application JavaScript errors",
+      "No network requests needed"
+    ],
+    "errors": [],
+    "requests": []
+  },
+  "deterministicBuild": true,
+  "physicalHardwareValidation": false
+}

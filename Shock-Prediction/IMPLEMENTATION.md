@@ -2,6 +2,8 @@
 
 20 October 2026 · proposed work, not executed software validation.
 
+Implementation update: [version 1.0](README.md) is available as a standalone offline HTML tool with source/assessment records, SRS/history processing, four empirical methods, and linear time-domain isolation. [VALIDATION.md](VALIDATION.md) records executed numerical and browser checks. The phases and gates below remain the broader roadmap; this release does not claim completion of all of them, particularly hardware validation and controlled standards profiles.
+
 This plan implements the [technical framework](FRAMEWORK.md). Source IDs refer to the [research register](RESEARCH.md). Release gates below are proposed engineering controls; they are not presented as NASA/ECSS requirements.
 
 ## 1. Product boundaries and sequence

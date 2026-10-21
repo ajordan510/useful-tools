@@ -1,0 +1,10 @@
+import { readFileSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+const dir=dirname(fileURLToPath(import.meta.url));
+const read=name=>readFileSync(join(dir,name),'utf8').replace(/\r\n/g,'\n');
+let html=read('app.template.html');
+for(const [marker,file] of Object.entries({'/*__STYLE__*/':'style.css','<!--__METHOD__-->':'method.html','/*__ENGINE_TEXT__*/':'engine.js','/*__ENGINE__*/':'engine.js','/*__APP__*/':'app.js'}))html=html.replace(marker,()=>read(file).replace(/<\/script/gi,'<\\/script'));
+if(/\/\*__[A-Z_]+__\*\//.test(html))throw new Error('Unresolved build marker');
+writeFileSync(join(dir,'shock_workbench.html'),html);
+console.log('Built Shock-Prediction/shock_workbench.html ('+Buffer.byteLength(html)+' bytes)');
