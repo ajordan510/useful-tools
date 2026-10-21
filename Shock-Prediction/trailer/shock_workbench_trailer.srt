@@ -1,0 +1,127 @@
+1
+00:00:01,299 --> 00:00:02,049
+In a world...
+
+2
+00:00:01,998 --> 00:00:03,295
+where one tiny bolt...
+
+3
+00:00:03,246 --> 00:00:05,142
+has absolutely no chill.
+
+4
+00:00:05,342 --> 00:00:06,589
+A shock is coming.
+
+5
+00:00:06,839 --> 00:00:09,010
+And your electronics would like a word.
+
+6
+00:00:09,284 --> 00:00:10,432
+Introducing...
+
+7
+00:00:10,531 --> 00:00:12,253
+Shock Prediction Workbench.
+
+8
+00:00:12,477 --> 00:00:13,775
+Separation bolts.
+
+9
+00:00:13,925 --> 00:00:15,472
+Linear shaped charges.
+
+10
+00:00:15,671 --> 00:00:17,742
+One place to assess the aftermath.
+
+11
+00:00:17,917 --> 00:00:18,996
+Load the source.
+
+12
+00:00:19,275 --> 00:00:20,398
+Trace the path.
+
+13
+00:00:20,622 --> 00:00:22,569
+Compare the component environment.
+
+14
+00:00:22,768 --> 00:00:24,066
+Direct prediction.
+
+15
+00:00:24,415 --> 00:00:25,713
+Measured ratios.
+
+16
+00:00:25,813 --> 00:00:27,085
+Distance models.
+
+17
+00:00:27,260 --> 00:00:28,632
+Path factors.
+
+18
+00:00:28,906 --> 00:00:30,603
+Time-domain isolation.
+
+19
+00:00:30,903 --> 00:00:32,749
+Try a new location.
+
+20
+00:00:33,347 --> 00:00:34,620
+Check the margins.
+
+21
+00:00:34,795 --> 00:00:37,402
+And when the isolator runs out of travel...
+
+22
+00:00:37,489 --> 00:00:39,042
+the tool calls it out.
+
+23
+00:00:39,247 --> 00:00:41,978
+Because, it'll probably be fine...
+
+24
+00:00:42,091 --> 00:00:43,863
+is not a transfer function.
+
+25
+00:00:44,386 --> 00:00:46,158
+Shock Prediction Workbench.
+
+26
+00:00:46,433 --> 00:00:47,281
+Big drama.
+
+27
+00:00:47,481 --> 00:00:48,528
+Better evidence.
+
+28
+00:00:48,877 --> 00:00:50,474
+Now available to the team.
+
+29
+00:00:50,724 --> 00:00:52,670
+No actual hardware was harmed in the making
+
+30
+00:00:52,720 --> 00:00:53,794
+of this trailer.
+
+31
+00:00:53,967 --> 00:00:55,216
+The demo data, however...
+
+32
+00:00:55,165 --> 00:00:57,040
+are extremely dramatic.

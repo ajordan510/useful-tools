@@ -4,6 +4,8 @@
 
 This release provides the empirical/measurement foundation and linear SDOF isolation described below. It has numerical verification, but no physically validated source-device or attenuation database. The startup study is clearly marked as teaching data.
 
+**Team announcement:** [Watch the narrated action-comedy trailer](trailer/shock_workbench_trailer.mp4), or use the [smaller 720p copy](trailer/shock_workbench_trailer_720p.mp4). [Trailer credits and production notes](trailer/README.md).
+
 ## Implemented capabilities
 
 - Shared source library for separation bolts/nuts, pin actuators, cutters, linear shaped charges, frangible joints, clampbands, non-explosive releases, mechanical impacts and incoming interfaces. Point, line, ring, multiple-source and interface support are recorded as metadata.

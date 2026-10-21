@@ -1,0 +1,35 @@
+/* Capture real workbench states for the announcement trailer. */
+const {chromium}=require('playwright');
+const path=require('node:path'),fs=require('node:fs'),{pathToFileURL}=require('node:url');
+const S=require('../engine.js'),out=path.join(__dirname,'captures');fs.mkdirSync(out,{recursive:true});
+(async()=>{
+ const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe'});
+ const page=await browser.newPage({viewport:{width:1536,height:864},deviceScaleFactor:1});
+ await page.goto(pathToFileURL(path.join(__dirname,'../shock_workbench.html')).href);
+ await page.waitForFunction(()=>ShockWorkbench.getResult());
+ const shot=async(name,selector)=>{if(selector){await page.locator(selector).scrollIntoViewIfNeeded();await page.locator(selector).screenshot({path:path.join(out,name+'.png')});}else await page.screenshot({path:path.join(out,name+'.png')});};
+ await shot('overview');
+ await shot('baseline','.plots >> nth=0');
+ await shot('compare','.plots >> nth=1');
+ await page.click('[data-result-case="case-2"]');await shot('relocation','.plots >> nth=0');
+ await page.click('[data-tab="setup"]');await shot('source','#editor .card >> nth=1');
+ await page.locator('[data-bind="source.family"]').selectOption('Linear shaped charge');
+ await page.locator('[data-bind="source.support"]').selectOption('line');
+  await page.locator('[data-bind="source.name"]').fill('Linear shaped charge · teaching spectrum');
+ await shot('linear-source','#editor .card >> nth=1');
+ await page.locator('[data-bind="case.method"]').selectOption('ratio');await shot('ratio','#editor .card >> nth=2');
+ await page.locator('[data-bind="case.method"]').selectOption('power');await shot('distance','#editor .card >> nth=2');
+ await page.locator('[data-bind="case.method"]').selectOption('factors');await page.click('#addFactor');
+ await page.locator('[data-bind="factor.0.label"]').fill('Measured panel joint');await page.locator('[data-bind="factor.0.db"]').fill('-3');await page.locator('[data-bind="factor.0.evidence"]').fill('Illustrative factor — replace with test evidence');await shot('factors','#editor .card >> nth=2');
+ const p=S.demo();p.title='Isolation trade · teaching example';p.cases=[p.cases[0]];p.sources=[p.sources[0]];
+ Object.assign(p.sources[0],{name:'100 g / 5 ms half-sine · teaching',kind:'history',min:20,max:2000,data:Array.from({length:1001},(_,i)=>{const t=i/20000;return `${t.toFixed(7)},${t<=.005?100*Math.sin(Math.PI*t/.005):0}`;}).join('\n')});
+ Object.assign(p.settings,{min:20,max:2000});Object.assign(p.cases[0],{method:'isolator',baseConfirmed:true});
+ await page.evaluate(p=>ShockWorkbench.setProject(p),p);await page.click('#run');await page.waitForFunction(()=>ShockWorkbench.getResult());
+ await shot('isolation','.plots >> nth=0');await shot('history','.plot-card:has(svg[data-chart-id="history"])');
+ await shot('mount','.card:has(h3:text-is("Mount response"))');
+ p.cases[0].mount.clearance=.001;await page.evaluate(p=>ShockWorkbench.setProject(p),p);await page.click('#run');await page.waitForFunction(()=>ShockWorkbench.getResult());
+ await shot('contact','.card:has(h3:text-is("Mount response"))');
+ await page.evaluate(p=>ShockWorkbench.setProject(p),S.demo());await page.click('#run');await page.waitForFunction(()=>ShockWorkbench.getResult());
+ await shot('evidence','.two-column');await shot('exports','.report-actions');
+ console.log('Captured',fs.readdirSync(out).length,'real tool states.');await browser.close();
+})().catch(e=>{console.error(e);process.exit(1)});

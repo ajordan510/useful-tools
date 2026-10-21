@@ -1,0 +1,6 @@
+assets/
+captures/
+render/
+*.wav
+*.mp3
+*.webm

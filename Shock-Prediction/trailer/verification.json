@@ -1,0 +1,41 @@
+{
+  "files": [
+    {
+      "file": "shock_workbench_trailer.mp4",
+      "bytes": 16609091,
+      "sha256": "dde6d2641f1f6a5b272b9ee755dfb533239d8a0eb7a1dbd8acb1d48bdbff3821",
+      "width": 1920,
+      "height": 1080,
+      "fps": 24,
+      "duration_seconds": 61.5,
+      "full_decode": "passed",
+      "integrated_loudness_LUFS": -16.83,
+      "true_peak_dBTP": -4.46
+    },
+    {
+      "file": "shock_workbench_trailer_720p.mp4",
+      "bytes": 7318037,
+      "sha256": "bfe499479a2a313b323418e5e8dffe9627a17b7f413eb55e8f8252d34729d55e",
+      "width": 1280,
+      "height": 720,
+      "fps": 24,
+      "duration_seconds": 61.5,
+      "full_decode": "passed",
+      "integrated_loudness_LUFS": -16.88,
+      "true_peak_dBTP": -4.19
+    }
+  ],
+  "captions": "burned into picture and provided as SRT",
+  "visual_review": "Sampled full-edit contact sheet plus title, method and explosion frames inspected.",
+  "sources": "See README.md; actual tool captures use illustrative inputs.",
+  "browserPlayback": {
+    "status": "passed",
+    "browser": "155.0.8059.85",
+    "metadata": {
+      "width": 1920,
+      "height": 1080,
+      "duration": 61.5
+    },
+    "errors": []
+  }
+}
